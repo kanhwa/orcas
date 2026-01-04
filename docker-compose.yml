@@ -1,0 +1,26 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: orcas-postgres
+    environment:
+      POSTGRES_DB: orcas_db
+      POSTGRES_USER: orcas_user
+      POSTGRES_PASSWORD: orcas_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - orcas_postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: orcas-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - orcas_redis_data:/data
+    restart: unless-stopped
+
+volumes:
+  orcas_postgres_data:
+  orcas_redis_data:
