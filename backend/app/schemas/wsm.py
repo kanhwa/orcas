@@ -21,6 +21,15 @@ class WSMScoreRequest(BaseModel):
         le=32,
         description="Optional limit for number of ranked tickers (1-32).",
     )
+    missing_policy: Literal["redistribute", "zero", "drop"] = Field(
+        default="zero",
+        description=(
+            "How to handle missing metrics per ticker: "
+            "'redistribute' = redistribute weights among available metrics (old behavior), "
+            "'zero' = missing metrics get normalized_value=0 (default), "
+            "'drop' = exclude ticker if any metric is missing."
+        ),
+    )
 
 
 class WSMRankingItem(BaseModel):

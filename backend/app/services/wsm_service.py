@@ -149,11 +149,27 @@ def calculate_wsm_score(db: Session, payload: WSMScoreRequest) -> WSMScoreRespon
         min_by_metric[metric_id] = min(metrics_values)
 
     ranking: List[WSMRankingItem] = []
+    requested_metric_ids = set(metric_id_by_name.values())
+
     for ticker, metrics_values in ticker_metric_values.items():
-        available_metric_ids = list(metrics_values.keys())
-        available_weight_sum = sum(weight_by_metric_id[metric_id] for metric_id in available_metric_ids)
-        if available_weight_sum <= 0:
-            continue
+        available_metric_ids = set(metrics_values.keys())
+        missing_metric_ids = requested_metric_ids - available_metric_ids
+
+        # Handle missing_policy
+        if payload.missing_policy == "drop":
+            # Skip ticker if any metric is missing
+            if missing_metric_ids:
+                continue
+            weight_divisor = 1.0  # all metrics present, no redistribution needed
+        elif payload.missing_policy == "redistribute":
+            # Old behavior: redistribute weights among available metrics
+            available_weight_sum = sum(weight_by_metric_id[mid] for mid in available_metric_ids)
+            if available_weight_sum <= 0:
+                continue
+            weight_divisor = available_weight_sum
+        else:  # "zero" (default)
+            # Keep total weight = 1, missing metrics contribute 0
+            weight_divisor = 1.0
 
         score = 0.0
         for metric_id in available_metric_ids:
@@ -172,8 +188,10 @@ def calculate_wsm_score(db: Session, payload: WSMScoreRequest) -> WSMScoreRespon
                     raw = numerator / value
                     normalized_value = max(0.0, min(1.0, raw))  # clamp 0..1
 
-            weight_share = weight_by_metric_id[metric_id] / available_weight_sum
+            weight_share = weight_by_metric_id[metric_id] / weight_divisor
             score += weight_share * normalized_value
+
+        # For "zero" policy, missing metrics contribute 0 (already handled by not adding to score)
 
         ranking.append(WSMRankingItem(ticker=ticker, score=round(score, 6)))
 
