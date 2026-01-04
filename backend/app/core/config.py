@@ -24,3 +24,6 @@ class Settings(BaseSettings):
     )
 
 settings = Settings()
+
+# Metric names to exclude from WSM calculations and rankings
+DISABLED_METRICS: set[str] = {"Operating Cash Flow"}
