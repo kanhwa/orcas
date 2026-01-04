@@ -1,0 +1,132 @@
+# backend/app/models/models.py
+import enum
+from sqlalchemy import (
+    Column, Integer, String, Text, DateTime, ForeignKey,
+    Numeric, UniqueConstraint, Enum
+)
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
+
+from app.db.base import Base
+
+
+class UserRole(str, enum.Enum):
+    admin = "admin"
+    user = "user"
+
+
+class UserStatus(str, enum.Enum):
+    active = "active"
+    inactive = "inactive"
+
+
+class MetricSection(str, enum.Enum):
+    cashflow = "cashflow"
+    balance = "balance"
+    income = "income"
+
+
+class MetricType(str, enum.Enum):
+    benefit = "benefit"
+    cost = "cost"
+
+
+class ImportStatus(str, enum.Enum):
+    success = "success"
+    failed = "failed"
+    rolled_back = "rolled_back"
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True)
+    username = Column(String(50), unique=True, nullable=False)
+    password_hash = Column(String(255), nullable=False)
+    full_name = Column(String(100), nullable=True)
+    role = Column(Enum(UserRole, name="user_role"), nullable=False, server_default=UserRole.user.value)
+    status = Column(Enum(UserStatus, name="user_status"), nullable=False, server_default=UserStatus.active.value)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    scoring_templates = relationship("ScoringTemplate", back_populates="user")
+    import_history = relationship("ImportHistory", back_populates="user")
+
+
+class Emiten(Base):
+    __tablename__ = "emitens"
+
+    id = Column(Integer, primary_key=True)
+    ticker_code = Column(String(10), unique=True, nullable=False)
+    bank_name = Column(String(100), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    financial_data = relationship("FinancialData", back_populates="emiten")
+
+
+class MetricDefinition(Base):
+    __tablename__ = "metric_definitions"
+
+    id = Column(Integer, primary_key=True)
+    metric_name = Column(String(100), nullable=False)
+    section = Column(Enum(MetricSection, name="metric_section"), nullable=False)
+    # type dan value_type jangan dipaksa dulu (biar tidak "ngarang" sebelum mapping final Anda dikunci)
+    type = Column(Enum(MetricType, name="metric_type"), nullable=True)
+    default_weight = Column(Numeric(5, 2), nullable=True)
+    description = Column(Text, nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint("section", "metric_name", name="uq_metric_section_name"),
+    )
+
+    financial_data = relationship("FinancialData", back_populates="metric")
+
+
+class FinancialData(Base):
+    __tablename__ = "financial_data"
+
+    id = Column(Integer, primary_key=True)
+    emiten_id = Column(Integer, ForeignKey("emitens.id", ondelete="CASCADE"), nullable=False)
+    metric_id = Column(Integer, ForeignKey("metric_definitions.id", ondelete="CASCADE"), nullable=False)
+    year = Column(Integer, nullable=False)
+    value = Column(Numeric(20, 4), nullable=True)  # bisa null sesuai dataset
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("emiten_id", "metric_id", "year", name="uq_financial_emiten_metric_year"),
+    )
+
+    emiten = relationship("Emiten", back_populates="financial_data")
+    metric = relationship("MetricDefinition", back_populates="financial_data")
+
+
+class ScoringTemplate(Base):
+    __tablename__ = "scoring_templates"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String(100), nullable=False)
+    description = Column(Text, nullable=True)
+    metrics_config = Column(JSONB, nullable=False)  # simpan bobot & pilihan metric
+    visibility = Column(String(10), nullable=False, server_default="private")
+    version = Column(Integer, nullable=False, server_default="1")
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    user = relationship("User", back_populates="scoring_templates")
+
+
+class ImportHistory(Base):
+    __tablename__ = "import_history"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    file_name = Column(String(255), nullable=False)
+    year_imported = Column(Integer, nullable=False)
+    rows_added = Column(Integer, nullable=False, server_default="0")
+    status = Column(Enum(ImportStatus, name="import_status"), nullable=False, server_default=ImportStatus.success.value)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    user = relationship("User", back_populates="import_history")

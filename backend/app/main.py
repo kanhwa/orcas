@@ -2,8 +2,12 @@ from fastapi import FastAPI
 import redis
 from app.core.config import settings
 from app.db.database import ping_db
+from app.api.routes import wsm, ranking
 
 app = FastAPI(title="ORCAS API")
+
+app.include_router(wsm.router)
+app.include_router(ranking.router)
 
 @app.get("/health")
 def health():
