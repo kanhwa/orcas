@@ -1,11 +1,23 @@
 from fastapi import FastAPI
 import redis
+from starlette.middleware.sessions import SessionMiddleware
+
 from app.core.config import settings
 from app.db.database import ping_db
-from app.api.routes import wsm, ranking
+from app.api.routes import auth, wsm, ranking
 
 app = FastAPI(title="ORCAS API")
 
+# Session middleware for cookie-based auth
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=settings.SESSION_SECRET,
+    session_cookie="orcas_session",
+    https_only=False,  # Set True in production with HTTPS
+    same_site="lax",
+)
+
+app.include_router(auth.router)
 app.include_router(wsm.router)
 app.include_router(ranking.router)
 
