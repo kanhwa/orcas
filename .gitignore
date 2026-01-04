@@ -1,13 +1,94 @@
+cat > .gitignore <<'EOF'
+### macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
 
-frontend/node_modules
-frontend/dist
-frontend/.env
+### Editors / IDE
+.idea/
+*.swp
+*.swo
 
-backend/.env
-backend/__pycache__/
-backend/.venv/
-backend/venv/
+# VS Code (ignore noise, keep important project configs)
+.vscode/*
+**/.vscode/*
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!**/.vscode/settings.json
+!**/.vscode/launch.json
+!**/.vscode/extensions.json
 
+### Environment files (secrets)
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+
+### Python
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual envs (IMPORTANT: include both file + folder forms for symlink case)
+.venv
+.venv/
+venv
+venv/
+ENV
+ENV/
+**/.venv
+**/.venv/
+**/venv
+**/venv/
+**/ENV
+**/ENV/
+
+# Python tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyright/
+.coverage
+htmlcov/
+coverage.xml
+
+# Build / packaging
+build/
+dist/
+*.egg-info/
+pip-wheel-metadata/
+
+### Node / Frontend
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+.next/
+out/
+.cache/
+.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+### Logs
+*.log
+logs/
+**/logs/
+
+### Data
 data/raw/
 data/processed/
+
+### Docker
+**/.docker/
+EOF
