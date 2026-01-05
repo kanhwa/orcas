@@ -4,11 +4,51 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
-from app.core.security import verify_password
-from app.models import User
-from app.schemas.auth import LoginRequest, UserMeResponse
+from app.core.security import hash_password, verify_password
+from app.models import User, UserRole, UserStatus
+from app.schemas.auth import (
+    ChangePasswordRequest,
+    LoginRequest,
+    RegisterRequest,
+    UpdateProfileRequest,
+    UserMeResponse,
+)
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+
+@router.post("/register", response_model=UserMeResponse, status_code=status.HTTP_201_CREATED)
+def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> UserMeResponse:
+    """
+    Register a new user account.
+    New users get 'user' role by default.
+    """
+    # Check if username already exists
+    existing = db.query(User).filter(User.username == payload.username).first()
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Username sudah digunakan.",
+        )
+
+    user = User(
+        username=payload.username,
+        password_hash=hash_password(payload.password),
+        full_name=payload.full_name,
+        role=UserRole.user,
+        status=UserStatus.active,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    return UserMeResponse(
+        id=user.id,
+        username=user.username,
+        full_name=user.full_name,
+        role=user.role.value,
+        status=user.status.value,
+    )
 
 
 @router.post("/login", response_model=UserMeResponse)
@@ -63,6 +103,52 @@ def logout(request: Request) -> dict:
     """
     request.session.clear()
     return {"detail": "Logout berhasil."}
+
+
+@router.patch("/profile", response_model=UserMeResponse)
+def update_profile(
+    payload: UpdateProfileRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> UserMeResponse:
+    """
+    Update current user's profile (full_name).
+    """
+    if payload.full_name is not None:
+        current_user.full_name = payload.full_name
+
+    db.commit()
+    db.refresh(current_user)
+
+    return UserMeResponse(
+        id=current_user.id,
+        username=current_user.username,
+        full_name=current_user.full_name,
+        role=current_user.role.value,
+        status=current_user.status.value,
+    )
+
+
+@router.post("/change-password")
+def change_password(
+    payload: ChangePasswordRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    """
+    Change current user's password.
+    Requires current password verification.
+    """
+    if not verify_password(payload.current_password, current_user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password saat ini salah.",
+        )
+
+    current_user.password_hash = hash_password(payload.new_password)
+    db.commit()
+
+    return {"detail": "Password berhasil diubah."}
 
 
 # =============================================================================

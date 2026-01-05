@@ -299,3 +299,268 @@ export async function getMetricsCatalog(): Promise<MetricsCatalog> {
     method: "GET",
   });
 }
+
+// =============================================================================
+// Years API (Dropdown)
+// =============================================================================
+
+export interface YearsResponse {
+  years: number[];
+}
+
+export async function getYears(): Promise<YearsResponse> {
+  return request<YearsResponse>("/api/years", { method: "GET" });
+}
+
+// =============================================================================
+// Emitens API (Dropdown)
+// =============================================================================
+
+export interface EmitenItem {
+  ticker_code: string;
+  bank_name: string | null;
+}
+
+export interface EmitensResponse {
+  items: EmitenItem[];
+}
+
+export async function getEmitens(): Promise<EmitensResponse> {
+  return request<EmitensResponse>("/api/emitens", { method: "GET" });
+}
+
+// =============================================================================
+// Scoring Runs API (History)
+// =============================================================================
+
+export interface ScoringRunSummary {
+  id: number;
+  year: number;
+  template_id: number | null;
+  created_at: string;
+}
+
+export interface ScoringRunListResponse {
+  total: number;
+  runs: ScoringRunSummary[];
+}
+
+export interface ScoringRunItemOut {
+  emiten_id: number;
+  ticker: string;
+  score: number;
+  rank: number;
+  breakdown: Record<string, unknown> | null;
+}
+
+export interface ScoringRunDetail {
+  id: number;
+  year: number;
+  template_id: number | null;
+  request: Record<string, unknown>;
+  created_at: string;
+  items: ScoringRunItemOut[];
+}
+
+export async function getScoringRuns(
+  skip = 0,
+  limit = 20,
+  year?: number
+): Promise<ScoringRunListResponse> {
+  const params = new URLSearchParams({
+    skip: String(skip),
+    limit: String(limit),
+  });
+  if (year) params.set("year", String(year));
+  return request<ScoringRunListResponse>(`/api/scoring-runs?${params}`, {
+    method: "GET",
+  });
+}
+
+export async function getScoringRunDetail(
+  runId: number
+): Promise<ScoringRunDetail> {
+  return request<ScoringRunDetail>(`/api/scoring-runs/${runId}`, {
+    method: "GET",
+  });
+}
+
+export async function deleteScoringRun(runId: number): Promise<void> {
+  return request<void>(`/api/scoring-runs/${runId}`, { method: "DELETE" });
+}
+
+// =============================================================================
+// Templates API
+// =============================================================================
+
+export interface TemplateMetricConfig {
+  metric_name: string;
+  type: "benefit" | "cost";
+  weight: number;
+}
+
+export interface TemplateOut {
+  id: number;
+  user_id: number;
+  name: string;
+  description: string | null;
+  metrics_config: TemplateMetricConfig[];
+  visibility: string;
+  version: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TemplateListResponse {
+  total: number;
+  templates: TemplateOut[];
+}
+
+export interface TemplateCreateRequest {
+  name: string;
+  description?: string | null;
+  metrics_config: TemplateMetricConfig[];
+  visibility?: "private" | "public";
+}
+
+export interface TemplateUpdateRequest {
+  name?: string;
+  description?: string | null;
+  metrics_config?: TemplateMetricConfig[];
+  visibility?: "private" | "public";
+}
+
+export async function getTemplates(
+  skip = 0,
+  limit = 20,
+  mineOnly = false
+): Promise<TemplateListResponse> {
+  const params = new URLSearchParams({
+    skip: String(skip),
+    limit: String(limit),
+    mine_only: String(mineOnly),
+  });
+  return request<TemplateListResponse>(`/api/templates?${params}`, {
+    method: "GET",
+  });
+}
+
+export async function getTemplate(templateId: number): Promise<TemplateOut> {
+  return request<TemplateOut>(`/api/templates/${templateId}`, {
+    method: "GET",
+  });
+}
+
+export async function createTemplate(
+  payload: TemplateCreateRequest
+): Promise<TemplateOut> {
+  return request<TemplateOut>("/api/templates", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateTemplate(
+  templateId: number,
+  payload: TemplateUpdateRequest
+): Promise<TemplateOut> {
+  return request<TemplateOut>(`/api/templates/${templateId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteTemplate(templateId: number): Promise<void> {
+  return request<void>(`/api/templates/${templateId}`, { method: "DELETE" });
+}
+
+// =============================================================================
+// Activity API (Dashboard)
+// =============================================================================
+
+export interface ScoringResultSummary {
+  id: number;
+  year: number;
+  calculated_at: string;
+}
+
+export interface ComparisonSummary {
+  id: number;
+  created_at: string;
+}
+
+export interface SimulationSummary {
+  id: number;
+  created_at: string;
+}
+
+export interface RecentActivityResponse {
+  scoring: ScoringResultSummary[];
+  comparisons: ComparisonSummary[];
+  simulations: SimulationSummary[];
+}
+
+export async function getRecentActivity(
+  limit = 5
+): Promise<RecentActivityResponse> {
+  return request<RecentActivityResponse>(
+    `/api/activity/recent?limit=${limit}`,
+    {
+      method: "GET",
+    }
+  );
+}
+
+// =============================================================================
+// Financial Data API
+// =============================================================================
+
+export interface FinancialDataItem {
+  ticker: string;
+  metric_name: string;
+  section: string;
+  year: number;
+  value: number | null;
+}
+
+export interface FinancialDataResponse {
+  total: number;
+  data: FinancialDataItem[];
+}
+
+export async function getFinancialData(params: {
+  tickers: string;
+  metrics?: string;
+  section?: string;
+  year_from?: number;
+  year_to?: number;
+}): Promise<FinancialDataResponse> {
+  const searchParams = new URLSearchParams({ tickers: params.tickers });
+  if (params.metrics) searchParams.set("metrics", params.metrics);
+  if (params.section) searchParams.set("section", params.section);
+  if (params.year_from) searchParams.set("year_from", String(params.year_from));
+  if (params.year_to) searchParams.set("year_to", String(params.year_to));
+  return request<FinancialDataResponse>(`/api/financial-data?${searchParams}`, {
+    method: "GET",
+  });
+}
+
+// =============================================================================
+// Export API
+// =============================================================================
+
+export function getExportScoringRunUrl(
+  runId: number,
+  format: "csv" | "json" | "pdf" = "csv"
+): string {
+  return `${BASE_URL}/api/export/scoring/${runId}?format=${format}`;
+}
+
+export function getExportAllScoringRunsUrl(
+  format: "csv" | "json" = "csv",
+  year?: number
+): string {
+  const params = new URLSearchParams({ format });
+  if (year) params.set("year", String(year));
+  return `${BASE_URL}/api/export/scoring-runs?${params}`;
+}
