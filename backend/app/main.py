@@ -5,7 +5,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.core.config import settings
 from app.db.database import ping_db
-from app.api.routes import activity, auth, emitens, ranking, scoring_runs, templates, wsm, years
+from app.api.routes import activity, auth, emitens, financial_data, ranking, scoring_runs, templates, wsm, years
 
 app = FastAPI(title="ORCAS API")
 
@@ -35,6 +35,7 @@ app.include_router(activity.router)
 app.include_router(scoring_runs.router)
 app.include_router(templates.router)
 app.include_router(years.router)
+app.include_router(financial_data.router)
 
 @app.get("/health")
 def health():
