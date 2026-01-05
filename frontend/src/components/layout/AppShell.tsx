@@ -1,90 +1,172 @@
-import { ReactNode } from "react";
-import { Button } from "../ui/Button";
+import { ReactNode, useState, useRef, useEffect } from "react";
 import { cn } from "../../utils/cn";
 import InfoTip from "../InfoTip";
-import { Badge } from "../ui/Badge";
 
 export interface NavItem {
   key: string;
   label: string;
+  icon?: string;
   onSelect: () => void;
   active?: boolean;
   disabled?: boolean;
   description?: string;
 }
 
+export interface ProfileMenuItem {
+  key: string;
+  label: string;
+  icon?: string;
+  onClick: () => void;
+  danger?: boolean;
+}
+
 interface AppShellProps {
   pageTitle: string;
+  pageSubtitle?: string;
   userDisplay?: string;
+  userRole?: string;
+  userAvatar?: string;
   navItems: NavItem[];
+  profileMenuItems: ProfileMenuItem[];
   children: ReactNode;
-  onProfile?: () => void;
-  onLogout?: () => void;
-  contextualInfo?: string;
 }
 
 export function AppShell({
   pageTitle,
+  pageSubtitle,
   userDisplay,
+  userRole,
+  userAvatar,
   navItems,
+  profileMenuItems,
   children,
-  onProfile,
-  onLogout,
-  contextualInfo,
 }: AppShellProps) {
+  const [profileOpen, setProfileOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        profileRef.current &&
+        !profileRef.current.contains(event.target as Node)
+      ) {
+        setProfileOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   return (
     <div className="min-h-screen bg-[rgb(var(--color-surface))] text-[rgb(var(--color-text))]">
-      {/* Top navigation */}
-      <header className="flex items-center justify-between border-b border-[rgb(var(--color-border))] bg-white px-6 py-3 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[rgb(var(--color-primary))] text-white font-bold">
-            OR
+      {/* Header with gradient background */}
+      <header className="bg-gradient-to-r from-[rgb(var(--color-primary))] to-[rgb(var(--color-action))] px-6 py-3 shadow-lg">
+        <div className="flex items-center justify-between">
+          {/* Logo & Brand */}
+          <div className="flex items-center gap-3">
+            {/* Orca Icon */}
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm text-2xl">
+              🐋
+            </div>
+            <div>
+              <div className="text-lg font-bold tracking-wide text-white">
+                ORCAS
+              </div>
+              <div className="text-xs text-white/70">Analyst Workspace</div>
+            </div>
           </div>
-          <div>
-            <div className="text-sm font-semibold tracking-wide text-[rgb(var(--color-primary))]">
-              ORCAS
-            </div>
-            <div className="text-xs text-[rgb(var(--color-text-subtle))]">
-              Analyst workspace
-            </div>
-          </div>
-          {contextualInfo && (
-            <div className="ml-4 text-xs text-[rgb(var(--color-text-muted))] flex items-center gap-1">
-              <Badge className="bg-[rgb(var(--color-surface))] text-[rgb(var(--color-primary))]">
-                Info
-              </Badge>
-              <span>{contextualInfo}</span>
-            </div>
-          )}
-        </div>
 
-        <div className="flex items-center gap-3">
-          <div className="text-right">
-            <div className="text-sm font-semibold text-[rgb(var(--color-text))]">
-              {userDisplay || "User"}
-            </div>
-            <div className="text-xs text-[rgb(var(--color-text-subtle))]">
-              Analyst
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={onProfile}>
-              Profile
-            </Button>
-            <Button variant="secondary" size="sm" onClick={onLogout}>
-              Logout
-            </Button>
+          {/* User Profile Dropdown */}
+          <div className="relative" ref={profileRef}>
+            <button
+              type="button"
+              onClick={() => setProfileOpen(!profileOpen)}
+              className="flex items-center gap-3 rounded-xl bg-white/10 px-4 py-2 transition hover:bg-white/20"
+            >
+              {/* Avatar */}
+              <div className="h-9 w-9 rounded-full bg-white/30 overflow-hidden flex items-center justify-center border-2 border-white/50">
+                {userAvatar ? (
+                  <img
+                    src={userAvatar}
+                    alt="Avatar"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span className="text-white text-sm font-semibold">
+                    {userDisplay?.charAt(0).toUpperCase() || "U"}
+                  </span>
+                )}
+              </div>
+              <span className="text-sm font-medium text-white">
+                Hi, {userDisplay || "User"}
+              </span>
+              <svg
+                className={cn(
+                  "h-4 w-4 text-white/70 transition-transform",
+                  profileOpen && "rotate-180"
+                )}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </button>
+
+            {/* Dropdown Menu */}
+            {profileOpen && (
+              <div className="absolute right-0 mt-2 w-56 rounded-xl bg-white shadow-xl border border-[rgb(var(--color-border))] py-2 z-50">
+                {/* User Info Header */}
+                <div className="px-4 py-3 border-b border-[rgb(var(--color-border))]">
+                  <div className="font-semibold text-[rgb(var(--color-text))]">
+                    {userDisplay || "User"}
+                  </div>
+                  <div className="text-xs text-[rgb(var(--color-text-subtle))] capitalize">
+                    {userRole || "User"}
+                  </div>
+                </div>
+
+                {/* Menu Items */}
+                <div className="py-1">
+                  {profileMenuItems.map((item) => (
+                    <button
+                      key={item.key}
+                      type="button"
+                      onClick={() => {
+                        item.onClick();
+                        setProfileOpen(false);
+                      }}
+                      className={cn(
+                        "flex w-full items-center gap-3 px-4 py-2.5 text-sm text-left transition",
+                        item.danger
+                          ? "text-red-600 hover:bg-red-50"
+                          : "text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-surface))]"
+                      )}
+                    >
+                      {item.icon && (
+                        <span className="text-base">{item.icon}</span>
+                      )}
+                      <span>{item.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </header>
 
       <div className="flex">
-        {/* Sidebar */}
-        <aside className="hidden w-60 shrink-0 border-r border-[rgb(var(--color-border))] bg-white p-4 lg:block">
-          <div className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-[rgb(var(--color-text-subtle))]">
-            Navigation
-          </div>
-          <nav className="flex flex-col gap-1">
+        {/* Sidebar with color accents */}
+        <aside className="hidden w-60 shrink-0 border-r border-[rgb(var(--color-border))] bg-white lg:block">
+          {/* Sidebar content */}
+          <nav className="flex flex-col gap-1 p-3">
             {navItems.map((item) => (
               <button
                 key={item.key}
@@ -92,19 +174,17 @@ export function AppShell({
                 onClick={item.onSelect}
                 disabled={item.disabled}
                 className={cn(
-                  "flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm text-left transition",
+                  "flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm text-left transition",
                   item.active
-                    ? "bg-[rgb(var(--color-primary))]/10 text-[rgb(var(--color-primary))] font-semibold"
+                    ? "bg-gradient-to-r from-[rgb(var(--color-primary))] to-[rgb(var(--color-action))] text-white font-semibold shadow-md"
                     : "text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-surface))]",
                   item.disabled && "opacity-50 cursor-not-allowed"
                 )}
               >
-                <span className="flex items-center gap-2">
-                  <span>{item.label}</span>
-                  {item.description && <InfoTip content={item.description} />}
-                </span>
-                {item.active && (
-                  <span className="text-[rgb(var(--color-primary))]">•</span>
+                {item.icon && <span className="text-lg">{item.icon}</span>}
+                <span className="flex-1">{item.label}</span>
+                {item.description && !item.active && (
+                  <InfoTip content={item.description} />
                 )}
               </button>
             ))}
@@ -113,15 +193,15 @@ export function AppShell({
 
         {/* Main content */}
         <main className="flex-1 px-4 py-6 lg:px-8">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-semibold text-[rgb(var(--color-text))]">
-                {pageTitle}
-              </h1>
-              <p className="text-sm text-[rgb(var(--color-text-subtle))]">
-                Curated tools for ranking, simulation, and comparisons.
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold text-[rgb(var(--color-text))]">
+              {pageTitle}
+            </h1>
+            {pageSubtitle && (
+              <p className="text-sm text-[rgb(var(--color-text-subtle))] mt-1">
+                {pageSubtitle}
               </p>
-            </div>
+            )}
           </div>
           {children}
         </main>

@@ -132,3 +132,19 @@ textarea:focus {
     background: rgb(var(--color-surface));
   }
 }
+
+/* Custom dropdown styling to override browser defaults */
+select {
+  background-color: white !important;
+  color: rgb(var(--color-text)) !important;
+}
+
+select option {
+  background-color: white;
+  color: rgb(var(--color-text));
+}
+
+select option:hover,
+select option:checked {
+  background-color: rgb(var(--color-surface));
+}

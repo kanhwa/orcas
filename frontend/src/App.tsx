@@ -12,13 +12,17 @@ import Admin from "./pages/Admin";
 import Screening from "./pages/Screening";
 import MetricRanking from "./pages/MetricRanking";
 import Historical from "./pages/Historical";
-import { AppShell, NavItem } from "./components/layout/AppShell";
+import {
+  AppShell,
+  NavItem,
+  ProfileMenuItem,
+} from "./components/layout/AppShell";
 import { CatalogProvider, useCatalog } from "./contexts/CatalogContext";
 import { Button } from "./components/ui/Button";
 import { Card } from "./components/ui/Card";
 
 type Page =
-  | "dashboard"
+  | "home"
   | "simulation"
   | "compare"
   | "screening"
@@ -35,7 +39,7 @@ function AppContent() {
   const [user, setUser] = useState<User | null>(null);
   const [checking, setChecking] = useState(true);
   const [authView, setAuthView] = useState<"login" | "register">("login");
-  const [currentPage, setCurrentPage] = useState<Page>("dashboard");
+  const [currentPage, setCurrentPage] = useState<Page>("home");
 
   // Check existing session on mount
   useEffect(() => {
@@ -65,7 +69,7 @@ function AppContent() {
       // Ignore logout errors
     }
     setUser(null);
-    setCurrentPage("dashboard");
+    setCurrentPage("home");
     setAuthView("login");
   };
 
@@ -73,100 +77,161 @@ function AppContent() {
     setUser(updated);
   };
 
-  const pageTitleMap: Record<Page, string> = {
-    dashboard: "Dashboard",
-    screening: "Screening",
-    "metric-ranking": "Metric Ranking",
-    historical: "Historical",
-    scoring: "Scoring",
-    templates: "Templates",
-    compare: "Compare",
-    simulation: "Simulation",
-    reports: "Reports (Export)",
-    profile: "Profile",
-    admin: "Admin",
+  // Page configuration
+  const pageConfig: Record<Page, { title: string; subtitle?: string }> = {
+    home: {
+      title: "Home",
+      subtitle: "Overview harga saham dan ranking emiten",
+    },
+    screening: {
+      title: "Screening",
+      subtitle: "Filter saham berdasarkan kriteria metrik",
+    },
+    "metric-ranking": {
+      title: "Metric Ranking",
+      subtitle: "Top emiten per metrik keuangan",
+    },
+    historical: {
+      title: "Historical",
+      subtitle: "Bandingkan performa emiten antar periode",
+    },
+    scoring: {
+      title: "Scoring",
+      subtitle: "Kalkulasi skor WSM",
+    },
+    templates: {
+      title: "My Templates",
+      subtitle: "Kelola template scoring Anda",
+    },
+    compare: {
+      title: "Compare",
+      subtitle: "Bandingkan skor WSM beberapa ticker",
+    },
+    simulation: {
+      title: "Simulation",
+      subtitle: "Skenario what-if untuk analisis",
+    },
+    reports: {
+      title: "Reports",
+      subtitle: "Lihat dan ekspor riwayat scoring",
+    },
+    profile: {
+      title: "Profile",
+      subtitle: "Kelola akun dan pengaturan",
+    },
+    admin: {
+      title: "Admin Panel",
+      subtitle: "Manajemen user dan sinkronisasi data",
+    },
   };
+
   const role = user?.role || "viewer";
   const isAdmin = role === "admin";
+
+  // Sidebar navigation - simplified, main features only
   const navItems: NavItem[] = [
     {
-      key: "dashboard",
-      label: "Dashboard",
-      onSelect: () => setCurrentPage("dashboard"),
-      active: currentPage === "dashboard",
-      description: "Overview and ranking tools",
+      key: "home",
+      label: "Home",
+      icon: "🏠",
+      onSelect: () => setCurrentPage("home"),
+      active: currentPage === "home",
+      description: "Beranda dengan harga realtime",
     },
     {
       key: "screening",
       label: "Screening",
+      icon: "🔍",
       onSelect: () => setCurrentPage("screening"),
       active: currentPage === "screening",
-      description: "Filter stocks by criteria",
+      description: "Filter saham dengan kriteria",
     },
     {
       key: "metric-ranking",
       label: "Metric Ranking",
+      icon: "📊",
       onSelect: () => setCurrentPage("metric-ranking"),
       active: currentPage === "metric-ranking",
-      description: "Top emitens per metric",
+      description: "Peringkat per metrik",
     },
     {
       key: "historical",
       label: "Historical",
+      icon: "📈",
       onSelect: () => setCurrentPage("historical"),
       active: currentPage === "historical",
-      description: "Compare emiten across years",
+      description: "Perbandingan historis",
     },
     {
       key: "compare",
       label: "Compare",
+      icon: "⚖️",
       onSelect: () => setCurrentPage("compare"),
       active: currentPage === "compare",
-      description: "Compare tickers across years",
+      description: "Bandingkan ticker",
     },
     {
       key: "simulation",
       label: "Simulation",
+      icon: "🧪",
       onSelect: () => setCurrentPage("simulation"),
       active: currentPage === "simulation",
-      description: "Scenario testing",
-    },
-    {
-      key: "templates",
-      label: "Templates",
-      onSelect: () => setCurrentPage("templates"),
-      active: currentPage === "templates",
-      description: "Manage scoring templates",
+      description: "Skenario what-if",
     },
     {
       key: "reports",
       label: "Reports",
+      icon: "📋",
       onSelect: () => setCurrentPage("reports"),
       active: currentPage === "reports",
-      description: "View & export scoring history",
+      description: "Ekspor dan riwayat",
     },
+  ];
+
+  // Profile dropdown menu items
+  const profileMenuItems: ProfileMenuItem[] = [
     {
       key: "profile",
-      label: "Profile",
-      onSelect: () => setCurrentPage("profile"),
-      active: currentPage === "profile",
-      description: "Manage account",
+      label: "My Profile",
+      icon: "👤",
+      onClick: () => setCurrentPage("profile"),
+    },
+    {
+      key: "templates",
+      label: "My Templates",
+      icon: "📝",
+      onClick: () => setCurrentPage("templates"),
     },
     ...(isAdmin
       ? [
           {
-            key: "admin" as const,
-            label: "Admin",
-            onSelect: () => setCurrentPage("admin"),
-            active: currentPage === "admin",
-            description: "User management (placeholder)",
+            key: "admin",
+            label: "User Management",
+            icon: "👥",
+            onClick: () => setCurrentPage("admin"),
+          },
+          {
+            key: "sync",
+            label: "Sync Data",
+            icon: "🔄",
+            onClick: () => {
+              // TODO: Implement sync data from Google Drive
+              alert("Sync Data: Coming soon - will sync from Google Drive");
+            },
           },
         ]
       : []),
+    {
+      key: "logout",
+      label: "Logout",
+      icon: "🚪",
+      onClick: handleLogout,
+      danger: true,
+    },
   ];
 
   const renderPage = () => {
-    if (currentPage === "dashboard" && user) {
+    if (currentPage === "home" && user) {
       return <Dashboard user={user} onLogout={handleLogout} />;
     }
     if (currentPage === "screening") {
@@ -201,7 +266,7 @@ function AppContent() {
       <div className="card">
         <div className="card-body">
           <h3 className="text-lg font-semibold text-[rgb(var(--color-text))]">
-            {pageTitleMap[currentPage]}
+            {pageConfig[currentPage].title}
           </h3>
           <p className="text-sm text-[rgb(var(--color-text-subtle))]">
             Feature coming soon.
@@ -256,11 +321,12 @@ function AppContent() {
 
   return (
     <AppShell
-      pageTitle={pageTitleMap[currentPage]}
+      pageTitle={pageConfig[currentPage].title}
+      pageSubtitle={pageConfig[currentPage].subtitle}
       userDisplay={user.username}
+      userRole={user.role}
       navItems={navItems}
-      onLogout={handleLogout}
-      contextualInfo="Catalog-driven metrics and WCAG-compliant UI"
+      profileMenuItems={profileMenuItems}
     >
       {renderPage()}
     </AppShell>

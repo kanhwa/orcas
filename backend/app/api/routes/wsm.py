@@ -123,11 +123,11 @@ def compare(
 @router.get("/metrics-catalog", response_model=MetricsCatalog)
 def metrics_catalog(
     db: Session = Depends(get_db),
-    _current_user: User = Depends(get_current_user),
 ) -> MetricsCatalog:
     """
     Get catalog of available sections, metrics, modes, and missing policy options.
     Used to populate UI dropdowns dynamically.
+    PUBLIC endpoint - no auth required for UI initialization.
     """
     return get_metrics_catalog(db)
 

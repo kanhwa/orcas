@@ -153,7 +153,7 @@ export default function Dashboard({
               <InfoTip
                 content={
                   getModeOptions().find((m) => m.key === mode)?.description ||
-                  "Overall WSM uses default metric set; Section Ranking uses metrics from a chosen section."
+                  "Overall uses default metric set; Section Ranking uses metrics from a chosen section."
                 }
               />
             </label>

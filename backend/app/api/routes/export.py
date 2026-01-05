@@ -4,10 +4,10 @@ import csv
 import io
 import json
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any, List
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import Response, StreamingResponse
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
@@ -100,7 +100,7 @@ startxref
 @router.get("/scoring/{run_id}")
 def export_scoring_run(
     run_id: int,
-    format: str = Query(default="csv", description="Export format: csv, json, pdf"),
+    fmt: str = Query(default="csv", alias="format", description="Export format: csv, json, pdf"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> Response:
@@ -124,7 +124,7 @@ def export_scoring_run(
         .all()
     )
 
-    if format == "json":
+    if fmt == "json":
         data = {
             "run_id": run.id,
             "year": run.year,
@@ -143,7 +143,7 @@ def export_scoring_run(
     headers = ["Rank", "Ticker", "Score"]
     rows = [[item.rank, ticker, f"{float(item.score):.6f}"] for item, ticker in items]
 
-    if format == "pdf":
+    if fmt == "pdf":
         pdf_bytes = generate_simple_pdf(f"Scoring Run #{run_id} - Year {run.year}", headers, rows)
         return Response(
             content=pdf_bytes,
@@ -162,7 +162,7 @@ def export_scoring_run(
 
 @router.get("/scoring-runs")
 def export_all_scoring_runs(
-    format: str = Query(default="csv", description="Export format: csv, json"),
+    fmt: str = Query(default="csv", alias="format", description="Export format: csv, json"),
     year: int | None = Query(default=None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -175,7 +175,7 @@ def export_all_scoring_runs(
         query = query.filter(ScoringRun.year == year)
     runs = query.order_by(ScoringRun.created_at.desc()).all()
 
-    if format == "json":
+    if fmt == "json":
         data = [
             {
                 "id": r.id,

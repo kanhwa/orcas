@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.deps import get_current_user, get_db
-from app.models import Emiten, ScoringRun, ScoringRunItem, User
+from app.models import Emiten, ScoringRun, User
 from app.schemas.scoring_runs import (
     ScoringRunDetail,
     ScoringRunItemOut,

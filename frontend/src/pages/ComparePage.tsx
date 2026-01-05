@@ -301,8 +301,8 @@ export default function ComparePage() {
         }
       >
         <p className="mb-4 text-sm text-[rgb(var(--color-text-subtle))]">
-          Compare WSM scores for multiple tickers (max 4) across a year range.
-          All options are catalog-driven.
+          Compare scores for multiple tickers (max 4) across a year range. All
+          options are catalog-driven.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -359,7 +359,7 @@ export default function ComparePage() {
                 <InfoTip
                   content={
                     getModeOptions().find((m) => m.key === mode)?.description ||
-                    "Overall WSM uses default metrics; Section compares within a specific section."
+                    "Overall uses default metrics; Section compares within a specific section."
                   }
                 />
               </label>

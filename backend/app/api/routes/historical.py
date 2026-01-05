@@ -36,7 +36,6 @@ def historical_compare(
     metrics = db.query(MetricDefinition).order_by(
         MetricDefinition.section, MetricDefinition.metric_name
     ).all()
-    metric_map = {m.id: m for m in metrics}
     
     # Get financial data for both years
     data_year1 = (

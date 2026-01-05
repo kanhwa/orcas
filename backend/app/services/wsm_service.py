@@ -671,7 +671,7 @@ def get_metrics_catalog(db: Session) -> MetricsCatalog:
     modes = [
         ModeOption(
             key="overall",
-            label="Overall WSM",
+            label="Overall Score",
             description="Use default overall metrics (ROA, ROE, Operating Expense)."
         ),
         ModeOption(
