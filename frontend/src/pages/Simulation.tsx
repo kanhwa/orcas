@@ -4,21 +4,30 @@ import {
   SimulationRequest,
   SimulationResponse,
   MetricOverride,
-  MetricsCatalog,
 } from "../services/api";
 import InfoTip from "../components/InfoTip";
+import { useCatalog } from "../contexts/CatalogContext";
 
-interface SimulationProps {
-  catalog: MetricsCatalog | null;
-}
+const Simulation: React.FC = () => {
+  const {
+    getSectionMeta,
+    getModeOptions,
+    getMissingPolicyOptions,
+    getYearOptions,
+  } = useCatalog();
+  const {
+    getSectionMeta,
+    getModeOptions,
+    getMissingPolicyOptions,
+    getYearOptions,
+  } = useCatalog();
 
-interface OverrideRow {
-  id: number;
-  metric_name: string;
-  value: string;
-}
+  interface OverrideRow {
+    id: number;
+    metric_name: string;
+    value: string;
+  }
 
-const Simulation: React.FC<SimulationProps> = ({ catalog }) => {
   // Form state
   const [ticker, setTicker] = useState("");
   const [year, setYear] = useState(2024);
@@ -43,7 +52,7 @@ const Simulation: React.FC<SimulationProps> = ({ catalog }) => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const years = [2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015];
+  const years = getYearOptions();
 
   const addOverrideRow = () => {
     setOverrides([...overrides, { id: nextId, metric_name: "", value: "" }]);
@@ -120,10 +129,10 @@ const Simulation: React.FC<SimulationProps> = ({ catalog }) => {
   };
 
   const getDeltaColor = (delta?: number | null) => {
-    if (delta == null) return "gray";
-    if (delta > 0) return "green";
-    if (delta < 0) return "red";
-    return "gray";
+    if (delta == null) return "var(--text-subtle)";
+    if (delta > 0) return "#2f7a4a";
+    if (delta < 0) return "#b23c2f";
+    return "var(--text-subtle)";
   };
 
   // Get options from catalog or fallback to defaults
@@ -393,7 +402,7 @@ const Simulation: React.FC<SimulationProps> = ({ catalog }) => {
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    background: "#f5f7fa",
+    background: "var(--surface)",
   },
   main: {
     padding: "2rem",
@@ -401,18 +410,18 @@ const styles: Record<string, React.CSSProperties> = {
     margin: "0 auto",
   },
   card: {
-    background: "#fff",
+    background: "var(--card-bg)",
     borderRadius: "12px",
     padding: "2rem",
-    boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
+    boxShadow: "var(--card-shadow)",
   },
   cardTitle: {
     margin: "0 0 0.5rem",
     fontSize: "1.25rem",
-    color: "#1a1a2e",
+    color: "var(--accent-1)",
   },
   subtitle: {
-    color: "#666",
+    color: "var(--text-subtle)",
     marginBottom: "1.5rem",
   },
   controls: {
@@ -430,20 +439,20 @@ const styles: Record<string, React.CSSProperties> = {
   label: {
     fontSize: "0.8rem",
     fontWeight: 600,
-    color: "#666",
+    color: "var(--text-subtle)",
     display: "flex",
     alignItems: "center",
   },
   input: {
     padding: "0.6rem 0.75rem",
     fontSize: "0.9rem",
-    border: "1px solid #ddd",
+    border: "1px solid var(--border)",
     borderRadius: "6px",
   },
   select: {
     padding: "0.6rem 0.75rem",
     fontSize: "0.9rem",
-    border: "1px solid #ddd",
+    border: "1px solid var(--border)",
     borderRadius: "6px",
     background: "#fff",
     cursor: "pointer",
@@ -462,7 +471,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: "0.85rem",
     fontWeight: 600,
     color: "#fff",
-    background: "#28a745",
+    background: "var(--action)",
     border: "none",
     borderRadius: "6px",
     cursor: "pointer",
@@ -481,16 +490,16 @@ const styles: Record<string, React.CSSProperties> = {
     flex: 1,
     padding: "0.6rem 0.75rem",
     fontSize: "0.9rem",
-    border: "1px solid #ddd",
+    border: "1px solid var(--border)",
     borderRadius: "6px",
   },
   removeRowBtn: {
     width: "32px",
     height: "32px",
     fontSize: "1.25rem",
-    color: "#666",
+    color: "var(--text-subtle)",
     background: "transparent",
-    border: "1px solid #ddd",
+    border: "1px solid var(--border)",
     borderRadius: "6px",
     cursor: "pointer",
     display: "flex",
@@ -502,7 +511,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: "0.9rem",
     fontWeight: 600,
     color: "#fff",
-    background: "#2563eb",
+    background: "var(--action)",
     border: "none",
     borderRadius: "6px",
     cursor: "pointer",
@@ -510,23 +519,23 @@ const styles: Record<string, React.CSSProperties> = {
   error: {
     margin: "1rem 0",
     padding: "0.75rem 1rem",
-    background: "#fee",
-    color: "#c00",
+    background: "#fff6f6",
+    color: "#a83232",
     borderRadius: "6px",
     fontSize: "0.85rem",
   },
   resultsSection: {
     marginTop: "2rem",
     paddingTop: "1.5rem",
-    borderTop: "1px solid #e9ecef",
+    borderTop: "1px solid var(--border)",
   },
   resultsTitle: {
     margin: "0 0 0.5rem",
     fontSize: "1.1rem",
-    color: "#333",
+    color: "var(--accent-1)",
   },
   resultsSubtitle: {
-    color: "#666",
+    color: "var(--text-subtle)",
     fontSize: "0.9rem",
     marginBottom: "1.5rem",
   },
@@ -538,31 +547,31 @@ const styles: Record<string, React.CSSProperties> = {
   },
   scoreCard: {
     padding: "1rem",
-    background: "#f8f9fa",
+    background: "var(--table-header)",
     borderRadius: "8px",
     textAlign: "center",
   },
   scoreLabel: {
     fontSize: "0.8rem",
-    color: "#666",
+    color: "var(--text-subtle)",
     marginBottom: "0.5rem",
   },
   scoreValue: {
     fontSize: "1.5rem",
     fontWeight: 600,
-    color: "#1a1a2e",
+    color: "var(--accent-1)",
     fontFamily: "monospace",
   },
   appliedOverrides: {
     padding: "1rem",
-    background: "#f8f9fa",
+    background: "var(--table-header)",
     borderRadius: "8px",
     marginBottom: "1rem",
   },
   appliedOverridesTitle: {
     fontSize: "0.85rem",
     fontWeight: 600,
-    color: "#666",
+    color: "var(--text-subtle)",
     margin: "0 0 0.5rem",
   },
   appliedOverridesList: {
@@ -571,12 +580,12 @@ const styles: Record<string, React.CSSProperties> = {
   },
   appliedOverrideItem: {
     fontSize: "0.85rem",
-    color: "#333",
+    color: "var(--text-main)",
     marginBottom: "0.25rem",
   },
   resultMessage: {
     fontSize: "0.85rem",
-    color: "#666",
+    color: "var(--text-subtle)",
     fontStyle: "italic",
     margin: 0,
   },

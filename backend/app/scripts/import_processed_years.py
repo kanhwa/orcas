@@ -254,7 +254,7 @@ def main() -> int:
 
         return exit_code
 
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
         db.rollback()
         print(f"ERROR: {e}", file=sys.stderr)
         return 1

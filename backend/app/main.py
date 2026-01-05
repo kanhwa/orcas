@@ -5,7 +5,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.core.config import settings
 from app.db.database import ping_db
-from app.api.routes import auth, wsm, ranking
+from app.api.routes import activity, auth, emitens, ranking, scoring_runs, templates, wsm, years
 
 app = FastAPI(title="ORCAS API")
 
@@ -30,6 +30,11 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(wsm.router)
 app.include_router(ranking.router)
+app.include_router(emitens.router)
+app.include_router(activity.router)
+app.include_router(scoring_runs.router)
+app.include_router(templates.router)
+app.include_router(years.router)
 
 @app.get("/health")
 def health():
@@ -44,5 +49,5 @@ def redis_health():
     try:
         r = redis.Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, decode_responses=True)
         return {"redis": "ok" if r.ping() else "failed"}
-    except Exception:
+    except Exception:  # pylint: disable=broad-exception-caught
         return {"redis": "failed"}

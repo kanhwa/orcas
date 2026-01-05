@@ -6,12 +6,11 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.config import DISABLED_METRICS
-from app.models import Emiten, FinancialData, MetricDefinition
+from app.models import Comparison, Emiten, FinancialData, MetricDefinition, ScoringResult, SimulationLog
 from app.schemas.wsm import (
     CompareRequest,
     CompareResponse,
     MetricInfo,
-    MetricOverride,
     MetricsCatalog,
     MetricWeightInput,
     MissingPolicyOption,
@@ -96,7 +95,14 @@ def _fetch_financial_data(
     return rows
 
 
-def calculate_wsm_score(db: Session, payload: WSMScoreRequest) -> WSMScoreResponse:
+def _safe_commit(db: Session) -> None:
+    try:
+        db.commit()
+    except Exception:  # pylint: disable=broad-exception-caught
+        db.rollback()
+
+
+def calculate_wsm_score(db: Session, payload: WSMScoreRequest, user_id: int | None = None) -> WSMScoreResponse:
     if not payload.metrics:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -216,7 +222,24 @@ def calculate_wsm_score(db: Session, payload: WSMScoreRequest) -> WSMScoreRespon
             detail="No ranking could be computed for the provided parameters.",
         )
 
-    return WSMScoreResponse(year=payload.year, ranking=ranking)
+    response = WSMScoreResponse(year=payload.year, ranking=ranking)
+
+    if user_id is not None:
+        try:
+            db.add(
+                ScoringResult(
+                    user_id=user_id,
+                    template_id=None,
+                    year=payload.year,
+                    request=payload.model_dump(),
+                    ranking=response.model_dump(),
+                )
+            )
+            _safe_commit(db)
+        except Exception:  # pylint: disable=broad-exception-caught
+            db.rollback()
+
+    return response
 
 
 # =============================================================================
@@ -392,7 +415,7 @@ def _compute_single_ticker_score(
     return round(score, 6)
 
 
-def run_simulation(db: Session, payload: SimulationRequest) -> SimulationResponse:
+def run_simulation(db: Session, payload: SimulationRequest, user_id: int | None = None) -> SimulationResponse:
     """Run simulation with metric overrides for a single ticker."""
     # Validate section requirement
     if payload.mode == "section" and not payload.section:
@@ -473,7 +496,7 @@ def run_simulation(db: Session, payload: SimulationRequest) -> SimulationRespons
     elif ignored_overrides:
         message = f"Ignored overrides not in {payload.section or 'overall'} scope: {', '.join(ignored_overrides)}"
 
-    return SimulationResponse(
+    response = SimulationResponse(
         ticker=payload.ticker,
         year=payload.year,
         mode=payload.mode,
@@ -481,9 +504,24 @@ def run_simulation(db: Session, payload: SimulationRequest) -> SimulationRespons
         baseline_score=baseline_score,
         simulated_score=simulated_score,
         delta=delta,
-        applied_overrides=effective_overrides if effective_overrides else None,
+        applied_overrides=effective_overrides,
         message=message,
     )
+
+    if user_id is not None:
+        try:
+            db.add(
+                SimulationLog(
+                    user_id=user_id,
+                    request=payload.model_dump(),
+                    response=response.model_dump(),
+                )
+            )
+            _safe_commit(db)
+        except Exception:  # pylint: disable=broad-exception-caught
+            db.rollback()
+
+    return response
 
 
 # =============================================================================
@@ -491,7 +529,7 @@ def run_simulation(db: Session, payload: SimulationRequest) -> SimulationRespons
 # =============================================================================
 
 
-def run_compare(db: Session, payload: CompareRequest) -> CompareResponse:
+def run_compare(db: Session, payload: CompareRequest, user_id: int | None = None) -> CompareResponse:
     """Compare WSM scores for multiple tickers across a year range."""
     # Validate year range
     if payload.year_from > payload.year_to:
@@ -550,7 +588,22 @@ def run_compare(db: Session, payload: CompareRequest) -> CompareResponse:
                 missing_years.append(year)
         series.append(TickerSeries(ticker=ticker, scores=scores, missing_years=missing_years))
 
-    return CompareResponse(years=years, series=series)
+    response = CompareResponse(years=years, series=series)
+
+    if user_id is not None:
+        try:
+            db.add(
+                Comparison(
+                    user_id=user_id,
+                    request=payload.model_dump(),
+                    response=response.model_dump(),
+                )
+            )
+            _safe_commit(db)
+        except Exception:  # pylint: disable=broad-exception-caught
+            db.rollback()
+
+    return response
 
 
 def get_metrics_catalog(db: Session) -> MetricsCatalog:

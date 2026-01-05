@@ -1,11 +1,17 @@
 import { useState, FormEvent } from "react";
 import { authLogin, authMe, User } from "../services/api";
+import { Card } from "../components/ui/Card";
+import { Button } from "../components/ui/Button";
 
 interface LoginProps {
   onLoginSuccess: (user: User) => void;
+  onSwitchToRegister: () => void;
 }
 
-export default function Login({ onLoginSuccess }: LoginProps) {
+export default function Login({
+  onLoginSuccess,
+  onSwitchToRegister,
+}: LoginProps) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -29,119 +35,77 @@ export default function Login({ onLoginSuccess }: LoginProps) {
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <h1 style={styles.title}>🐋 ORCAS</h1>
-        <p style={styles.subtitle}>Bank Stock Ranking System</p>
+    <div className="flex min-h-screen items-center justify-center bg-[rgb(var(--color-surface))] p-4">
+      <div className="w-full max-w-md">
+        <Card
+          header={
+            <div className="text-xl font-semibold text-[rgb(var(--color-text))]">
+              Sign in to ORCAS
+            </div>
+          }
+        >
+          <p className="mb-4 text-sm text-[rgb(var(--color-text-subtle))]">
+            Session uses HttpOnly cookie set by FastAPI. Ensure backend is
+            running.
+          </p>
 
-        <form onSubmit={handleSubmit} style={styles.form}>
-          <div style={styles.inputGroup}>
-            <label style={styles.label}>Username</label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              style={styles.input}
-              placeholder="admin"
-              required
+          <form className="space-y-3" onSubmit={handleSubmit}>
+            <div className="space-y-1">
+              <label className="text-sm font-semibold text-[rgb(var(--color-text-muted))]">
+                Username
+              </label>
+              <input
+                className="w-full rounded-lg border border-[rgb(var(--color-border))] bg-white px-3 py-2 text-[rgb(var(--color-text))] focus:border-[rgb(var(--color-primary))] focus:outline-none"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="admin"
+                required
+                disabled={loading}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-sm font-semibold text-[rgb(var(--color-text-muted))]">
+                Password
+              </label>
+              <input
+                type="password"
+                className="w-full rounded-lg border border-[rgb(var(--color-border))] bg-white px-3 py-2 text-[rgb(var(--color-text))] focus:border-[rgb(var(--color-primary))] focus:outline-none"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+                disabled={loading}
+              />
+            </div>
+
+            {error && (
+              <p
+                className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700"
+                role="alert"
+              >
+                {error}
+              </p>
+            )}
+
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Loading..." : "Login"}
+            </Button>
+          </form>
+
+          <div className="mt-4 flex items-center justify-between text-sm text-[rgb(var(--color-text-subtle))]">
+            <span>Don&apos;t have an account?</span>
+            <button
+              type="button"
+              className="font-semibold text-[rgb(var(--color-primary))] hover:underline"
+              onClick={onSwitchToRegister}
               disabled={loading}
-            />
+            >
+              Register
+            </button>
           </div>
-
-          <div style={styles.inputGroup}>
-            <label style={styles.label}>Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              style={styles.input}
-              placeholder="••••••••"
-              required
-              disabled={loading}
-            />
-          </div>
-
-          {error && <p style={styles.error}>{error}</p>}
-
-          <button type="submit" style={styles.button} disabled={loading}>
-            {loading ? "Loading..." : "Login"}
-          </button>
-        </form>
+        </Card>
       </div>
     </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  container: {
-    minHeight: "100vh",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)",
-    padding: "1rem",
-  },
-  card: {
-    background: "#fff",
-    borderRadius: "12px",
-    padding: "2.5rem",
-    width: "100%",
-    maxWidth: "400px",
-    boxShadow: "0 10px 40px rgba(0,0,0,0.2)",
-  },
-  title: {
-    margin: 0,
-    fontSize: "2rem",
-    textAlign: "center",
-    color: "#1a1a2e",
-  },
-  subtitle: {
-    margin: "0.5rem 0 2rem",
-    textAlign: "center",
-    color: "#666",
-    fontSize: "0.9rem",
-  },
-  form: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "1rem",
-  },
-  inputGroup: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "0.25rem",
-  },
-  label: {
-    fontSize: "0.85rem",
-    fontWeight: 600,
-    color: "#333",
-  },
-  input: {
-    padding: "0.75rem 1rem",
-    fontSize: "1rem",
-    border: "1px solid #ddd",
-    borderRadius: "8px",
-    outline: "none",
-    transition: "border-color 0.2s",
-  },
-  button: {
-    marginTop: "0.5rem",
-    padding: "0.875rem",
-    fontSize: "1rem",
-    fontWeight: 600,
-    color: "#fff",
-    background: "#1a1a2e",
-    border: "none",
-    borderRadius: "8px",
-    cursor: "pointer",
-    transition: "background 0.2s",
-  },
-  error: {
-    margin: 0,
-    padding: "0.75rem",
-    background: "#fee",
-    color: "#c00",
-    borderRadius: "6px",
-    fontSize: "0.85rem",
-  },
-};

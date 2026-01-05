@@ -22,6 +22,23 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface RegisterRequest {
+  username: string;
+  password: string;
+  full_name?: string | null;
+  company?: string | null;
+}
+
+export interface UpdateProfileRequest {
+  full_name?: string | null;
+  company?: string | null;
+}
+
+export interface ChangePasswordRequest {
+  current_password: string;
+  new_password: string;
+}
+
 export interface MetricWeightInput {
   metric_name: string;
   type: "benefit" | "cost";
@@ -120,6 +137,31 @@ export async function authMe(): Promise<User> {
 export async function authLogout(): Promise<{ detail: string }> {
   return request<{ detail: string }>("/api/auth/logout", {
     method: "POST",
+  });
+}
+
+export async function authRegister(payload: RegisterRequest): Promise<User> {
+  return request<User>("/api/auth/register", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateProfile(
+  payload: UpdateProfileRequest
+): Promise<User> {
+  return request<User>("/api/auth/profile", {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function changePassword(
+  payload: ChangePasswordRequest
+): Promise<{ detail: string }> {
+  return request<{ detail: string }>("/api/auth/change-password", {
+    method: "POST",
+    body: JSON.stringify(payload),
   });
 }
 

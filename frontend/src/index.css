@@ -1,26 +1,134 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-bg: 255 255 255;
+  --color-surface: 246 247 244;
+  --color-card: 255 255 255;
+  --color-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  --color-text: 31 31 31;
+  --color-text-muted: 74 74 74;
+  --color-text-subtle: 122 122 122;
+  --color-primary: 37 52 42;
+  --color-secondary: 127 82 53;
+  --color-action: 120 127 86;
+  --color-border: 226 230 227;
+  --color-table-header: 242 244 240;
+}
+
 * {
   box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
-    Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background: rgb(var(--color-bg));
+  color: rgb(var(--color-text));
 }
 
-button:hover:not(:disabled) {
-  opacity: 0.9;
+a {
+  color: rgb(var(--color-primary));
 }
 
-button:disabled {
+button,
+[role="button"] {
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+button:hover:not(:disabled),
+[role="button"]:hover:not(:disabled) {
+  opacity: 0.92;
+}
+
+button:disabled,
+[role="button"]:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
 input:focus,
-select:focus {
-  border-color: #2563eb;
-  outline: none;
+select:focus,
+textarea:focus {
+  border-color: rgb(var(--color-primary));
+  outline: 2px solid rgba(37, 52, 42, 0.2);
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  .text-main {
+    color: rgb(var(--color-text));
+  }
+
+  .text-muted {
+    color: rgb(var(--color-text-muted));
+  }
+
+  .text-subtle {
+    color: rgb(var(--color-text-subtle));
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-xl shadow-sm bg-white border border-[rgb(var(--color-border))];
+  }
+
+  .card-body {
+    @apply p-6; /* consistent padding */
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2;
+  }
+
+  .btn-primary {
+    @apply bg-[rgb(var(--color-primary))] text-white hover:bg-[rgb(var(--color-primary))]/90 focus-visible:ring-[rgb(var(--color-primary))] focus-visible:ring-offset-2;
+  }
+
+  .btn-secondary {
+    @apply bg-[rgb(var(--color-action))] text-white hover:bg-[rgb(var(--color-action))]/90 focus-visible:ring-[rgb(var(--color-action))];
+  }
+
+  .btn-ghost {
+    @apply text-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-surface))];
+  }
+
+  .badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-[rgb(var(--color-surface))] text-[rgb(var(--color-primary))];
+  }
+
+  .table-shell {
+    @apply w-full border border-[rgb(var(--color-border))] rounded-lg overflow-hidden;
+  }
+
+  .table-shell table {
+    @apply w-full text-sm;
+  }
+
+  .table-shell thead {
+    background: rgb(var(--color-table-header));
+  }
+
+  .table-shell th,
+  .table-shell td {
+    @apply px-4 py-2 text-left border-b border-[rgb(var(--color-border))];
+  }
+
+  .table-shell tr:nth-child(even) td {
+    background: rgb(var(--color-surface));
+  }
 }

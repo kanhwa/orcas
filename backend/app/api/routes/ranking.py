@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from typing import List, Set
+# pylint: disable=not-callable
+
+from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func
@@ -23,7 +25,7 @@ MIN_COVERAGE_RATIO = 0.70  # 70% minimum coverage
 def section_ranking(
     payload: SectionRankingRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    _current_user: User = Depends(get_current_user),
 ) -> SectionRankingResponse:
     if payload.section not in ALLOWED_SECTIONS:
         raise HTTPException(
@@ -45,7 +47,7 @@ def section_ranking(
         )
 
     # Get total emiten count for coverage calculation
-    total_emitens = db.query(func.count(Emiten.id)).scalar() or 0
+    total_emitens = db.query(func.count(1)).select_from(Emiten).scalar() or 0
     if total_emitens == 0:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -57,7 +59,7 @@ def section_ranking(
     coverage_query = (
         db.query(
             FinancialData.metric_id,
-            func.count(func.distinct(FinancialData.emiten_id)).label("covered"),
+            func.count(func.distinct(FinancialData.emiten_id)).label("covered"),  # type: ignore
         )
         .filter(FinancialData.year == payload.year)
         .filter(FinancialData.metric_id.in_(metric_ids))

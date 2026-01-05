@@ -1,11 +1,11 @@
 # backend/app/models/models.py
+# pylint: disable=not-callable
 import enum
 from sqlalchemy import (
     Column, Integer, String, Text, DateTime, ForeignKey,
-    Numeric, UniqueConstraint, Enum
+    Numeric, UniqueConstraint, Enum, func
 )
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 
 from app.db.base import Base
@@ -130,3 +130,66 @@ class ImportHistory(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     user = relationship("User", back_populates="import_history")
+
+
+class ScoringResult(Base):
+    __tablename__ = "scoring_results"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    template_id = Column(Integer, ForeignKey("scoring_templates.id", ondelete="SET NULL"), nullable=True)
+    year = Column(Integer, nullable=False)
+    request = Column(JSONB, nullable=False)
+    ranking = Column(JSONB, nullable=False)
+    calculated_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class Comparison(Base):
+    __tablename__ = "comparisons"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    request = Column(JSONB, nullable=False)
+    response = Column(JSONB, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class SimulationLog(Base):
+    __tablename__ = "simulation_logs"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    request = Column(JSONB, nullable=False)
+    response = Column(JSONB, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class ScoringRun(Base):
+    __tablename__ = "scoring_runs"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    template_id = Column(Integer, ForeignKey("scoring_templates.id", ondelete="SET NULL"), nullable=True)
+    year = Column(Integer, nullable=False)
+    request = Column(JSONB, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    items = relationship("ScoringRunItem", back_populates="run", cascade="all, delete-orphan")
+
+
+class ScoringRunItem(Base):
+    __tablename__ = "scoring_run_items"
+
+    id = Column(Integer, primary_key=True)
+    run_id = Column(Integer, ForeignKey("scoring_runs.id", ondelete="CASCADE"), nullable=False)
+    emiten_id = Column(Integer, ForeignKey("emitens.id", ondelete="CASCADE"), nullable=False)
+    score = Column(Numeric(12, 6), nullable=False)
+    rank = Column(Integer, nullable=False)
+    breakdown = Column(JSONB, nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint("run_id", "emiten_id", name="uq_scoring_run_emiten"),
+        UniqueConstraint("run_id", "rank", name="uq_scoring_run_rank"),
+    )
+
+    run = relationship("ScoringRun", back_populates="items")

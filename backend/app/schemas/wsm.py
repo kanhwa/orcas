@@ -12,6 +12,7 @@ class MetricWeightInput(BaseModel):
 
 
 class WSMScoreRequest(BaseModel):
+    template_id: Optional[int] = None
     year: int
     metrics: List[MetricWeightInput]
     tickers: Optional[List[str]] = None
