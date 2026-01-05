@@ -9,6 +9,9 @@ import Profile from "./pages/Profile";
 import Templates from "./pages/Templates";
 import Reports from "./pages/Reports";
 import Admin from "./pages/Admin";
+import Screening from "./pages/Screening";
+import MetricRanking from "./pages/MetricRanking";
+import Historical from "./pages/Historical";
 import { AppShell, NavItem } from "./components/layout/AppShell";
 import { CatalogProvider, useCatalog } from "./contexts/CatalogContext";
 import { Button } from "./components/ui/Button";
@@ -19,6 +22,8 @@ type Page =
   | "simulation"
   | "compare"
   | "screening"
+  | "metric-ranking"
+  | "historical"
   | "scoring"
   | "templates"
   | "reports"
@@ -71,6 +76,8 @@ function AppContent() {
   const pageTitleMap: Record<Page, string> = {
     dashboard: "Dashboard",
     screening: "Screening",
+    "metric-ranking": "Metric Ranking",
+    historical: "Historical",
     scoring: "Scoring",
     templates: "Templates",
     compare: "Compare",
@@ -88,6 +95,27 @@ function AppContent() {
       onSelect: () => setCurrentPage("dashboard"),
       active: currentPage === "dashboard",
       description: "Overview and ranking tools",
+    },
+    {
+      key: "screening",
+      label: "Screening",
+      onSelect: () => setCurrentPage("screening"),
+      active: currentPage === "screening",
+      description: "Filter stocks by criteria",
+    },
+    {
+      key: "metric-ranking",
+      label: "Metric Ranking",
+      onSelect: () => setCurrentPage("metric-ranking"),
+      active: currentPage === "metric-ranking",
+      description: "Top emitens per metric",
+    },
+    {
+      key: "historical",
+      label: "Historical",
+      onSelect: () => setCurrentPage("historical"),
+      active: currentPage === "historical",
+      description: "Compare emiten across years",
     },
     {
       key: "compare",
@@ -140,6 +168,15 @@ function AppContent() {
   const renderPage = () => {
     if (currentPage === "dashboard" && user) {
       return <Dashboard user={user} onLogout={handleLogout} />;
+    }
+    if (currentPage === "screening") {
+      return <Screening />;
+    }
+    if (currentPage === "metric-ranking") {
+      return <MetricRanking />;
+    }
+    if (currentPage === "historical") {
+      return <Historical />;
     }
     if (currentPage === "compare") {
       return <Compare />;

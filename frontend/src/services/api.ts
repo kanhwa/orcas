@@ -564,3 +564,154 @@ export function getExportAllScoringRunsUrl(
   if (year) params.set("year", String(year));
   return `${BASE_URL}/api/export/scoring-runs?${params}`;
 }
+
+// =============================================================================
+// Screening API
+// =============================================================================
+
+export type FilterOperator = ">" | "<" | ">=" | "<=" | "=" | "between";
+
+export interface MetricFilter {
+  metric_name: string;
+  operator: FilterOperator;
+  value: number;
+  value_max?: number | null;
+}
+
+export interface ScreeningRequest {
+  year: number;
+  filters: MetricFilter[];
+}
+
+export interface ScreenedEmiten {
+  ticker: string;
+  name: string;
+  metrics: Record<string, string | number>;
+}
+
+export interface ScreeningResponse {
+  year: number;
+  filters_applied: number;
+  total_matched: number;
+  emitens: ScreenedEmiten[];
+}
+
+export async function screenEmitens(
+  payload: ScreeningRequest
+): Promise<ScreeningResponse> {
+  return request<ScreeningResponse>("/api/screening", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export interface ScreeningMetric {
+  id: number;
+  name: string;
+  section: string;
+  type: string;
+  description: string;
+}
+
+export async function getScreeningMetrics(): Promise<ScreeningMetric[]> {
+  return request<ScreeningMetric[]>("/api/screening/metrics", {
+    method: "GET",
+  });
+}
+
+// =============================================================================
+// Metric Ranking API
+// =============================================================================
+
+export interface MetricRankingRequest {
+  metric_name: string;
+  year_from: number;
+  year_to: number;
+  top_n?: number;
+}
+
+export interface RankingItem {
+  ticker: string;
+  name: string;
+  value: number | null;
+  rank: number;
+}
+
+export interface YearlyRanking {
+  year: number;
+  rankings: RankingItem[];
+}
+
+export interface MetricRankingResponse {
+  metric_name: string;
+  metric_type: string;
+  years: number[];
+  yearly_rankings: YearlyRanking[];
+}
+
+export async function getMetricRanking(
+  payload: MetricRankingRequest
+): Promise<MetricRankingResponse> {
+  return request<MetricRankingResponse>("/api/metric-ranking", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export interface AvailableMetric {
+  name: string;
+  section: string;
+  type: string;
+  description: string;
+}
+
+export async function getAvailableMetrics(): Promise<AvailableMetric[]> {
+  return request<AvailableMetric[]>("/api/metric-ranking/available-metrics", {
+    method: "GET",
+  });
+}
+
+// =============================================================================
+// Historical Comparison API
+// =============================================================================
+
+export interface HistoricalCompareRequest {
+  ticker: string;
+  year1: number;
+  year2: number;
+}
+
+export interface MetricComparison {
+  metric_name: string;
+  section: string;
+  metric_type: string;
+  value_year1: number | null;
+  value_year2: number | null;
+  delta: number | null;
+  pct_change: number | null;
+  trend: "up" | "down" | "stable" | "n/a";
+  is_significant: boolean;
+}
+
+export interface HistoricalCompareResponse {
+  ticker: string;
+  name: string;
+  year1: number;
+  year2: number;
+  metrics: MetricComparison[];
+  summary: {
+    improved: number;
+    declined: number;
+    stable: number;
+    na: number;
+  };
+}
+
+export async function historicalCompare(
+  payload: HistoricalCompareRequest
+): Promise<HistoricalCompareResponse> {
+  return request<HistoricalCompareResponse>("/api/historical/compare", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
