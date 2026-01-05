@@ -1,0 +1,41 @@
+id,section,metric_name,type,default_weight
+15,cashflow,Arus Kas Dari Aktivitas Investasi,benefit,0.1
+16,cashflow,Arus Kas Dari Aktivitas Operasi,benefit,0.1
+17,cashflow,Arus Kas Dari Aktivitas Pendanaan,cost,0.1
+18,cashflow,Capital expenditure,benefit,0.1
+19,cashflow,Free cash flow,benefit,0.1
+20,cashflow,Free cash flow per share,benefit,0.1
+21,cashflow,Kas Dan Setara Kas Akhir Periode,benefit,0.1
+22,cashflow,Kas Dan Setara Kas Awal Periode,benefit,0.1
+23,cashflow,Kenaikan (Penurunan) Bersih Kas dan Setara Kas,benefit,0.1
+24,cashflow,Operating Cash Flow,benefit,0.1
+1,balance,Aset Tetap,benefit,0.07
+2,balance,Asset Turnover,benefit,0.07
+3,balance,Book Value Per Share (BVPS),benefit,0.07
+4,balance,Giro Pada Bank Indonesia,benefit,0.07
+5,balance,Kas Dan Setara Kas,benefit,0.07
+6,balance,Penempatan Pada Bank Indonesia,benefit,0.07
+7,balance,Pinjaman Yang Diberikan,benefit,0.07
+8,balance,Pinjaman yang Diterima,benefit,0.07
+9,balance,Price to Book Value (PBV),benefit,0.07
+10,balance,Simpanan Nasabah,benefit,0.07
+11,balance,Tangible Book Value Per Share,benefit,0.07
+12,balance,Total Aset,benefit,0.07
+13,balance,Total Ekuitas,benefit,0.07
+14,balance,Total Liabilitas,benefit,0.07
+25,income,Beban Pajak Penghasilan,cost,0.06
+26,income,Beban Usaha,cost,0.06
+27,income,Earnings per Share (EPS),benefit,0.06
+28,income,Jumlah Laba Komprehensif,benefit,0.06
+29,income,Laba Bersih Tahun Berjalan,benefit,0.06
+30,income,Laba Kotor,benefit,0.06
+31,income,Laba Sebelum Pajak,benefit,0.06
+32,income,Laba Usaha,benefit,0.06
+33,income,Pendapatan/Beban Lain-lain,benefit,0.06
+34,income,Price to Earnings Ratio (PER),cost,0.06
+35,income,Price to Sales (P/S),cost,0.06
+36,income,Return on Assets (ROA),benefit,0.06
+37,income,Return on Equity (ROE),benefit,0.06
+38,income,Saham Beredar (Share Outstanding),benefit,0.06
+39,income,Total Beban Pokok Penjualan,cost,0.06
+40,income,Total Pendapatan,benefit,0.06
