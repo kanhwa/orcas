@@ -8,6 +8,7 @@ import Simulation from "./pages/Simulation";
 import Profile from "./pages/Profile";
 import Templates from "./pages/Templates";
 import Reports from "./pages/Reports";
+import Admin from "./pages/Admin";
 import { AppShell, NavItem } from "./components/layout/AppShell";
 import { CatalogProvider, useCatalog } from "./contexts/CatalogContext";
 import { Button } from "./components/ui/Button";
@@ -155,19 +156,8 @@ function AppContent() {
     if (currentPage === "profile" && user) {
       return <Profile user={user} onUserUpdate={handleUserUpdate} />;
     }
-    if (currentPage === "admin" && isAdmin) {
-      return (
-        <div className="card">
-          <div className="card-body">
-            <h3 className="text-lg font-semibold text-[rgb(var(--color-text))]">
-              Admin
-            </h3>
-            <p className="text-sm text-[rgb(var(--color-text-subtle))]">
-              Placeholder for user management (requires backend support).
-            </p>
-          </div>
-        </div>
-      );
+    if (currentPage === "admin" && isAdmin && user) {
+      return <Admin user={user} />;
     }
     // Placeholder content for sections that are not yet implemented
     return (

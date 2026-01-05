@@ -9,10 +9,7 @@ import InfoTip from "../components/InfoTip";
 import { useCatalog } from "../contexts/CatalogContext";
 
 const Simulation: React.FC = () => {
-  const {
-    getYearOptions,
-    catalog,
-  } = useCatalog();
+  const { getYearOptions, catalog } = useCatalog();
 
   interface OverrideRow {
     id: number;
