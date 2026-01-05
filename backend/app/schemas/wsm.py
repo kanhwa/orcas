@@ -40,3 +40,95 @@ class WSMRankingItem(BaseModel):
 class WSMScoreResponse(BaseModel):
     year: int
     ranking: List[WSMRankingItem]
+
+
+# =============================================================================
+# Simulation
+# =============================================================================
+
+
+class MetricOverride(BaseModel):
+    metric_name: str
+    value: float
+
+
+class SimulationRequest(BaseModel):
+    ticker: str
+    year: int
+    mode: Literal["overall", "section"]
+    section: Optional[Literal["income", "balance", "cashflow"]] = None
+    overrides: List[MetricOverride] = Field(default_factory=list)
+    missing_policy: Literal["redistribute", "zero", "drop"] = "zero"
+
+
+class SimulationResponse(BaseModel):
+    ticker: str
+    year: int
+    mode: str
+    section: Optional[str] = None
+    baseline_score: Optional[float] = None
+    simulated_score: Optional[float] = None
+    delta: Optional[float] = None
+    applied_overrides: List[MetricOverride] = Field(default_factory=list)
+    message: Optional[str] = None
+
+
+# =============================================================================
+# Compare
+# =============================================================================
+
+
+class CompareRequest(BaseModel):
+    tickers: List[str] = Field(..., min_length=1, max_length=4)
+    year_from: int = Field(..., ge=2010, le=2030)
+    year_to: int = Field(..., ge=2010, le=2030)
+    mode: Literal["overall", "section"]
+    section: Optional[Literal["income", "balance", "cashflow"]] = None
+    missing_policy: Literal["redistribute", "zero", "drop"] = "zero"
+
+
+class TickerSeries(BaseModel):
+    ticker: str
+    scores: List[Optional[float]]
+    missing_years: List[int] = Field(default_factory=list)
+
+
+class CompareResponse(BaseModel):
+    years: List[int]
+    series: List[TickerSeries]
+
+
+# =============================================================================
+# Metrics Catalog
+# =============================================================================
+
+
+class MetricInfo(BaseModel):
+    key: str
+    label: str
+    description: str = ""
+
+
+class SectionInfo(BaseModel):
+    key: str
+    label: str
+    description: str = ""
+    metrics: List[MetricInfo] = Field(default_factory=list)
+
+
+class MissingPolicyOption(BaseModel):
+    key: str
+    label: str
+    description: str = ""
+
+
+class ModeOption(BaseModel):
+    key: str
+    label: str
+    description: str = ""
+
+
+class MetricsCatalog(BaseModel):
+    sections: List[SectionInfo]
+    missing_policy_options: List[MissingPolicyOption]
+    modes: List[ModeOption]

@@ -50,6 +50,7 @@ export interface SectionRankingRequest {
   section: "cashflow" | "balance" | "income";
   year: number;
   limit?: number | null;
+  missing_policy?: "redistribute" | "zero" | "drop";
 }
 
 export interface SectionRankingResponse {
@@ -141,5 +142,118 @@ export async function sectionRanking(
   return request<SectionRankingResponse>("/api/wsm/section-ranking", {
     method: "POST",
     body: JSON.stringify(payload),
+  });
+}
+
+// =============================================================================
+// Simulation API
+// =============================================================================
+
+export interface MetricOverride {
+  metric_name: string;
+  value: number;
+}
+
+export interface SimulationRequest {
+  ticker: string;
+  year: number;
+  mode: "overall" | "section";
+  section?: "cashflow" | "balance" | "income" | null;
+  overrides: MetricOverride[];
+  missing_policy?: "redistribute" | "zero" | "drop";
+}
+
+export interface SimulationResponse {
+  ticker: string;
+  year: number;
+  mode: string;
+  section?: string | null;
+  baseline_score?: number | null;
+  simulated_score?: number | null;
+  delta?: number | null;
+  applied_overrides?: MetricOverride[] | null;
+  message?: string | null;
+}
+
+export async function simulate(
+  payload: SimulationRequest
+): Promise<SimulationResponse> {
+  return request<SimulationResponse>("/api/wsm/simulate", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+// =============================================================================
+// Compare API
+// =============================================================================
+
+export interface CompareRequest {
+  tickers: string[];
+  year_from: number;
+  year_to: number;
+  mode: "overall" | "section";
+  section?: "income" | "balance" | "cashflow" | null;
+  missing_policy?: "redistribute" | "zero" | "drop";
+}
+
+export interface TickerSeries {
+  ticker: string;
+  scores: (number | null)[];
+  missing_years: number[];
+}
+
+export interface CompareResponse {
+  years: number[];
+  series: TickerSeries[];
+}
+
+export async function compare(
+  payload: CompareRequest
+): Promise<CompareResponse> {
+  return request<CompareResponse>("/api/wsm/compare", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+// =============================================================================
+// Metrics Catalog API
+// =============================================================================
+
+export interface MetricInfo {
+  key: string;
+  label: string;
+  description: string;
+}
+
+export interface SectionInfo {
+  key: string;
+  label: string;
+  description: string;
+  metrics: MetricInfo[];
+}
+
+export interface MissingPolicyOption {
+  key: string;
+  label: string;
+  description: string;
+}
+
+export interface ModeOption {
+  key: string;
+  label: string;
+  description: string;
+}
+
+export interface MetricsCatalog {
+  sections: SectionInfo[];
+  missing_policy_options: MissingPolicyOption[];
+  modes: ModeOption[];
+}
+
+export async function getMetricsCatalog(): Promise<MetricsCatalog> {
+  return request<MetricsCatalog>("/api/wsm/metrics-catalog", {
+    method: "GET",
   });
 }

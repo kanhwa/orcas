@@ -6,9 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db
+from app.api.deps import get_current_user, get_db
 from app.core.config import DISABLED_METRICS
-from app.models import Emiten, FinancialData, MetricDefinition
+from app.models import Emiten, FinancialData, MetricDefinition, User
 from app.schemas.ranking import SectionRankingRequest, SectionRankingResponse
 from app.schemas.wsm import MetricWeightInput, WSMScoreRequest
 from app.services.wsm_service import calculate_wsm_score
@@ -20,7 +20,11 @@ MIN_COVERAGE_RATIO = 0.70  # 70% minimum coverage
 
 
 @router.post("/section-ranking", response_model=SectionRankingResponse)
-def section_ranking(payload: SectionRankingRequest, db: Session = Depends(get_db)) -> SectionRankingResponse:
+def section_ranking(
+    payload: SectionRankingRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> SectionRankingResponse:
     if payload.section not in ALLOWED_SECTIONS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

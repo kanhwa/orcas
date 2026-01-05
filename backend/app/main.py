@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 import redis
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -7,6 +8,15 @@ from app.db.database import ping_db
 from app.api.routes import auth, wsm, ranking
 
 app = FastAPI(title="ORCAS API")
+
+# CORS middleware for frontend dev
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Session middleware for cookie-based auth
 app.add_middleware(
