@@ -2,15 +2,21 @@ import type { ReactNode } from "react";
 import { cn } from "../../utils/cn";
 import { Button } from "./Button";
 
-interface ModalProps {
+export interface ModalProps {
   title: string;
-  open: boolean;
+  open?: boolean;
   onClose: () => void;
   children: ReactNode;
   footer?: ReactNode;
 }
 
-export function Modal({ title, open, onClose, children, footer }: ModalProps) {
+export function Modal({
+  title,
+  open = true,
+  onClose,
+  children,
+  footer,
+}: ModalProps) {
   if (!open) return null;
 
   return (

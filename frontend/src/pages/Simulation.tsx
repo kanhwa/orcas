@@ -10,16 +10,8 @@ import { useCatalog } from "../contexts/CatalogContext";
 
 const Simulation: React.FC = () => {
   const {
-    getSectionMeta,
-    getModeOptions,
-    getMissingPolicyOptions,
     getYearOptions,
-  } = useCatalog();
-  const {
-    getSectionMeta,
-    getModeOptions,
-    getMissingPolicyOptions,
-    getYearOptions,
+    catalog,
   } = useCatalog();
 
   interface OverrideRow {

@@ -6,6 +6,8 @@ import Dashboard from "./pages/Dashboard";
 import Compare from "./pages/ComparePage";
 import Simulation from "./pages/Simulation";
 import Profile from "./pages/Profile";
+import Templates from "./pages/Templates";
+import Reports from "./pages/Reports";
 import { AppShell, NavItem } from "./components/layout/AppShell";
 import { CatalogProvider, useCatalog } from "./contexts/CatalogContext";
 import { Button } from "./components/ui/Button";
@@ -105,8 +107,14 @@ function AppContent() {
       label: "Templates",
       onSelect: () => setCurrentPage("templates"),
       active: currentPage === "templates",
-      disabled: true,
-      description: "Coming soon (read-only for viewer)",
+      description: "Manage scoring templates",
+    },
+    {
+      key: "reports",
+      label: "Reports",
+      onSelect: () => setCurrentPage("reports"),
+      active: currentPage === "reports",
+      description: "View & export scoring history",
     },
     {
       key: "profile",
@@ -137,6 +145,12 @@ function AppContent() {
     }
     if (currentPage === "simulation") {
       return <Simulation />;
+    }
+    if (currentPage === "templates" && user) {
+      return <Templates user={user} />;
+    }
+    if (currentPage === "reports" && user) {
+      return <Reports user={user} />;
     }
     if (currentPage === "profile" && user) {
       return <Profile user={user} onUserUpdate={handleUserUpdate} />;
