@@ -5,11 +5,10 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
 from app.core.security import hash_password, verify_password
-from app.models import User, UserRole, UserStatus
+from app.models import User, UserStatus
 from app.schemas.auth import (
     ChangePasswordRequest,
     LoginRequest,
-    RegisterRequest,
     UpdateProfileRequest,
     UserMeResponse,
 )
@@ -17,35 +16,16 @@ from app.schemas.auth import (
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
-@router.post("/register", response_model=UserMeResponse, status_code=status.HTTP_201_CREATED)
-def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> UserMeResponse:
-    """
-    Register a new user account.
-    New users get 'user' role by default.
-    """
-    # Check if username already exists
-    existing = db.query(User).filter(User.username == payload.username).first()
-    if existing:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Username sudah digunakan.",
-        )
-
-    user = User(
-        username=payload.username,
-        password_hash=hash_password(payload.password),
-        full_name=payload.full_name,
-        role=UserRole.user,
-        status=UserStatus.active,
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-
+def user_to_response(user: User) -> UserMeResponse:
+    """Convert User model to UserMeResponse."""
     return UserMeResponse(
         id=user.id,
         username=user.username,
-        full_name=user.full_name,
+        email=user.email,
+        first_name=user.first_name,
+        middle_name=user.middle_name,
+        last_name=user.last_name,
+        full_name=user.computed_full_name,
         role=user.role.value,
         status=user.status.value,
     )
@@ -73,13 +53,7 @@ def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)
     # Set session
     request.session["user_id"] = user.id
 
-    return UserMeResponse(
-        id=user.id,
-        username=user.username,
-        full_name=user.full_name,
-        role=user.role.value,
-        status=user.status.value,
-    )
+    return user_to_response(user)
 
 
 @router.get("/me", response_model=UserMeResponse)
@@ -87,13 +61,7 @@ def get_me(current_user: User = Depends(get_current_user)) -> UserMeResponse:
     """
     Get current authenticated user info from session.
     """
-    return UserMeResponse(
-        id=current_user.id,
-        username=current_user.username,
-        full_name=current_user.full_name,
-        role=current_user.role.value,
-        status=current_user.status.value,
-    )
+    return user_to_response(current_user)
 
 
 @router.post("/logout")
@@ -112,21 +80,25 @@ def update_profile(
     current_user: User = Depends(get_current_user),
 ) -> UserMeResponse:
     """
-    Update current user's profile (full_name).
+    Update current user's profile (name fields, email).
     """
-    if payload.full_name is not None:
-        current_user.full_name = payload.full_name
+    if payload.first_name is not None:
+        current_user.first_name = payload.first_name
+    if payload.middle_name is not None:
+        current_user.middle_name = payload.middle_name if payload.middle_name else None
+    if payload.last_name is not None:
+        current_user.last_name = payload.last_name
+    if payload.email is not None:
+        current_user.email = payload.email if payload.email else None
+    
+    # Update computed full_name
+    parts = [current_user.first_name, current_user.middle_name, current_user.last_name]
+    current_user.full_name = " ".join(p for p in parts if p) or current_user.username
 
     db.commit()
     db.refresh(current_user)
 
-    return UserMeResponse(
-        id=current_user.id,
-        username=current_user.username,
-        full_name=current_user.full_name,
-        role=current_user.role.value,
-        status=current_user.status.value,
-    )
+    return user_to_response(current_user)
 
 
 @router.post("/change-password")

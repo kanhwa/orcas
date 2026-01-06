@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { authMe, authLogout, User } from "./services/api";
 import Login from "./pages/Login";
-import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Compare from "./pages/ComparePage";
 import Simulation from "./pages/Simulation";
@@ -9,6 +8,7 @@ import Profile from "./pages/Profile";
 import Templates from "./pages/Templates";
 import Reports from "./pages/Reports";
 import Admin from "./pages/Admin";
+import SyncData from "./pages/SyncData";
 import Screening from "./pages/Screening";
 import MetricRanking from "./pages/MetricRanking";
 import Historical from "./pages/Historical";
@@ -32,13 +32,13 @@ type Page =
   | "templates"
   | "reports"
   | "profile"
-  | "admin";
+  | "admin"
+  | "sync-data";
 
 function AppContent() {
   const { loading: catalogLoading, error: catalogError, retry } = useCatalog();
   const [user, setUser] = useState<User | null>(null);
   const [checking, setChecking] = useState(true);
-  const [authView, setAuthView] = useState<"login" | "register">("login");
   const [currentPage, setCurrentPage] = useState<Page>("home");
 
   // Check existing session on mount
@@ -59,7 +59,6 @@ function AppContent() {
 
   const handleLoginSuccess = async (loggedInUser: User) => {
     setUser(loggedInUser);
-    setAuthView("login");
   };
 
   const handleLogout = async () => {
@@ -70,7 +69,6 @@ function AppContent() {
     }
     setUser(null);
     setCurrentPage("home");
-    setAuthView("login");
   };
 
   const handleUserUpdate = (updated: User) => {
@@ -81,7 +79,7 @@ function AppContent() {
   const pageConfig: Record<Page, { title: string; subtitle?: string }> = {
     home: {
       title: "Home",
-      subtitle: "Overview harga saham dan ranking emiten",
+      subtitle: "Overview ranking emiten bank",
     },
     screening: {
       title: "Screening",
@@ -120,15 +118,19 @@ function AppContent() {
       subtitle: "Kelola akun dan pengaturan",
     },
     admin: {
-      title: "Admin Panel",
-      subtitle: "Manajemen user dan sinkronisasi data",
+      title: "User Management",
+      subtitle: "Kelola user dan status akun",
+    },
+    "sync-data": {
+      title: "Sync Data",
+      subtitle: "Upload dan kelola file data CSV",
     },
   };
 
   const role = user?.role || "viewer";
   const isAdmin = role === "admin";
 
-  // Sidebar navigation - simplified, main features only
+  // Sidebar navigation - 5 main features
   const navItems: NavItem[] = [
     {
       key: "home",
@@ -136,7 +138,7 @@ function AppContent() {
       icon: "🏠",
       onSelect: () => setCurrentPage("home"),
       active: currentPage === "home",
-      description: "Beranda dengan harga realtime",
+      description: "Beranda dengan ranking WSM",
     },
     {
       key: "screening",
@@ -170,25 +172,9 @@ function AppContent() {
       active: currentPage === "compare",
       description: "Bandingkan ticker",
     },
-    {
-      key: "simulation",
-      label: "Simulation",
-      icon: "🧪",
-      onSelect: () => setCurrentPage("simulation"),
-      active: currentPage === "simulation",
-      description: "Skenario what-if",
-    },
-    {
-      key: "reports",
-      label: "Reports",
-      icon: "📋",
-      onSelect: () => setCurrentPage("reports"),
-      active: currentPage === "reports",
-      description: "Ekspor dan riwayat",
-    },
   ];
 
-  // Profile dropdown menu items
+  // Profile dropdown menu items - different for admin vs employee
   const profileMenuItems: ProfileMenuItem[] = [
     {
       key: "profile",
@@ -211,13 +197,10 @@ function AppContent() {
             onClick: () => setCurrentPage("admin"),
           },
           {
-            key: "sync",
+            key: "sync-data",
             label: "Sync Data",
             icon: "🔄",
-            onClick: () => {
-              // TODO: Implement sync data from Google Drive
-              alert("Sync Data: Coming soon - will sync from Google Drive");
-            },
+            onClick: () => setCurrentPage("sync-data"),
           },
         ]
       : []),
@@ -260,6 +243,9 @@ function AppContent() {
     }
     if (currentPage === "admin" && isAdmin && user) {
       return <Admin user={user} />;
+    }
+    if (currentPage === "sync-data" && isAdmin && user) {
+      return <SyncData user={user} />;
     }
     // Placeholder content for sections that are not yet implemented
     return (
@@ -304,19 +290,9 @@ function AppContent() {
     );
   }
 
-  // Simple routing based on auth state
+  // Show login if not authenticated
   if (!user) {
-    return authView === "login" ? (
-      <Login
-        onLoginSuccess={handleLoginSuccess}
-        onSwitchToRegister={() => setAuthView("register")}
-      />
-    ) : (
-      <Register
-        onRegistered={() => setAuthView("login")}
-        onCancel={() => setAuthView("login")}
-      />
-    );
+    return <Login onLoginSuccess={handleLoginSuccess} />;
   }
 
   return (

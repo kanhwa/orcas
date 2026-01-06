@@ -23,6 +23,11 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    @property
+    def REDIS_URL(self) -> str:
+        """Build Redis URL from host and port"""
+        return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/0"
+
 settings = Settings()
 
 # Metric names to exclude from WSM calculations and rankings

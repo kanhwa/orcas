@@ -123,6 +123,7 @@ export default function Dashboard({
 
   return (
     <div className="space-y-4">
+      {/* WSM Ranking Section */}
       <Card
         header={
           <div className="text-lg font-semibold text-[rgb(var(--color-text))]">

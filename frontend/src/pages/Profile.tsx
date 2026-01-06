@@ -2,7 +2,6 @@ import { FormEvent, useState } from "react";
 import { User, updateProfile, changePassword } from "../services/api";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
-import InfoTip from "../components/InfoTip";
 
 interface ProfileProps {
   user: User;
@@ -10,8 +9,10 @@ interface ProfileProps {
 }
 
 export default function Profile({ user, onUserUpdate }: ProfileProps) {
-  const [fullName, setFullName] = useState(user.full_name ?? "");
-  const [company, setCompany] = useState("");
+  const [firstName, setFirstName] = useState(user.first_name ?? "");
+  const [middleName, setMiddleName] = useState(user.middle_name ?? "");
+  const [lastName, setLastName] = useState(user.last_name ?? "");
+  const [email, setEmail] = useState(user.email ?? "");
   const [profileMsg, setProfileMsg] = useState<string | null>(null);
   const [profileErr, setProfileErr] = useState<string | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
@@ -30,17 +31,16 @@ export default function Profile({ user, onUserUpdate }: ProfileProps) {
     setProfileLoading(true);
     try {
       const updated = await updateProfile({
-        full_name: fullName.trim() || null,
-        company: company.trim() || null,
+        first_name: firstName.trim() || undefined,
+        middle_name: middleName.trim() || undefined,
+        last_name: lastName.trim() || undefined,
+        email: email.trim() || undefined,
       });
       onUserUpdate(updated);
       setProfileMsg("Profile updated.");
     } catch (err: unknown) {
       const e = err as { detail?: string };
-      setProfileErr(
-        e.detail ||
-          "Profile update failed. Backend may not support this endpoint."
-      );
+      setProfileErr(e.detail || "Profile update failed.");
     } finally {
       setProfileLoading(false);
     }
@@ -56,22 +56,24 @@ export default function Profile({ user, onUserUpdate }: ProfileProps) {
       return;
     }
 
+    if (newPassword.length < 6) {
+      setPwdErr("Password must be at least 6 characters.");
+      return;
+    }
+
     setPwdLoading(true);
     try {
       await changePassword({
         current_password: currentPassword,
         new_password: newPassword,
       });
-      setPwdMsg("Password changed.");
+      setPwdMsg("Password changed successfully.");
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
     } catch (err: unknown) {
       const e = err as { detail?: string };
-      setPwdErr(
-        e.detail ||
-          "Password change failed. Backend may not support this endpoint."
-      );
+      setPwdErr(e.detail || "Password change failed.");
     } finally {
       setPwdLoading(false);
     }
@@ -82,16 +84,11 @@ export default function Profile({ user, onUserUpdate }: ProfileProps) {
       <Card
         header={
           <div className="text-lg font-semibold text-[rgb(var(--color-text))]">
-            Profile
+            My Profile
           </div>
         }
       >
-        <p className="mb-3 text-sm text-[rgb(var(--color-text-subtle))]">
-          Manage your account details. Session is cookie-based; role comes from
-          server.
-        </p>
-
-        <dl className="mb-4 grid grid-cols-1 gap-3 text-sm text-[rgb(var(--color-text))] sm:grid-cols-2">
+        <dl className="mb-4 grid grid-cols-1 gap-3 text-sm text-[rgb(var(--color-text))] sm:grid-cols-3">
           <div>
             <dt className="text-[rgb(var(--color-text-subtle))]">Username</dt>
             <dd className="font-semibold">{user.username}</dd>
@@ -102,35 +99,71 @@ export default function Profile({ user, onUserUpdate }: ProfileProps) {
           </div>
           <div>
             <dt className="text-[rgb(var(--color-text-subtle))]">Status</dt>
-            <dd className="font-semibold capitalize">{user.status}</dd>
+            <dd>
+              <span
+                className={`px-2 py-1 rounded text-xs ${
+                  user.status === "active"
+                    ? "bg-green-100 text-green-800"
+                    : "bg-red-100 text-red-800"
+                }`}
+              >
+                {user.status}
+              </span>
+            </dd>
           </div>
         </dl>
 
-        <form className="space-y-3" onSubmit={handleProfileSubmit}>
-          <div className="space-y-1">
-            <label className="flex items-center gap-1 text-sm font-semibold text-[rgb(var(--color-text-muted))]">
-              Full name
-              <InfoTip content="Saved to server if supported." />
-            </label>
-            <input
-              className="w-full rounded-lg border border-[rgb(var(--color-border))] bg-white px-3 py-2 text-[rgb(var(--color-text))] focus:border-[rgb(var(--color-primary))] focus:outline-none"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              disabled={profileLoading}
-            />
+        <form className="space-y-4" onSubmit={handleProfileSubmit}>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="space-y-1">
+              <label className="text-sm font-semibold text-[rgb(var(--color-text-muted))]">
+                First Name
+              </label>
+              <input
+                className="w-full rounded-lg border border-[rgb(var(--color-border))] bg-white px-3 py-2 text-[rgb(var(--color-text))] focus:border-[rgb(var(--color-primary))] focus:outline-none"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                disabled={profileLoading}
+                placeholder="John"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-semibold text-[rgb(var(--color-text-muted))]">
+                Middle Name
+              </label>
+              <input
+                className="w-full rounded-lg border border-[rgb(var(--color-border))] bg-white px-3 py-2 text-[rgb(var(--color-text))] focus:border-[rgb(var(--color-primary))] focus:outline-none"
+                value={middleName}
+                onChange={(e) => setMiddleName(e.target.value)}
+                disabled={profileLoading}
+                placeholder="(optional)"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-semibold text-[rgb(var(--color-text-muted))]">
+                Last Name
+              </label>
+              <input
+                className="w-full rounded-lg border border-[rgb(var(--color-border))] bg-white px-3 py-2 text-[rgb(var(--color-text))] focus:border-[rgb(var(--color-primary))] focus:outline-none"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                disabled={profileLoading}
+                placeholder="Doe"
+              />
+            </div>
           </div>
 
           <div className="space-y-1">
-            <label className="flex items-center gap-1 text-sm font-semibold text-[rgb(var(--color-text-muted))]">
-              Company
-              <InfoTip content="Displayed locally; backend schema does not yet store this." />
+            <label className="text-sm font-semibold text-[rgb(var(--color-text-muted))]">
+              Email
             </label>
             <input
+              type="email"
               className="w-full rounded-lg border border-[rgb(var(--color-border))] bg-white px-3 py-2 text-[rgb(var(--color-text))] focus:border-[rgb(var(--color-primary))] focus:outline-none"
-              value={company}
-              onChange={(e) => setCompany(e.target.value)}
-              placeholder="Optional"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               disabled={profileLoading}
+              placeholder="user@example.com"
             />
           </div>
 
@@ -156,7 +189,7 @@ export default function Profile({ user, onUserUpdate }: ProfileProps) {
             className="w-full sm:w-auto"
             disabled={profileLoading}
           >
-            {profileLoading ? "Saving..." : "Save profile"}
+            {profileLoading ? "Saving..." : "Save Profile"}
           </Button>
         </form>
       </Card>
@@ -171,7 +204,7 @@ export default function Profile({ user, onUserUpdate }: ProfileProps) {
         <form className="space-y-3" onSubmit={handlePasswordSubmit}>
           <div className="space-y-1">
             <label className="text-sm font-semibold text-[rgb(var(--color-text-muted))]">
-              Current password
+              Current Password
             </label>
             <input
               type="password"
@@ -185,7 +218,7 @@ export default function Profile({ user, onUserUpdate }: ProfileProps) {
 
           <div className="space-y-1">
             <label className="text-sm font-semibold text-[rgb(var(--color-text-muted))]">
-              New password
+              New Password
             </label>
             <input
               type="password"
@@ -194,12 +227,13 @@ export default function Profile({ user, onUserUpdate }: ProfileProps) {
               onChange={(e) => setNewPassword(e.target.value)}
               required
               disabled={pwdLoading}
+              minLength={6}
             />
           </div>
 
           <div className="space-y-1">
             <label className="text-sm font-semibold text-[rgb(var(--color-text-muted))]">
-              Confirm new password
+              Confirm New Password
             </label>
             <input
               type="password"
@@ -233,7 +267,7 @@ export default function Profile({ user, onUserUpdate }: ProfileProps) {
             className="w-full sm:w-auto"
             disabled={pwdLoading}
           >
-            {pwdLoading ? "Updating..." : "Change password"}
+            {pwdLoading ? "Updating..." : "Change Password"}
           </Button>
         </form>
       </Card>

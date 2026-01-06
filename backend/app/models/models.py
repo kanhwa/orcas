@@ -13,7 +13,7 @@ from app.db.base import Base
 
 class UserRole(str, enum.Enum):
     admin = "admin"
-    user = "user"
+    employee = "employee"
 
 
 class UserStatus(str, enum.Enum):
@@ -44,14 +44,24 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     username = Column(String(50), unique=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
-    full_name = Column(String(100), nullable=True)
-    role = Column(Enum(UserRole, name="user_role"), nullable=False, server_default=UserRole.user.value)
+    email = Column(String(100), nullable=True)
+    first_name = Column(String(50), nullable=True)
+    middle_name = Column(String(50), nullable=True)
+    last_name = Column(String(50), nullable=True)
+    full_name = Column(String(100), nullable=True)  # Legacy, computed from first/middle/last
+    role = Column(Enum(UserRole, name="user_role"), nullable=False, server_default=UserRole.employee.value)
     status = Column(Enum(UserStatus, name="user_status"), nullable=False, server_default=UserStatus.active.value)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
     scoring_templates = relationship("ScoringTemplate", back_populates="user")
     import_history = relationship("ImportHistory", back_populates="user")
+    
+    @property
+    def computed_full_name(self) -> str:
+        """Compute full name from first, middle, last names."""
+        parts = [self.first_name, self.middle_name, self.last_name]
+        return " ".join(p for p in parts if p) or self.username
 
 
 class Emiten(Base):

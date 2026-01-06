@@ -10,14 +10,12 @@ class LoginRequest(BaseModel):
     password: str = Field(..., min_length=1)
 
 
-class RegisterRequest(BaseModel):
-    username: str = Field(..., min_length=3, max_length=50)
-    password: str = Field(..., min_length=6, max_length=100)
-    full_name: Optional[str] = Field(default=None, max_length=100)
-
-
 class UpdateProfileRequest(BaseModel):
-    full_name: Optional[str] = Field(default=None, max_length=100)
+    """Request for updating user profile - employee can update their own name."""
+    first_name: Optional[str] = Field(default=None, max_length=50)
+    middle_name: Optional[str] = Field(default=None, max_length=50)
+    last_name: Optional[str] = Field(default=None, max_length=50)
+    email: Optional[str] = Field(default=None, max_length=100)
 
 
 class ChangePasswordRequest(BaseModel):
@@ -28,6 +26,10 @@ class ChangePasswordRequest(BaseModel):
 class UserMeResponse(BaseModel):
     id: int
     username: str
+    email: Optional[str] = None
+    first_name: Optional[str] = None
+    middle_name: Optional[str] = None
+    last_name: Optional[str] = None
     full_name: str | None
     role: str
     status: str

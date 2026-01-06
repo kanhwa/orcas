@@ -12,6 +12,10 @@ const BASE_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 export interface User {
   id: number;
   username: string;
+  email: string | null;
+  first_name: string | null;
+  middle_name: string | null;
+  last_name: string | null;
   full_name: string | null;
   role: string;
   status: string;
@@ -22,16 +26,11 @@ export interface LoginRequest {
   password: string;
 }
 
-export interface RegisterRequest {
-  username: string;
-  password: string;
-  full_name?: string | null;
-  company?: string | null;
-}
-
 export interface UpdateProfileRequest {
-  full_name?: string | null;
-  company?: string | null;
+  first_name?: string;
+  middle_name?: string;
+  last_name?: string;
+  email?: string;
 }
 
 export interface ChangePasswordRequest {
@@ -78,6 +77,25 @@ export interface SectionRankingResponse {
 
 export interface ApiError {
   detail: string;
+}
+
+export interface StockResponse {
+  ticker: string;
+  name: string;
+  price: number;
+  change: number;
+  changePercent: number;
+  volume: number;
+  marketCap?: number | null;
+  status: "open" | "closed";
+  lastUpdate: string;
+  disclaimer: string;
+}
+
+export interface StockListResponse {
+  stocks: StockResponse[];
+  count: number;
+  marketStatus: "open" | "closed";
 }
 
 // =============================================================================
@@ -137,13 +155,6 @@ export async function authMe(): Promise<User> {
 export async function authLogout(): Promise<{ detail: string }> {
   return request<{ detail: string }>("/api/auth/logout", {
     method: "POST",
-  });
-}
-
-export async function authRegister(payload: RegisterRequest): Promise<User> {
-  return request<User>("/api/auth/register", {
-    method: "POST",
-    body: JSON.stringify(payload),
   });
 }
 

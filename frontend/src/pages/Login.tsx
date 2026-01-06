@@ -5,13 +5,9 @@ import { Button } from "../components/ui/Button";
 
 interface LoginProps {
   onLoginSuccess: (user: User) => void;
-  onSwitchToRegister: () => void;
 }
 
-export default function Login({
-  onLoginSuccess,
-  onSwitchToRegister,
-}: LoginProps) {
+export default function Login({ onLoginSuccess }: LoginProps) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -45,8 +41,7 @@ export default function Login({
           }
         >
           <p className="mb-4 text-sm text-[rgb(var(--color-text-subtle))]">
-            Session uses HttpOnly cookie set by FastAPI. Ensure backend is
-            running.
+            Bank Stock Ranking System - Silakan login dengan akun Anda
           </p>
 
           <form className="space-y-3" onSubmit={handleSubmit}>
@@ -58,7 +53,7 @@ export default function Login({
                 className="w-full rounded-lg border border-[rgb(var(--color-border))] bg-white px-3 py-2 text-[rgb(var(--color-text))] focus:border-[rgb(var(--color-primary))] focus:outline-none"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="admin"
+                placeholder="username"
                 required
                 disabled={loading}
               />
@@ -93,16 +88,8 @@ export default function Login({
             </Button>
           </form>
 
-          <div className="mt-4 flex items-center justify-between text-sm text-[rgb(var(--color-text-subtle))]">
-            <span>Don&apos;t have an account?</span>
-            <button
-              type="button"
-              className="font-semibold text-[rgb(var(--color-primary))] hover:underline"
-              onClick={onSwitchToRegister}
-              disabled={loading}
-            >
-              Register
-            </button>
+          <div className="mt-4 text-center text-sm text-[rgb(var(--color-text-subtle))]">
+            <p>Belum punya akun? Hubungi administrator untuk dibuatkan akun.</p>
           </div>
         </Card>
       </div>
