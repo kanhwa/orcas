@@ -10,8 +10,9 @@ import Reports from "./pages/Reports";
 import Admin from "./pages/Admin";
 import SyncData from "./pages/SyncData";
 import Screening from "./pages/Screening";
-import MetricRanking from "./pages/MetricRanking";
-import Historical from "./pages/Historical";
+// MetricRanking dan Historical akan digabung ke Analysis dan Compare
+// import MetricRanking from "./pages/MetricRanking";
+// import Historical from "./pages/Historical";
 import {
   AppShell,
   NavItem,
@@ -22,15 +23,12 @@ import { Button } from "./components/ui/Button";
 import { Card } from "./components/ui/Card";
 
 type Page =
-  | "home"
-  | "simulation"
+  | "dashboard"
+  | "analysis"
   | "compare"
-  | "screening"
-  | "metric-ranking"
-  | "historical"
-  | "scoring"
-  | "templates"
+  | "simulation"
   | "reports"
+  | "templates"
   | "profile"
   | "admin"
   | "sync-data";
@@ -39,7 +37,7 @@ function AppContent() {
   const { loading: catalogLoading, error: catalogError, retry } = useCatalog();
   const [user, setUser] = useState<User | null>(null);
   const [checking, setChecking] = useState(true);
-  const [currentPage, setCurrentPage] = useState<Page>("home");
+  const [currentPage, setCurrentPage] = useState<Page>("dashboard");
 
   // Check existing session on mount
   useEffect(() => {
@@ -68,7 +66,7 @@ function AppContent() {
       // Ignore logout errors
     }
     setUser(null);
-    setCurrentPage("home");
+    setCurrentPage("dashboard");
   };
 
   const handleUserUpdate = (updated: User) => {
@@ -77,33 +75,17 @@ function AppContent() {
 
   // Page configuration
   const pageConfig: Record<Page, { title: string; subtitle?: string }> = {
-    home: {
-      title: "Home",
-      subtitle: "Overview ranking emiten bank",
+    dashboard: {
+      title: "Dashboard",
+      subtitle: "Overview ranking & quick stats emiten bank",
     },
-    screening: {
-      title: "Screening",
-      subtitle: "Filter saham berdasarkan kriteria metrik",
-    },
-    "metric-ranking": {
-      title: "Metric Ranking",
-      subtitle: "Top emiten per metrik keuangan",
-    },
-    historical: {
-      title: "Historical",
-      subtitle: "Bandingkan performa emiten antar periode",
-    },
-    scoring: {
-      title: "Scoring",
-      subtitle: "Kalkulasi skor WSM",
-    },
-    templates: {
-      title: "My Templates",
-      subtitle: "Kelola template scoring Anda",
+    analysis: {
+      title: "Analysis",
+      subtitle: "Screening & metric ranking emiten",
     },
     compare: {
       title: "Compare",
-      subtitle: "Bandingkan skor WSM beberapa ticker",
+      subtitle: "Bandingkan emiten & historical trend",
     },
     simulation: {
       title: "Simulation",
@@ -112,6 +94,10 @@ function AppContent() {
     reports: {
       title: "Reports",
       subtitle: "Lihat dan ekspor riwayat scoring",
+    },
+    templates: {
+      title: "My Templates",
+      subtitle: "Kelola template scoring Anda",
     },
     profile: {
       title: "Profile",
@@ -133,44 +119,44 @@ function AppContent() {
   // Sidebar navigation - 5 main features
   const navItems: NavItem[] = [
     {
-      key: "home",
-      label: "Home",
+      key: "dashboard",
+      label: "Dashboard",
       icon: "🏠",
-      onSelect: () => setCurrentPage("home"),
-      active: currentPage === "home",
-      description: "Beranda dengan ranking WSM",
+      onSelect: () => setCurrentPage("dashboard"),
+      active: currentPage === "dashboard",
+      description: "Overview ranking & quick stats",
     },
     {
-      key: "screening",
-      label: "Screening",
+      key: "analysis",
+      label: "Analysis",
       icon: "🔍",
-      onSelect: () => setCurrentPage("screening"),
-      active: currentPage === "screening",
-      description: "Filter saham dengan kriteria",
-    },
-    {
-      key: "metric-ranking",
-      label: "Metric Ranking",
-      icon: "📊",
-      onSelect: () => setCurrentPage("metric-ranking"),
-      active: currentPage === "metric-ranking",
-      description: "Peringkat per metrik",
-    },
-    {
-      key: "historical",
-      label: "Historical",
-      icon: "📈",
-      onSelect: () => setCurrentPage("historical"),
-      active: currentPage === "historical",
-      description: "Perbandingan historis",
+      onSelect: () => setCurrentPage("analysis"),
+      active: currentPage === "analysis",
+      description: "Screening & metric ranking",
     },
     {
       key: "compare",
       label: "Compare",
-      icon: "⚖️",
+      icon: "📊",
       onSelect: () => setCurrentPage("compare"),
       active: currentPage === "compare",
-      description: "Bandingkan ticker",
+      description: "Bandingkan emiten & historical",
+    },
+    {
+      key: "simulation",
+      label: "Simulation",
+      icon: "🎮",
+      onSelect: () => setCurrentPage("simulation"),
+      active: currentPage === "simulation",
+      description: "Skenario what-if",
+    },
+    {
+      key: "reports",
+      label: "Reports",
+      icon: "📋",
+      onSelect: () => setCurrentPage("reports"),
+      active: currentPage === "reports",
+      description: "Riwayat & ekspor",
     },
   ];
 
@@ -214,29 +200,26 @@ function AppContent() {
   ];
 
   const renderPage = () => {
-    if (currentPage === "home" && user) {
+    if (currentPage === "dashboard" && user) {
       return <Dashboard user={user} onLogout={handleLogout} />;
     }
-    if (currentPage === "screening") {
+    if (currentPage === "analysis") {
+      // Gabungan Screening + Metric Ranking - untuk sementara tampilkan Screening
+      // TODO: Buat halaman Analysis yang menggabungkan keduanya
       return <Screening />;
     }
-    if (currentPage === "metric-ranking") {
-      return <MetricRanking />;
-    }
-    if (currentPage === "historical") {
-      return <Historical />;
-    }
     if (currentPage === "compare") {
+      // Gabungan Compare + Historical
       return <Compare />;
     }
     if (currentPage === "simulation") {
       return <Simulation />;
     }
-    if (currentPage === "templates" && user) {
-      return <Templates user={user} />;
-    }
     if (currentPage === "reports" && user) {
       return <Reports user={user} />;
+    }
+    if (currentPage === "templates" && user) {
+      return <Templates user={user} />;
     }
     if (currentPage === "profile" && user) {
       return <Profile user={user} onUserUpdate={handleUserUpdate} />;
