@@ -155,9 +155,7 @@ export default function MetricRanking() {
 
           {/* Year To */}
           <div>
-            <label className="block text-sm font-medium mb-1">
-              To Year
-            </label>
+            <label className="block text-sm font-medium mb-1">To Year</label>
             <select
               className="w-full px-3 py-2 border rounded-md text-sm"
               value={yearTo}

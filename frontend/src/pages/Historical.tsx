@@ -111,14 +111,16 @@ export default function Historical() {
       <Card>
         <h2 className="text-xl font-bold mb-4">📊 Historical Comparison</h2>
         <p className="text-gray-600 mb-4">
-          Compare 1 emiten's performance across 2 periods. See trend
-          (up/down) for each metric.
+          Compare 1 emiten's performance across 2 periods. See trend (up/down)
+          for each metric.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
           {/* Emiten Select */}
           <div>
-            <label className="block text-sm font-medium mb-1">Bank/Emiten</label>
+            <label className="block text-sm font-medium mb-1">
+              Bank/Emiten
+            </label>
             <select
               className="w-full px-3 py-2 border rounded-md text-sm"
               value={selectedTicker}
@@ -150,9 +152,7 @@ export default function Historical() {
 
           {/* Year 2 */}
           <div>
-            <label className="block text-sm font-medium mb-1">
-              End Year
-            </label>
+            <label className="block text-sm font-medium mb-1">End Year</label>
             <select
               className="w-full px-3 py-2 border rounded-md text-sm"
               value={year2}
