@@ -38,6 +38,20 @@ class ImportStatus(str, enum.Enum):
     rolled_back = "rolled_back"
 
 
+class AuditLog(Base):
+    """Audit log for tracking important system events."""
+    __tablename__ = "audit_logs"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    action = Column(String(50), nullable=False)  # login_success, logout, user_created, etc.
+    target_type = Column(String(50), nullable=True)  # user, import, etc.
+    target_id = Column(Integer, nullable=True)
+    details = Column(JSONB, nullable=True)  # Additional context (never passwords/tokens)
+    ip_address = Column(String(45), nullable=True)  # IPv4 or IPv6
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
 class User(Base):
     __tablename__ = "users"
 

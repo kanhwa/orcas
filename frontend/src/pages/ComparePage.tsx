@@ -21,7 +21,9 @@ import { Table } from "../components/ui/Table";
 import { MultiSelect, MultiSelectOption } from "../components/ui/MultiSelect";
 import { Toggle } from "../components/ui/Toggle";
 import { useCatalog } from "../contexts/CatalogContext";
+import Historical from "./Historical";
 
+type Tab = "compare" | "historical";
 type Mode = "overall" | "section";
 type Section = "income" | "balance" | "cashflow";
 type MissingPolicy = "zero" | "redistribute" | "drop";
@@ -66,7 +68,7 @@ const TICKER_OPTIONS: MultiSelectOption[] = [
   "BMAS",
 ].map((t) => ({ value: t, label: t }));
 
-export default function ComparePage() {
+function CompareTab() {
   const {
     getSectionMeta,
     getModeOptions,
@@ -552,6 +554,72 @@ export default function ComparePage() {
           </div>
         )}
       </Card>
+    </div>
+  );
+}
+// Tabbed wrapper component that combines Compare and Historical
+export default function ComparePage() {
+  const [activeTab, setActiveTab] = useState<Tab>("compare");
+
+  return (
+    <div className="space-y-6">
+      {/* Tab Navigation */}
+      <Card>
+        <div className="flex border-b border-[rgb(var(--color-border))]">
+          <button
+            type="button"
+            onClick={() => setActiveTab("compare")}
+            className={`px-6 py-3 text-sm font-medium transition-colors relative ${
+              activeTab === "compare"
+                ? "text-[rgb(var(--color-primary))]"
+                : "text-[rgb(var(--color-text-subtle))] hover:text-[rgb(var(--color-text))]"
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <span>📈</span>
+              Compare Stocks
+            </span>
+            {activeTab === "compare" && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[rgb(var(--color-primary))]" />
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("historical")}
+            className={`px-6 py-3 text-sm font-medium transition-colors relative ${
+              activeTab === "historical"
+                ? "text-[rgb(var(--color-primary))]"
+                : "text-[rgb(var(--color-text-subtle))] hover:text-[rgb(var(--color-text))]"
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <span>📊</span>
+              Historical
+            </span>
+            {activeTab === "historical" && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[rgb(var(--color-primary))]" />
+            )}
+          </button>
+        </div>
+
+        {/* Tab Description */}
+        <div className="p-4 bg-[rgb(var(--color-surface))]">
+          {activeTab === "compare" ? (
+            <p className="text-sm text-[rgb(var(--color-text-subtle))]">
+              Compare WSM scores across multiple stocks (2-4) over a range of
+              years with line/bar charts.
+            </p>
+          ) : (
+            <p className="text-sm text-[rgb(var(--color-text-subtle))]">
+              View detailed metric-by-metric comparison for a single stock
+              between two years.
+            </p>
+          )}
+        </div>
+      </Card>
+
+      {/* Tab Content */}
+      <div>{activeTab === "compare" ? <CompareTab /> : <Historical />}</div>
     </div>
   );
 }

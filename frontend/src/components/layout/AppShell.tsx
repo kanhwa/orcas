@@ -18,6 +18,7 @@ export interface ProfileMenuItem {
   icon?: string;
   onClick: () => void;
   danger?: boolean;
+  separator?: boolean;
 }
 
 interface AppShellProps {
@@ -29,6 +30,23 @@ interface AppShellProps {
   navItems: NavItem[];
   profileMenuItems: ProfileMenuItem[];
   children: ReactNode;
+}
+
+// Role badge component
+function RoleBadge({ role }: { role: string }) {
+  const isAdmin = role === "admin";
+  return (
+    <span
+      className={cn(
+        "px-2 py-0.5 rounded-full text-xs font-medium",
+        isAdmin
+          ? "bg-amber-500/20 text-amber-200 border border-amber-500/30"
+          : "bg-blue-500/20 text-blue-200 border border-blue-500/30"
+      )}
+    >
+      {isAdmin ? "Admin" : "Employee"}
+    </span>
+  );
 }
 
 export function AppShell({
@@ -63,7 +81,7 @@ export function AppShell({
       {/* Header with gradient background */}
       <header className="bg-gradient-to-r from-[rgb(var(--color-primary))] to-[rgb(var(--color-action))] px-6 py-3 shadow-lg">
         <div className="flex items-center justify-between">
-          {/* Logo & Brand */}
+          {/* Logo & Brand - Left */}
           <div className="flex items-center gap-3">
             {/* Orca Icon */}
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm text-2xl">
@@ -77,7 +95,7 @@ export function AppShell({
             </div>
           </div>
 
-          {/* User Profile Dropdown */}
+          {/* User Panel - Right */}
           <div className="relative" ref={profileRef}>
             <button
               type="button"
@@ -98,9 +116,12 @@ export function AppShell({
                   </span>
                 )}
               </div>
-              <span className="text-sm font-medium text-white">
-                Hi, {userDisplay || "User"}
-              </span>
+              <div className="flex flex-col items-start">
+                <span className="text-sm font-medium text-white">
+                  {userDisplay || "User"}
+                </span>
+                {userRole && <RoleBadge role={userRole} />}
+              </div>
               <svg
                 className={cn(
                   "h-4 w-4 text-white/70 transition-transform",
@@ -128,32 +149,36 @@ export function AppShell({
                     {userDisplay || "User"}
                   </div>
                   <div className="text-xs text-[rgb(var(--color-text-subtle))] capitalize">
-                    {userRole || "User"}
+                    {userRole === "admin" ? "Administrator" : "Employee"}
                   </div>
                 </div>
 
                 {/* Menu Items */}
                 <div className="py-1">
-                  {profileMenuItems.map((item) => (
-                    <button
-                      key={item.key}
-                      type="button"
-                      onClick={() => {
-                        item.onClick();
-                        setProfileOpen(false);
-                      }}
-                      className={cn(
-                        "flex w-full items-center gap-3 px-4 py-2.5 text-sm text-left transition",
-                        item.danger
-                          ? "text-red-600 hover:bg-red-50"
-                          : "text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-surface))]"
+                  {profileMenuItems.map((item, index) => (
+                    <div key={item.key}>
+                      {item.separator && index > 0 && (
+                        <div className="my-1 border-t border-[rgb(var(--color-border))]" />
                       )}
-                    >
-                      {item.icon && (
-                        <span className="text-base">{item.icon}</span>
-                      )}
-                      <span>{item.label}</span>
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          item.onClick();
+                          setProfileOpen(false);
+                        }}
+                        className={cn(
+                          "flex w-full items-center gap-3 px-4 py-2.5 text-sm text-left transition",
+                          item.danger
+                            ? "text-red-600 hover:bg-red-50"
+                            : "text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-surface))]"
+                        )}
+                      >
+                        {item.icon && (
+                          <span className="text-base">{item.icon}</span>
+                        )}
+                        <span>{item.label}</span>
+                      </button>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -163,9 +188,8 @@ export function AppShell({
       </header>
 
       <div className="flex">
-        {/* Sidebar with color accents */}
+        {/* Sidebar */}
         <aside className="hidden w-60 shrink-0 border-r border-[rgb(var(--color-border))] bg-white lg:block">
-          {/* Sidebar content */}
           <nav className="flex flex-col gap-1 p-3">
             {navItems.map((item) => (
               <button

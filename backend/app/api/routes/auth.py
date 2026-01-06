@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
 from app.core.security import hash_password, verify_password
+from app.core.audit import log_audit
 from app.models import User, UserStatus
 from app.schemas.auth import (
     ChangePasswordRequest,
@@ -36,22 +37,44 @@ def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)
     """
     Authenticate user with username/password and create session.
     """
+    ip_address = request.client.host if request.client else None
     user = db.query(User).filter(User.username == payload.username).first()
 
     if not user or not verify_password(payload.password, user.password_hash):
+        # Log failed login attempt
+        log_audit(
+            db=db,
+            user_id=None,
+            action="login_failed",
+            target_type="user",
+            target_id=None,
+            details={"username": payload.username},
+            ip_address=ip_address,
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Username atau password salah.",
+            detail="Invalid username or password.",
         )
 
     if user.status.value != "active":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Akun tidak aktif. Hubungi administrator.",
+            detail="Account inactive. Contact administrator.",
         )
 
     # Set session
     request.session["user_id"] = user.id
+    
+    # Log successful login
+    log_audit(
+        db=db,
+        user_id=user.id,
+        action="login_success",
+        target_type="user",
+        target_id=user.id,
+        details={"username": user.username},
+        ip_address=ip_address,
+    )
 
     return user_to_response(user)
 
@@ -65,12 +88,28 @@ def get_me(current_user: User = Depends(get_current_user)) -> UserMeResponse:
 
 
 @router.post("/logout")
-def logout(request: Request) -> dict:
+def logout(request: Request, db: Session = Depends(get_db)) -> dict:
     """
     Clear session and logout user.
     """
+    user_id = request.session.get("user_id")
+    ip_address = request.client.host if request.client else None
+    
     request.session.clear()
-    return {"detail": "Logout berhasil."}
+    
+    # Log logout
+    if user_id:
+        log_audit(
+            db=db,
+            user_id=user_id,
+            action="logout",
+            target_type="user",
+            target_id=user_id,
+            details=None,
+            ip_address=ip_address,
+        )
+    
+    return {"detail": "Logout successful."}
 
 
 @router.patch("/profile", response_model=UserMeResponse)
@@ -103,6 +142,7 @@ def update_profile(
 
 @router.post("/change-password")
 def change_password(
+    request: Request,
     payload: ChangePasswordRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -114,13 +154,24 @@ def change_password(
     if not verify_password(payload.current_password, current_user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Password saat ini salah.",
+            detail="Current password is incorrect.",
         )
 
     current_user.password_hash = hash_password(payload.new_password)
     db.commit()
+    
+    # Log password change (never log the actual password)
+    log_audit(
+        db=db,
+        user_id=current_user.id,
+        action="password_changed",
+        target_type="user",
+        target_id=current_user.id,
+        details={"username": current_user.username},
+        ip_address=request.client.host if request.client else None,
+    )
 
-    return {"detail": "Password berhasil diubah."}
+    return {"detail": "Password changed successfully."}
 
 
 # =============================================================================

@@ -24,7 +24,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
       onLoginSuccess(user);
     } catch (err: unknown) {
       const e = err as { status?: number; detail?: string };
-      setError(e.detail || "Login gagal. Periksa username dan password.");
+      setError(e.detail || "Login failed. Check username and password.");
     } finally {
       setLoading(false);
     }
@@ -41,7 +41,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
           }
         >
           <p className="mb-4 text-sm text-[rgb(var(--color-text-subtle))]">
-            Bank Stock Ranking System - Silakan login dengan akun Anda
+            Bank Stock Ranking System - Please sign in with your account
           </p>
 
           <form className="space-y-3" onSubmit={handleSubmit}>

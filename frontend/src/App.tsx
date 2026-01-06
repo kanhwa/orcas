@@ -2,17 +2,14 @@ import { useState, useEffect } from "react";
 import { authMe, authLogout, User } from "./services/api";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
-import Compare from "./pages/ComparePage";
+import ComparePage from "./pages/ComparePage";
 import Simulation from "./pages/Simulation";
 import Profile from "./pages/Profile";
 import Templates from "./pages/Templates";
 import Reports from "./pages/Reports";
 import Admin from "./pages/Admin";
 import SyncData from "./pages/SyncData";
-import Screening from "./pages/Screening";
-// MetricRanking dan Historical akan digabung ke Analysis dan Compare
-// import MetricRanking from "./pages/MetricRanking";
-// import Historical from "./pages/Historical";
+import Analysis from "./pages/Analysis";
 import {
   AppShell,
   NavItem,
@@ -77,39 +74,39 @@ function AppContent() {
   const pageConfig: Record<Page, { title: string; subtitle?: string }> = {
     dashboard: {
       title: "Dashboard",
-      subtitle: "Overview ranking & quick stats emiten bank",
+      subtitle: "Overview ranking & quick stats for bank stocks",
     },
     analysis: {
       title: "Analysis",
-      subtitle: "Screening & metric ranking emiten",
+      subtitle: "Screening & metric ranking for stocks",
     },
     compare: {
       title: "Compare",
-      subtitle: "Bandingkan emiten & historical trend",
+      subtitle: "Compare stocks & historical trends",
     },
     simulation: {
       title: "Simulation",
-      subtitle: "Skenario what-if untuk analisis",
+      subtitle: "What-if scenario analysis",
     },
     reports: {
       title: "Reports",
-      subtitle: "Lihat dan ekspor riwayat scoring",
+      subtitle: "View and export scoring history",
     },
     templates: {
       title: "My Templates",
-      subtitle: "Kelola template scoring Anda",
+      subtitle: "Manage your scoring templates",
     },
     profile: {
       title: "Profile",
-      subtitle: "Kelola akun dan pengaturan",
+      subtitle: "Manage account and settings",
     },
     admin: {
       title: "User Management",
-      subtitle: "Kelola user dan status akun",
+      subtitle: "Manage users and account status",
     },
     "sync-data": {
       title: "Sync Data",
-      subtitle: "Upload dan kelola file data CSV",
+      subtitle: "Upload and manage CSV data files",
     },
   };
 
@@ -121,10 +118,10 @@ function AppContent() {
     {
       key: "dashboard",
       label: "Dashboard",
-      icon: "🏠",
+      icon: "📊",
       onSelect: () => setCurrentPage("dashboard"),
       active: currentPage === "dashboard",
-      description: "Overview ranking & quick stats",
+      description: "Overview & quick stats",
     },
     {
       key: "analysis",
@@ -137,18 +134,18 @@ function AppContent() {
     {
       key: "compare",
       label: "Compare",
-      icon: "📊",
+      icon: "📈",
       onSelect: () => setCurrentPage("compare"),
       active: currentPage === "compare",
-      description: "Bandingkan emiten & historical",
+      description: "Compare stocks & historical",
     },
     {
       key: "simulation",
       label: "Simulation",
-      icon: "🎮",
+      icon: "🧪",
       onSelect: () => setCurrentPage("simulation"),
       active: currentPage === "simulation",
-      description: "Skenario what-if",
+      description: "What-if scenarios",
     },
     {
       key: "reports",
@@ -156,7 +153,7 @@ function AppContent() {
       icon: "📋",
       onSelect: () => setCurrentPage("reports"),
       active: currentPage === "reports",
-      description: "Riwayat & ekspor",
+      description: "History & export",
     },
   ];
 
@@ -181,6 +178,7 @@ function AppContent() {
             label: "User Management",
             icon: "👥",
             onClick: () => setCurrentPage("admin"),
+            separator: true,
           },
           {
             key: "sync-data",
@@ -196,6 +194,7 @@ function AppContent() {
       icon: "🚪",
       onClick: handleLogout,
       danger: true,
+      separator: true,
     },
   ];
 
@@ -204,13 +203,10 @@ function AppContent() {
       return <Dashboard user={user} onLogout={handleLogout} />;
     }
     if (currentPage === "analysis") {
-      // Gabungan Screening + Metric Ranking - untuk sementara tampilkan Screening
-      // TODO: Buat halaman Analysis yang menggabungkan keduanya
-      return <Screening />;
+      return <Analysis />;
     }
     if (currentPage === "compare") {
-      // Gabungan Compare + Historical
-      return <Compare />;
+      return <ComparePage />;
     }
     if (currentPage === "simulation") {
       return <Simulation />;

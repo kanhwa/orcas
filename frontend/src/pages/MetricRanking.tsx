@@ -43,7 +43,7 @@ export default function MetricRanking() {
 
   const handleFetch = async () => {
     if (!selectedMetric) {
-      setError("Pilih metrik terlebih dahulu");
+      setError("Please select a metric first");
       return;
     }
 
@@ -61,7 +61,7 @@ export default function MetricRanking() {
       setResult(res);
     } catch (err: unknown) {
       const e = err as { detail?: string };
-      setError(e.detail || "Gagal mengambil data ranking");
+      setError(e.detail || "Failed to fetch ranking data");
     } finally {
       setLoading(false);
     }
@@ -111,15 +111,15 @@ export default function MetricRanking() {
   return (
     <div className="space-y-6">
       <Card>
-        <h2 className="text-xl font-bold mb-4">🏆 Ranking per Metrik</h2>
+        <h2 className="text-xl font-bold mb-4">🏆 Metric Ranking</h2>
         <p className="text-gray-600 mb-4">
-          Lihat Top N emiten untuk satu metrik selama beberapa tahun.
+          View Top N stocks for a specific metric across multiple years.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
           {/* Metric Select */}
           <div>
-            <label className="block text-sm font-medium mb-1">Metrik</label>
+            <label className="block text-sm font-medium mb-1">Metric</label>
             <select
               className="w-full px-3 py-2 border rounded-md text-sm"
               value={selectedMetric}
@@ -139,7 +139,7 @@ export default function MetricRanking() {
 
           {/* Year From */}
           <div>
-            <label className="block text-sm font-medium mb-1">Dari Tahun</label>
+            <label className="block text-sm font-medium mb-1">From Year</label>
             <select
               className="w-full px-3 py-2 border rounded-md text-sm"
               value={yearFrom}
@@ -156,7 +156,7 @@ export default function MetricRanking() {
           {/* Year To */}
           <div>
             <label className="block text-sm font-medium mb-1">
-              Sampai Tahun
+              To Year
             </label>
             <select
               className="w-full px-3 py-2 border rounded-md text-sm"
@@ -189,7 +189,7 @@ export default function MetricRanking() {
         </div>
 
         <Button onClick={handleFetch} disabled={loading}>
-          {loading ? "Memproses..." : "🔍 Lihat Ranking"}
+          {loading ? "Processing..." : "🔍 View Ranking"}
         </Button>
 
         {error && <p className="mt-3 text-red-600 text-sm">{error}</p>}

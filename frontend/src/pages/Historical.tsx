@@ -42,11 +42,11 @@ export default function Historical() {
 
   const handleCompare = async () => {
     if (!selectedTicker) {
-      setError("Pilih emiten terlebih dahulu");
+      setError("Please select an emiten first");
       return;
     }
     if (year1 === year2) {
-      setError("Pilih 2 tahun berbeda");
+      setError("Please select 2 different years");
       return;
     }
 
@@ -63,7 +63,7 @@ export default function Historical() {
       setResult(res);
     } catch (err: unknown) {
       const e = err as { detail?: string };
-      setError(e.detail || "Perbandingan gagal");
+      setError(e.detail || "Comparison failed");
     } finally {
       setLoading(false);
     }
@@ -111,14 +111,14 @@ export default function Historical() {
       <Card>
         <h2 className="text-xl font-bold mb-4">📊 Historical Comparison</h2>
         <p className="text-gray-600 mb-4">
-          Bandingkan performa 1 emiten di 2 periode berbeda. Lihat tren
-          naik/turun setiap metrik.
+          Compare 1 emiten's performance across 2 periods. See trend
+          (up/down) for each metric.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
           {/* Emiten Select */}
           <div>
-            <label className="block text-sm font-medium mb-1">Emiten</label>
+            <label className="block text-sm font-medium mb-1">Bank/Emiten</label>
             <select
               className="w-full px-3 py-2 border rounded-md text-sm"
               value={selectedTicker}
@@ -134,7 +134,7 @@ export default function Historical() {
 
           {/* Year 1 */}
           <div>
-            <label className="block text-sm font-medium mb-1">Tahun Awal</label>
+            <label className="block text-sm font-medium mb-1">Start Year</label>
             <select
               className="w-full px-3 py-2 border rounded-md text-sm"
               value={year1}
@@ -151,7 +151,7 @@ export default function Historical() {
           {/* Year 2 */}
           <div>
             <label className="block text-sm font-medium mb-1">
-              Tahun Akhir
+              End Year
             </label>
             <select
               className="w-full px-3 py-2 border rounded-md text-sm"
@@ -172,7 +172,7 @@ export default function Historical() {
               disabled={loading}
               className="w-full"
             >
-              {loading ? "Memproses..." : "🔍 Bandingkan"}
+              {loading ? "Processing..." : "🔍 Compare"}
             </Button>
           </div>
         </div>
@@ -192,7 +192,7 @@ export default function Historical() {
                 </h3>
                 <p className="text-sm text-gray-500">
                   {result.year1} → {result.year2} ({result.year2 - result.year1}{" "}
-                  tahun)
+                  years)
                 </p>
               </div>
               <div className="flex gap-4 text-sm">
@@ -307,7 +307,7 @@ export default function Historical() {
 
             {filteredMetrics?.length === 0 && (
               <p className="text-center text-gray-500 py-8">
-                Tidak ada metrik yang sesuai filter.
+                No metrics match the current filter.
               </p>
             )}
           </Card>

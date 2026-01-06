@@ -107,7 +107,7 @@ export default function Screening() {
       setResult(res);
     } catch (err: unknown) {
       const e = err as { detail?: string };
-      setError(e.detail || "Screening gagal");
+      setError(e.detail || "Screening failed");
     } finally {
       setLoading(false);
     }
@@ -131,15 +131,15 @@ export default function Screening() {
   return (
     <div className="space-y-6">
       <Card>
-        <h2 className="text-xl font-bold mb-4">🔍 Screening Saham</h2>
+        <h2 className="text-xl font-bold mb-4">🔍 Stock Screening</h2>
         <p className="text-gray-600 mb-4">
-          Filter emiten berdasarkan kriteria metrik. Semua kondisi harus
-          terpenuhi (AND).
+          Filter stocks based on metric criteria. All conditions must be met
+          (AND logic).
         </p>
 
         {/* Year Selection */}
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-1">Tahun Data</label>
+          <label className="block text-sm font-medium mb-1">Data Year</label>
           <select
             className="w-full max-w-xs px-3 py-2 border rounded-md text-sm"
             value={selectedYear}
@@ -171,7 +171,7 @@ export default function Screening() {
                   updateFilter(f.id, "metric_name", e.target.value)
                 }
               >
-                <option value="">-- Pilih Metrik --</option>
+                <option value="">-- Select Metric --</option>
                 {Object.entries(metricsBySection).map(([section, mets]) => (
                   <optgroup key={section} label={section.toUpperCase()}>
                     {mets.map((m) => (
@@ -247,7 +247,7 @@ export default function Screening() {
             + Tambah Filter
           </Button>
           <Button onClick={handleScreen} disabled={loading}>
-            {loading ? "Memproses..." : "🔍 Jalankan Screening"}
+            {loading ? "Processing..." : "🔍 Run Screening"}
           </Button>
         </div>
 
@@ -258,10 +258,10 @@ export default function Screening() {
       {result && (
         <Card>
           <h3 className="text-lg font-bold mb-2">
-            Hasil Screening: {result.total_matched} Emiten Lolos
+            Screening Results: {result.total_matched} Stocks Passed
           </h3>
           <p className="text-sm text-gray-500 mb-4">
-            Tahun {result.year} • {result.filters_applied} filter diterapkan
+            Year {result.year} • {result.filters_applied} filters applied
           </p>
 
           {result.emitens.length > 0 ? (
@@ -306,7 +306,7 @@ export default function Screening() {
             </div>
           ) : (
             <p className="text-gray-500 text-center py-8">
-              Tidak ada emiten yang memenuhi kriteria filter.
+              No stocks match the filter criteria.
             </p>
           )}
         </Card>
