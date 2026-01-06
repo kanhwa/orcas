@@ -166,9 +166,9 @@ export default function SyncData({ user: _ }: SyncDataProps) {
           </div>
 
           <div className="mt-4 p-3 bg-blue-50 rounded-lg text-sm text-blue-800">
-            <strong>📝 Format nama file:</strong> Nama file harus dalam format{" "}
-            <code className="bg-blue-100 px-1 rounded">YYYY.csv</code> (contoh:
-            2024.csv, 2025.csv)
+            <strong>📝 File format:</strong> Filename must be in{" "}
+            <code className="bg-blue-100 px-1 rounded">YYYY.csv</code> format
+            (e.g., 2024.csv, 2025.csv)
           </div>
         </div>
       </Card>
@@ -271,21 +271,20 @@ export default function SyncData({ user: _ }: SyncDataProps) {
       <Card>
         <div className="card-body">
           <h3 className="text-lg font-semibold text-[rgb(var(--color-text))] mb-3">
-            ℹ️ Informasi
+            ℹ️ Information
           </h3>
           <ul className="list-disc list-inside space-y-2 text-sm text-[rgb(var(--color-text-subtle))]">
-            <li>File CSV berisi data laporan keuangan emiten bank per tahun</li>
+            <li>CSV files contain annual financial data for bank stocks</li>
             <li>
-              Nama file harus dalam format <strong>YYYY.csv</strong> (contoh:
+              Filename must be in <strong>YYYY.csv</strong> format (e.g.,
               2024.csv)
             </li>
             <li>
-              File yang sudah ada akan ditimpa jika mengupload dengan nama yang
-              sama
+              Existing files will be overwritten if uploading with the same name
             </li>
             <li>
-              Data yang diupload akan langsung tersedia untuk analisis di
-              fitur-fitur lainnya
+              Uploaded data will be immediately available for analysis in other
+              features
             </li>
           </ul>
         </div>

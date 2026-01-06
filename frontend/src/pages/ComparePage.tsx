@@ -155,7 +155,7 @@ function CompareTab() {
     const withBench = includeBenchmark
       ? (() => {
           const bench = {
-            ticker: "Avg KBMI",
+            ticker: "Average",
             scores: result.years.map((_, idx) => {
               const vals = series
                 .map((s) => s.scores[idx])
@@ -455,7 +455,7 @@ function CompareTab() {
             <Toggle
               pressed={includeBenchmark}
               onChange={setIncludeBenchmark}
-              label="Include Avg KBMI benchmark"
+              label="Include Average benchmark"
             />
             <Button type="submit" disabled={loading || tickers.length === 0}>
               {loading ? "Loading..." : "Run Compare"}

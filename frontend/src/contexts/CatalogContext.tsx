@@ -61,7 +61,7 @@ export function CatalogProvider({ children }: CatalogProviderProps) {
       setError(
         err instanceof Error
           ? err.message
-          : "Gagal memuat katalog metrik. Silakan coba lagi."
+          : "Failed to load metrics catalog. Please try again."
       );
     } finally {
       setLoading(false);

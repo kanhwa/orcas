@@ -81,7 +81,7 @@ export default function Screening() {
     const validFilters: MetricFilter[] = [];
     for (const f of filters) {
       if (!f.metric_name || !f.value) {
-        setError("Semua filter harus diisi lengkap");
+        setError("All filters must be filled completely");
         return;
       }
       validFilters.push({
