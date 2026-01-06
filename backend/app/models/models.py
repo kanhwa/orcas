@@ -94,11 +94,13 @@ class MetricDefinition(Base):
 
     id = Column(Integer, primary_key=True)
     metric_name = Column(String(100), nullable=False)
+    display_name_en = Column(String(150), nullable=False)
     section = Column(Enum(MetricSection, name="metric_section"), nullable=False)
     # type dan value_type jangan dipaksa dulu (biar tidak "ngarang" sebelum mapping final Anda dikunci)
     type = Column(Enum(MetricType, name="metric_type"), nullable=True)
     default_weight = Column(Numeric(5, 2), nullable=True)
     description = Column(Text, nullable=True)
+    unit_config = Column(JSONB, nullable=True)
 
     __table_args__ = (
         UniqueConstraint("section", "metric_name", name="uq_metric_section_name"),

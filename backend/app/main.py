@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import redis
@@ -5,7 +7,10 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.core.config import settings
 from app.db.database import ping_db
-from app.api.routes import activity, admin, auth, emitens, export, financial_data, historical, metric_ranking, ranking, scoring_runs, screening, stocks, sync_data, templates, wsm, years
+from app.db.session import SessionLocal
+from app.models import MetricDefinition
+from app.scripts.seed_metric_definitions import read_mapping, upsert_metrics
+from app.api.routes import activity, admin, auth, emitens, export, financial_data, historical, metric_ranking, ranking, scoring_runs, screening, stocks, sync_data, templates, wsm, years, metrics
 
 app = FastAPI(title="ORCAS API")
 
@@ -40,9 +45,37 @@ app.include_router(export.router)
 app.include_router(admin.router)
 app.include_router(screening.router)
 app.include_router(metric_ranking.router)
+app.include_router(metrics.router)
 app.include_router(historical.router)
 app.include_router(stocks.router)
 app.include_router(sync_data.router)
+
+
+def _seed_metrics_if_empty() -> None:
+    """Seed metric_definitions from the canonical CSV when empty."""
+    csv_path = Path(__file__).resolve().parents[2] / "data" / "processed" / "metric_type_mapping.csv"
+    if not csv_path.is_file():
+        return
+
+    db = SessionLocal()
+    try:
+        existing = db.query(MetricDefinition).count()
+        if existing > 0:
+            return
+
+        rows = read_mapping(csv_path)
+        applied, _ = upsert_metrics(db, rows)
+        if applied:
+            db.commit()
+    except Exception:  # pylint: disable=broad-exception-caught
+        db.rollback()
+    finally:
+        db.close()
+
+
+@app.on_event("startup")
+def _startup_tasks() -> None:
+    _seed_metrics_if_empty()
 
 @app.get("/health")
 def health():
