@@ -12,6 +12,8 @@ from app.schemas.screening import (
     ScreenedEmiten,
     ScreeningRequest,
     ScreeningResponse,
+    ConditionSummary,
+    ScreeningStats,
 )
 
 router = APIRouter(prefix="/api/screening", tags=["screening"])
@@ -55,21 +57,16 @@ def screen_emitens(
     
     All conditions must be met (AND logic).
     """
-    # Get metric names from filters
-    metric_names = [f.metric_name for f in payload.filters]
-    
-    # Validate all metrics exist
+    metric_ids = [f.metric_id for f in payload.filters]
+
     metrics = db.query(MetricDefinition).filter(
-        MetricDefinition.metric_name.in_(metric_names)
+        MetricDefinition.id.in_(metric_ids)
     ).all()
-    metric_map = {m.metric_name: m.id for m in metrics}
-    
-    missing = set(metric_names) - set(metric_map.keys())
+
+    metric_map = {m.id: m for m in metrics}
+    missing = set(metric_ids) - set(metric_map.keys())
     if missing:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unknown metrics: {', '.join(missing)}"
-        )
+        raise HTTPException(status_code=400, detail=f"Unknown metric ids: {sorted(missing)}")
     
     # Get all emitens
     emitens = db.query(Emiten).all()
@@ -80,55 +77,92 @@ def screen_emitens(
         db.query(FinancialData)
         .filter(
             FinancialData.year == payload.year,
-            FinancialData.metric_id.in_(list(metric_map.values()))
+            FinancialData.metric_id.in_(metric_ids),
         )
         .all()
     )
-    
-    # Build lookup: emiten_id -> metric_name -> value
-    data_lookup: dict[int, dict[str, float | None]] = {}
-    metric_id_to_name = {v: k for k, v in metric_map.items()}
-    
+
+    # Build lookup: emiten_id -> metric_id -> value
+    data_lookup: dict[int, dict[int, float | None]] = {}
+
     for fd in financial_data:
         if fd.emiten_id not in data_lookup:
             data_lookup[fd.emiten_id] = {}
-        metric_name = metric_id_to_name.get(fd.metric_id)
-        if metric_name:
-            data_lookup[fd.emiten_id][metric_name] = fd.value
+        data_lookup[fd.emiten_id][fd.metric_id] = float(fd.value) if fd.value is not None else None
     
     # Apply all filters to each emiten
     matched_emitens: list[ScreenedEmiten] = []
-    
+    missing_data_banks = 0
+
     for emiten_id, emiten in emiten_map.items():
         emiten_metrics = data_lookup.get(emiten_id, {})
-        
-        # Check all filters (AND logic)
+
+        # If any metric is missing value, count missing_data_banks
+        if any(emiten_metrics.get(f.metric_id) is None for f in payload.filters):
+            missing_data_banks += 1
+
         all_passed = True
         for f in payload.filters:
-            value = emiten_metrics.get(f.metric_name)
+            value = emiten_metrics.get(f.metric_id)
             if not apply_filter(value, f):
                 all_passed = False
                 break
-        
+
         if all_passed:
-            matched_emitens.append(ScreenedEmiten(
-                ticker=emiten.ticker_code,
-                name=emiten.bank_name or emiten.ticker_code,
-                metrics=emiten_metrics
-            ))
-    
+            matched_emitens.append(
+                ScreenedEmiten(
+                    ticker=emiten.ticker_code,
+                    name=emiten.bank_name or emiten.ticker_code,
+                    values=emiten_metrics,
+                )
+            )
+
     # Sort by first metric value (descending)
-    first_metric = payload.filters[0].metric_name
-    matched_emitens.sort(
-        key=lambda e: e.metrics.get(first_metric) or 0,
-        reverse=True
+    first_metric = payload.filters[0].metric_id
+    matched_emitens.sort(key=lambda e: e.values.get(first_metric) or 0, reverse=True)
+
+    # Condition summaries
+    conditions: list[ConditionSummary] = []
+    has_data = True
+    for f in payload.filters:
+        metric = metric_map[f.metric_id]
+        non_null_count = (
+            db.query(FinancialData)
+            .filter(
+                FinancialData.metric_id == f.metric_id,
+                FinancialData.year == payload.year,
+                FinancialData.value.isnot(None),
+            )
+            .count()
+        )
+        condition_has_data = non_null_count > 0
+        if not condition_has_data:
+            has_data = False
+        conditions.append(
+            ConditionSummary(
+                metric_id=metric.id,
+                metric_name=metric.metric_name,
+                display_name_en=metric.display_name_en,
+                operator=f.operator,
+                value=f.value,
+                value_max=f.value_max,
+                has_data=condition_has_data,
+                unit_config=metric.unit_config,
+            )
+        )
+
+    stats = ScreeningStats(
+        total=len(emiten_map),
+        passed=len(matched_emitens),
+        missing_data_banks=missing_data_banks,
     )
-    
+
     return ScreeningResponse(
         year=payload.year,
-        filters_applied=len(payload.filters),
-        total_matched=len(matched_emitens),
-        emitens=matched_emitens
+        conditions=conditions,
+        stats=stats,
+        passed=matched_emitens,
+        has_data=has_data,
     )
 
 
@@ -138,17 +172,21 @@ def get_screening_metrics(
     _current_user: User = Depends(get_current_user),
 ) -> list[dict]:
     """Get list of available metrics for screening with their sections."""
-    metrics = db.query(MetricDefinition).order_by(
-        MetricDefinition.section, MetricDefinition.metric_name
-    ).all()
-    
+    metrics = (
+        db.query(MetricDefinition)
+        .order_by(MetricDefinition.section, MetricDefinition.display_name_en)
+        .all()
+    )
+
     return [
         {
             "id": m.id,
             "name": m.metric_name,
-            "section": m.section,
-            "type": m.type,
-            "description": m.description or ""
+            "display_name_en": m.display_name_en,
+            "section": m.section.value if m.section else "",
+            "type": m.type.value if m.type else None,
+            "description": m.description or "",
+            "unit_config": m.unit_config,
         }
         for m in metrics
     ]

@@ -1,97 +1,200 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import {
-  screenEmitens,
-  getScreeningMetrics,
+  getMetrics,
+  getMetricSummary,
   getYears,
-  ScreeningResponse,
-  ScreeningMetric,
-  MetricFilter,
+  getEmitens,
+  screenEmitens,
+  MetricItem,
+  MetricSummaryResponse,
   FilterOperator,
+  ScreeningResponse,
+  MetricFilter,
 } from "../services/api";
 
 const OPERATORS: { value: FilterOperator; label: string }[] = [
-  { value: ">", label: "> (lebih dari)" },
-  { value: "<", label: "< (kurang dari)" },
-  { value: ">=", label: ">= (minimal)" },
-  { value: "<=", label: "<= (maksimal)" },
-  { value: "=", label: "= (sama dengan)" },
-  { value: "between", label: "between (antara)" },
+  { value: ">", label: "> (greater than)" },
+  { value: "<", label: "< (less than)" },
+  { value: ">=", label: ">= (at least)" },
+  { value: "<=", label: "<= (at most)" },
+  { value: "=", label: "= (equal to)" },
+  { value: "between", label: "between (range)" },
 ];
 
 interface FilterRow {
   id: number;
-  metric_name: string;
+  metric_id: number | null;
   operator: FilterOperator;
   value: string;
   value_max: string;
+  unit_choice: "base" | "mn" | "bn";
+}
+
+function convertInputToDataScale(
+  raw: string,
+  unit: string | null | undefined,
+  unit_choice: "base" | "mn" | "bn"
+): number | null {
+  if (raw === "") return null;
+  const num = parseFloat(raw);
+  if (Number.isNaN(num)) return null;
+
+  // Percent metrics stored as ratio (e.g., 0.15 for 15%)
+  if (unit === "%") {
+    return num / 100;
+  }
+
+  if (unit && unit.toLowerCase().startsWith("idr")) {
+    if (unit_choice === "mn") return num * 1_000_000;
+    if (unit_choice === "bn") return num * 1_000_000_000;
+  }
+
+  return num;
+}
+
+function formatValueDisplay(value: number | null, unit?: string | null) {
+  if (value === null || value === undefined) return "-";
+  if (unit === "%") {
+    return `${(value * 100).toFixed(2)} %`;
+  }
+  const abs = Math.abs(value);
+  const formatted =
+    abs >= 1_000_000_000
+      ? `${(value / 1_000_000_000).toFixed(2)}B`
+      : abs >= 1_000_000
+      ? `${(value / 1_000_000).toFixed(2)}M`
+      : abs >= 1_000
+      ? `${(value / 1_000).toFixed(2)}K`
+      : value.toFixed(4);
+  return unit ? `${formatted} ${unit}` : formatted;
 }
 
 export default function Screening() {
-  const [metrics, setMetrics] = useState<ScreeningMetric[]>([]);
+  const [metrics, setMetrics] = useState<MetricItem[]>([]);
   const [years, setYears] = useState<number[]>([]);
+  const [datasetSize, setDatasetSize] = useState<number>(32);
   const [selectedYear, setSelectedYear] = useState<number>(2024);
   const [filters, setFilters] = useState<FilterRow[]>([
-    { id: 1, metric_name: "", operator: ">", value: "", value_max: "" },
+    {
+      id: 1,
+      metric_id: null,
+      operator: ">",
+      value: "",
+      value_max: "",
+      unit_choice: "bn",
+    },
   ]);
+  const [activeSummary, setActiveSummary] =
+    useState<MetricSummaryResponse | null>(null);
   const [result, setResult] = useState<ScreeningResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    // Load metrics and years
-    getScreeningMetrics()
-      .then(setMetrics)
+    getMetrics()
+      .then((list) => {
+        setMetrics(list);
+      })
       .catch(() => setError("Failed to load metrics"));
+
     getYears()
       .then((res) => {
         setYears(res.years);
         if (res.years.length > 0) setSelectedYear(res.years[0]);
       })
       .catch(() => setError("Failed to load years"));
+
+    getEmitens()
+      .then((res) => setDatasetSize(res.items.length))
+      .catch(() => setDatasetSize(32));
   }, []);
+
+  const metricsBySection = useMemo(() => {
+    return metrics.reduce((acc, m) => {
+      if (!acc[m.section]) acc[m.section] = [];
+      acc[m.section].push(m);
+      return acc;
+    }, {} as Record<string, MetricItem[]>);
+  }, [metrics]);
+
+  const handleMetricChange = async (rowId: number, metricId: number) => {
+    setFilters((prev) =>
+      prev.map((f) => (f.id === rowId ? { ...f, metric_id: metricId } : f))
+    );
+    try {
+      const summary = await getMetricSummary(metricId, selectedYear);
+      setActiveSummary(summary);
+    } catch (e) {
+      setActiveSummary(null);
+    }
+  };
 
   const addFilter = () => {
     const newId = Math.max(...filters.map((f) => f.id), 0) + 1;
     setFilters([
       ...filters,
-      { id: newId, metric_name: "", operator: ">", value: "", value_max: "" },
+      {
+        id: newId,
+        metric_id: null,
+        operator: ">",
+        value: "",
+        value_max: "",
+        unit_choice: "bn",
+      },
     ]);
   };
 
   const removeFilter = (id: number) => {
-    if (filters.length > 1) {
-      setFilters(filters.filter((f) => f.id !== id));
-    }
+    if (filters.length > 1) setFilters(filters.filter((f) => f.id !== id));
   };
 
   const updateFilter = (
     id: number,
     field: keyof FilterRow,
-    value: string | FilterOperator
+    value: string | FilterOperator | number
   ) => {
-    setFilters(
-      filters.map((f) => (f.id === id ? { ...f, [field]: value } : f))
+    setFilters((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, [field]: value } : f))
     );
   };
 
   const handleScreen = async () => {
     // Validate filters
-    const validFilters: MetricFilter[] = [];
+    const metricFilters: MetricFilter[] = [];
     for (const f of filters) {
-      if (!f.metric_name || !f.value) {
-        setError("All filters must be filled completely");
+      if (!f.metric_id) {
+        setError("Please select a metric for each filter");
         return;
       }
-      validFilters.push({
-        metric_name: f.metric_name,
+      if (!f.value) {
+        setError("Please provide a value for each filter");
+        return;
+      }
+      const metric = metrics.find((m) => m.id === f.metric_id);
+      const unit = metric?.unit_config?.unit || null;
+      const baseValue = convertInputToDataScale(f.value, unit, f.unit_choice);
+      const baseMax = f.value_max
+        ? convertInputToDataScale(f.value_max, unit, f.unit_choice)
+        : null;
+      if (
+        metric?.unit_config?.allow_negative === false &&
+        baseValue !== null &&
+        baseValue < 0
+      ) {
+        setError("Negative values are not allowed for this metric");
+        return;
+      }
+      if (baseValue === null) {
+        setError("Invalid numeric value");
+        return;
+      }
+      metricFilters.push({
+        metric_id: f.metric_id,
         operator: f.operator,
-        value: parseFloat(f.value),
-        value_max:
-          f.operator === "between" && f.value_max
-            ? parseFloat(f.value_max)
-            : null,
+        value: baseValue,
+        value_max: f.operator === "between" ? baseMax : null,
       });
     }
 
@@ -102,39 +205,27 @@ export default function Screening() {
     try {
       const res = await screenEmitens({
         year: selectedYear,
-        filters: validFilters,
+        filters: metricFilters,
       });
       setResult(res);
-    } catch (err: unknown) {
-      const e = err as { detail?: string };
-      setError(e.detail || "Screening failed");
+    } catch (err: any) {
+      setError(err.detail || "Screening failed");
     } finally {
       setLoading(false);
     }
   };
 
-  // Group metrics by section
-  const metricsBySection = metrics.reduce((acc, m) => {
-    if (!acc[m.section]) acc[m.section] = [];
-    acc[m.section].push(m);
-    return acc;
-  }, {} as Record<string, ScreeningMetric[]>);
-
-  const formatValue = (val: string | number): string => {
-    const num = typeof val === "string" ? parseFloat(val) : val;
-    if (isNaN(num)) return String(val);
-    if (Math.abs(num) >= 1000000) return `${(num / 1000000).toFixed(2)}M`;
-    if (Math.abs(num) >= 1000) return `${(num / 1000).toFixed(2)}K`;
-    return num.toFixed(2);
-  };
+  const activeMetric = activeSummary
+    ? metrics.find((m) => m.id === activeSummary.metric_id)
+    : null;
 
   return (
     <div className="space-y-6">
       <Card>
         <h2 className="text-xl font-bold mb-4">🔍 Stock Screening</h2>
         <p className="text-gray-600 mb-4">
-          Filter stocks based on metric criteria. All conditions must be met
-          (AND logic).
+          Filter banks using multiple metric conditions (AND logic). Dataset
+          contains {datasetSize} tickers.
         </p>
 
         {/* Year Selection */}
@@ -143,7 +234,18 @@ export default function Screening() {
           <select
             className="w-full max-w-xs px-3 py-2 border rounded-md text-sm"
             value={selectedYear}
-            onChange={(e) => setSelectedYear(Number(e.target.value))}
+            onChange={async (e) => {
+              const y = Number(e.target.value);
+              setSelectedYear(y);
+              if (activeMetric) {
+                try {
+                  const summary = await getMetricSummary(activeMetric.id, y);
+                  setActiveSummary(summary);
+                } catch {
+                  setActiveSummary(null);
+                }
+              }
+            }}
           >
             {years.map((y) => (
               <option key={y} value={y}>
@@ -163,80 +265,124 @@ export default function Screening() {
             >
               <span className="text-sm text-gray-500 w-6">{idx + 1}.</span>
 
-              {/* Metric Select */}
-              <select
-                className="flex-1 min-w-[200px] px-3 py-2 border rounded-md text-sm"
-                value={f.metric_name}
-                onChange={(e) =>
-                  updateFilter(f.id, "metric_name", e.target.value)
-                }
-              >
-                <option value="">-- Select Metric --</option>
-                {Object.entries(metricsBySection).map(([section, mets]) => (
-                  <optgroup key={section} label={section.toUpperCase()}>
-                    {mets.map((m) => (
-                      <option key={m.id} value={m.name}>
-                        {m.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
+              {(() => {
+                const metric = metrics.find((m) => m.id === f.metric_id);
+                const unit = metric?.unit_config?.unit || "";
+                const unitIsIdr = unit.toLowerCase().startsWith("idr");
+                const unitLabel = unitIsIdr
+                  ? f.unit_choice === "bn"
+                    ? "IDR bn"
+                    : f.unit_choice === "mn"
+                    ? "IDR mn"
+                    : "IDR"
+                  : unit || "unitless";
+                return (
+                  <>
+                    {/* Metric Select */}
+                    <select
+                      className="flex-1 min-w-[220px] px-3 py-2 border rounded-md text-sm"
+                      value={f.metric_id ?? ""}
+                      onChange={(e) =>
+                        handleMetricChange(f.id, Number(e.target.value))
+                      }
+                    >
+                      <option value="">-- Select Metric --</option>
+                      {Object.entries(metricsBySection).map(
+                        ([section, mets]) => (
+                          <optgroup key={section} label={section.toUpperCase()}>
+                            {mets.map((m) => (
+                              <option key={m.id} value={m.id}>
+                                {m.display_name_en}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )
+                      )}
+                    </select>
 
-              {/* Operator Select */}
-              <select
-                className="w-40 px-3 py-2 border rounded-md text-sm"
-                value={f.operator}
-                onChange={(e) =>
-                  updateFilter(
-                    f.id,
-                    "operator",
-                    e.target.value as FilterOperator
-                  )
-                }
-              >
-                {OPERATORS.map((op) => (
-                  <option key={op.value} value={op.value}>
-                    {op.label}
-                  </option>
-                ))}
-              </select>
+                    {/* Operator Select */}
+                    <select
+                      className="w-40 px-3 py-2 border rounded-md text-sm"
+                      value={f.operator}
+                      onChange={(e) =>
+                        updateFilter(
+                          f.id,
+                          "operator",
+                          e.target.value as FilterOperator
+                        )
+                      }
+                    >
+                      {OPERATORS.map((op) => (
+                        <option key={op.value} value={op.value}>
+                          {op.label}
+                        </option>
+                      ))}
+                    </select>
 
-              {/* Value Input */}
-              <input
-                type="number"
-                className="w-32 px-3 py-2 border rounded-md text-sm"
-                placeholder="Nilai"
-                value={f.value}
-                onChange={(e) => updateFilter(f.id, "value", e.target.value)}
-              />
+                    {/* Unit choice for IDR metrics */}
+                    <select
+                      className="w-28 px-3 py-2 border rounded-md text-sm"
+                      value={f.unit_choice}
+                      disabled={!unitIsIdr}
+                      onChange={(e) =>
+                        updateFilter(f.id, "unit_choice", e.target.value)
+                      }
+                    >
+                      <option value="base">Unit</option>
+                      <option value="mn">IDR mn</option>
+                      <option value="bn">IDR bn</option>
+                    </select>
 
-              {/* Max Value for Between */}
-              {f.operator === "between" && (
-                <>
-                  <span className="text-sm text-gray-500">s.d.</span>
-                  <input
-                    type="number"
-                    className="w-32 px-3 py-2 border rounded-md text-sm"
-                    placeholder="Nilai Max"
-                    value={f.value_max}
-                    onChange={(e) =>
-                      updateFilter(f.id, "value_max", e.target.value)
-                    }
-                  />
-                </>
-              )}
+                    {/* Value Input */}
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        className="w-32 px-3 py-2 border rounded-md text-sm"
+                        placeholder={`Value (${unitLabel})`}
+                        value={f.value}
+                        onChange={(e) =>
+                          updateFilter(f.id, "value", e.target.value)
+                        }
+                      />
+                      <span className="text-xs text-gray-500">{unitLabel}</span>
+                    </div>
 
-              {/* Remove Button */}
-              {filters.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => removeFilter(f.id)}
-                  className="text-red-500 hover:text-red-700 text-lg"
-                >
-                  ✕
-                </button>
-              )}
+                    {/* Max Value for Between */}
+                    {f.operator === "between" && (
+                      <>
+                        <span className="text-sm text-gray-500">to</span>
+                        <input
+                          type="number"
+                          className="w-32 px-3 py-2 border rounded-md text-sm"
+                          placeholder={`Max (${unitLabel})`}
+                          value={f.value_max}
+                          onChange={(e) =>
+                            updateFilter(f.id, "value_max", e.target.value)
+                          }
+                        />
+                      </>
+                    )}
+
+                    {/* Remove Button */}
+                    {filters.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeFilter(f.id)}
+                        className="text-red-500 hover:text-red-700 text-lg"
+                      >
+                        ✕
+                      </button>
+                    )}
+
+                    {metric && (
+                      <p className="text-xs text-gray-500 w-full">
+                        Type: {metric.type || "unknown"} • Unit:{" "}
+                        {metric.unit_config?.unit || "n/a"}
+                      </p>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           ))}
         </div>
@@ -244,7 +390,7 @@ export default function Screening() {
         {/* Actions */}
         <div className="flex gap-2">
           <Button onClick={addFilter} variant="secondary">
-            + Tambah Filter
+            + Add Filter
           </Button>
           <Button onClick={handleScreen} disabled={loading}>
             {loading ? "Processing..." : "🔍 Run Screening"}
@@ -254,60 +400,106 @@ export default function Screening() {
         {error && <p className="mt-3 text-red-600 text-sm">{error}</p>}
       </Card>
 
+      {/* Data Hint */}
+      {activeSummary && (
+        <Card>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-bold">
+                Data Hint — {activeSummary.display_name_en}
+              </h3>
+              <p className="text-sm text-gray-600">
+                Type: {activeSummary.type || "unknown"}{" "}
+                {activeSummary.type === "benefit" && "(Higher is better)"}
+                {activeSummary.type === "cost" && "(Lower is better)"} • Unit:{" "}
+                {activeSummary.unit_config?.unit || "n/a"}
+              </p>
+            </div>
+            <div className="text-sm text-gray-600">
+              Missing: {activeSummary.missing_count}/{activeSummary.total_count}
+            </div>
+          </div>
+          {activeSummary.has_data ? (
+            <p className="text-sm text-gray-700 mt-2">
+              Range ({activeSummary.year}): min{" "}
+              {formatValueDisplay(
+                activeSummary.min,
+                activeSummary.unit_config?.unit
+              )}{" "}
+              • median{" "}
+              {formatValueDisplay(
+                activeSummary.median,
+                activeSummary.unit_config?.unit
+              )}{" "}
+              • max{" "}
+              {formatValueDisplay(
+                activeSummary.max,
+                activeSummary.unit_config?.unit
+              )}
+            </p>
+          ) : (
+            <p className="text-sm text-red-600 mt-2">
+              No data available for this metric/year.
+            </p>
+          )}
+        </Card>
+      )}
+
       {/* Results */}
       {result && (
         <Card>
-          <h3 className="text-lg font-bold mb-2">
-            Screening Results: {result.total_matched} Stocks Passed
-          </h3>
+          <h3 className="text-lg font-bold mb-2">Screening Results</h3>
           <p className="text-sm text-gray-500 mb-4">
-            Year {result.year} • {result.filters_applied} filters applied
+            Year {result.year} • {result.conditions.length} filters • Passed{" "}
+            {result.stats.passed}/{result.stats.total}
           </p>
 
-          {result.emitens.length > 0 ? (
+          {!result.has_data ? (
+            <p className="text-red-600">
+              No data available for selected metric/year.
+            </p>
+          ) : result.passed.length === 0 ? (
+            <p className="text-gray-500">No banks match the filter criteria.</p>
+          ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-4 py-2 text-left font-medium">#</th>
                     <th className="px-4 py-2 text-left font-medium">Ticker</th>
-                    <th className="px-4 py-2 text-left font-medium">Nama</th>
-                    {filters
-                      .filter((f) => f.metric_name)
-                      .map((f) => (
-                        <th
-                          key={f.id}
-                          className="px-4 py-2 text-right font-medium"
-                        >
-                          {f.metric_name}
-                        </th>
-                      ))}
+                    <th className="px-4 py-2 text-left font-medium">Bank</th>
+                    {result.conditions.map((c) => (
+                      <th
+                        key={c.metric_id}
+                        className="px-4 py-2 text-right font-medium"
+                      >
+                        {c.display_name_en}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {result.emitens.map((e, idx) => (
+                  {result.passed.map((e, idx) => (
                     <tr key={e.ticker} className="border-t hover:bg-gray-50">
                       <td className="px-4 py-2">{idx + 1}</td>
                       <td className="px-4 py-2 font-mono font-bold">
                         {e.ticker}
                       </td>
                       <td className="px-4 py-2">{e.name}</td>
-                      {filters
-                        .filter((f) => f.metric_name)
-                        .map((f) => (
-                          <td key={f.id} className="px-4 py-2 text-right">
-                            {formatValue(e.metrics[f.metric_name])}
-                          </td>
-                        ))}
+                      {result.conditions.map((c) => (
+                        <td key={c.metric_id} className="px-4 py-2 text-right">
+                          {formatValueDisplay(
+                            e.values[String(c.metric_id)] ??
+                              (e.values as any)[c.metric_id],
+                            c.unit_config?.unit
+                          )}
+                        </td>
+                      ))}
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          ) : (
-            <p className="text-gray-500 text-center py-8">
-              No stocks match the filter criteria.
-            </p>
           )}
         </Card>
       )}
