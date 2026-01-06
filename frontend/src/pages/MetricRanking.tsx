@@ -1,308 +1,436 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import {
-  getMetricRanking,
   getAvailableMetrics,
   getYears,
-  MetricRankingResponse,
-  AvailableMetric,
+  getMetricRankingPanel,
+  getMetricRankingByYear,
+  getEmitens,
+  MetricItem,
+  MetricPanelResponse,
+  MetricYearTopResponse,
 } from "../services/api";
 
+type Mode = "panel" | "byYear";
+
+function formatValue(val: number | null, unit?: string | null) {
+  if (val === null || val === undefined) return "—";
+  if (unit === "%") return `${(val * 100).toFixed(2)}%`;
+  const abs = Math.abs(val);
+  if (unit && unit.toLowerCase().startsWith("idr")) {
+    if (abs >= 1_000_000_000_000)
+      return `${(val / 1_000_000_000_000).toFixed(2)}T`;
+    if (abs >= 1_000_000_000) return `${(val / 1_000_000_000).toFixed(2)}B`;
+    if (abs >= 1_000_000) return `${(val / 1_000_000).toFixed(2)}M`;
+    if (abs >= 1_000) return `${(val / 1_000).toFixed(2)}K`;
+  }
+  return abs >= 1_000_000_000
+    ? `${(val / 1_000_000_000).toFixed(2)}B`
+    : abs >= 1_000_000
+    ? `${(val / 1_000_000).toFixed(2)}M`
+    : abs >= 1_000
+    ? `${(val / 1_000).toFixed(2)}K`
+    : val.toFixed(4);
+}
+
 export default function MetricRanking() {
-  const [metrics, setMetrics] = useState<AvailableMetric[]>([]);
+  const [metrics, setMetrics] = useState<MetricItem[]>([]);
   const [years, setYears] = useState<number[]>([]);
-  const [selectedMetric, setSelectedMetric] = useState("");
-  const [yearFrom, setYearFrom] = useState(2020);
-  const [yearTo, setYearTo] = useState(2024);
-  const [topN, setTopN] = useState(3);
-  const [result, setResult] = useState<MetricRankingResponse | null>(null);
+  const [datasetSize, setDatasetSize] = useState<number>(32);
+  const [mode, setMode] = useState<Mode>("panel");
+  const [selectedMetricId, setSelectedMetricId] = useState<number | null>(null);
+  const [yearFrom, setYearFrom] = useState<number>(2020);
+  const [yearTo, setYearTo] = useState<number>(2024);
+  const [singleYear, setSingleYear] = useState<number>(2024);
+  const [topN, setTopN] = useState<number>(5);
+  const [warning, setWarning] = useState<string>("");
+  const [panelResult, setPanelResult] = useState<MetricPanelResponse | null>(
+    null
+  );
+  const [yearResult, setYearResult] = useState<MetricYearTopResponse | null>(
+    null
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
     getAvailableMetrics()
-      .then((m) => {
-        setMetrics(m);
-        if (m.length > 0) setSelectedMetric(m[0].name);
+      .then((list) => {
+        setMetrics(list);
+        if (list.length > 0) setSelectedMetricId(list[0].id);
+        else setError("No metrics available. Please contact an administrator.");
       })
       .catch(() => setError("Failed to load metrics"));
 
     getYears()
       .then((res) => {
         setYears(res.years);
-        if (res.years.length > 0) {
-          setYearTo(res.years[0]);
-          setYearFrom(
-            Math.max(res.years[res.years.length - 1], res.years[0] - 4)
-          );
+        if (res.years.length) {
+          const maxYear = Math.max(...res.years);
+          const minYear = Math.min(...res.years);
+          setYearTo(maxYear);
+          setYearFrom(Math.max(minYear, maxYear - 4));
+          setSingleYear(maxYear);
         }
       })
       .catch(() => setError("Failed to load years"));
+
+    getEmitens()
+      .then((res) => setDatasetSize(res.items.length || 32))
+      .catch(() => setDatasetSize(32));
   }, []);
 
-  const handleFetch = async () => {
-    if (!selectedMetric) {
-      setError("Please select a metric first");
+  const metricsBySection = useMemo(() => {
+    return metrics.reduce((acc, m) => {
+      if (!acc[m.section]) acc[m.section] = [];
+      acc[m.section].push(m);
+      return acc;
+    }, {} as Record<string, MetricItem[]>);
+  }, [metrics]);
+
+  const clampTopN = (value: number) => {
+    if (!Number.isFinite(value) || value < 1) {
+      setWarning("Top N must be at least 1.");
+      return 1;
+    }
+    if (value > datasetSize) {
+      setWarning(`Top N capped at dataset size (${datasetSize}).`);
+      return datasetSize;
+    }
+    setWarning("");
+    return value;
+  };
+
+  const handleFetchPanel = async () => {
+    if (!selectedMetricId) {
+      setError("Please select a metric first.");
       return;
     }
-
     setLoading(true);
     setError("");
-    setResult(null);
-
+    setPanelResult(null);
+    setYearResult(null);
+    const cappedTopN = clampTopN(topN);
+    setTopN(cappedTopN);
     try {
-      const res = await getMetricRanking({
-        metric_name: selectedMetric,
-        year_from: yearFrom,
-        year_to: yearTo,
-        top_n: topN,
+      const res = await getMetricRankingPanel({
+        metric_id: selectedMetricId,
+        from_year: yearFrom,
+        to_year: yearTo,
+        top_n: cappedTopN,
+        rank_year: yearTo,
       });
-      setResult(res);
-    } catch (err: unknown) {
-      const e = err as { detail?: string };
-      setError(e.detail || "Failed to fetch ranking data");
+      setPanelResult(res);
+    } catch (err: any) {
+      setError(err.detail || "Failed to fetch ranking data");
     } finally {
       setLoading(false);
     }
   };
 
-  // Group metrics by section
-  const metricsBySection = metrics.reduce((acc, m) => {
-    if (!acc[m.section]) acc[m.section] = [];
-    acc[m.section].push(m);
-    return acc;
-  }, {} as Record<string, AvailableMetric[]>);
-
-  const formatValue = (val: number | null): string => {
-    if (val === null) return "-";
-    if (Math.abs(val) >= 1000000) return `${(val / 1000000).toFixed(2)}M`;
-    if (Math.abs(val) >= 1000) return `${(val / 1000).toFixed(2)}K`;
-    return val.toFixed(2);
+  const handleFetchByYear = async () => {
+    if (!selectedMetricId) {
+      setError("Please select a metric first.");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    setYearResult(null);
+    setPanelResult(null);
+    const cappedTopN = clampTopN(topN);
+    setTopN(cappedTopN);
+    try {
+      const res = await getMetricRankingByYear({
+        metric_id: selectedMetricId,
+        year: singleYear,
+        top_n: cappedTopN,
+      });
+      setYearResult(res);
+    } catch (err: any) {
+      setError(err.detail || "Failed to fetch ranking data");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Get medal emoji for rank
-  const getMedal = (rank: number): string => {
-    if (rank === 1) return "🥇";
-    if (rank === 2) return "🥈";
-    if (rank === 3) return "🥉";
-    return `#${rank}`;
-  };
-
-  // Get all unique tickers from results (for tracking across years)
-  const getAllTickers = (): string[] => {
-    if (!result) return [];
-    const tickers = new Set<string>();
-    result.yearly_rankings.forEach((yr) => {
-      yr.rankings.forEach((r) => tickers.add(r.ticker));
-    });
-    return Array.from(tickers);
-  };
-
-  // Color coding for tickers
-  const tickerColors: Record<string, string> = {
-    BBRI: "bg-blue-100 text-blue-800",
-    BMRI: "bg-green-100 text-green-800",
-    BBCA: "bg-purple-100 text-purple-800",
-    BBNI: "bg-orange-100 text-orange-800",
-    BNGA: "bg-pink-100 text-pink-800",
-  };
+  const activeMetric = metrics.find((m) => m.id === selectedMetricId);
+  const unit = activeMetric?.unit_config?.unit;
 
   return (
     <div className="space-y-6">
       <Card>
-        <h2 className="text-xl font-bold mb-4">🏆 Metric Ranking</h2>
+        <h2 className="text-xl font-bold mb-2">🏆 Metric Ranking</h2>
         <p className="text-gray-600 mb-4">
-          View Top N stocks for a specific metric across multiple years.
+          View Top N banks for a metric in English-only labels. Dataset contains{" "}
+          {datasetSize} tickers.
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-          {/* Metric Select */}
+        <div className="flex flex-wrap gap-3 mb-4">
+          <button
+            className={`px-3 py-2 rounded-md border text-sm ${
+              mode === "panel"
+                ? "bg-blue-600 text-white border-blue-600"
+                : "bg-white"
+            }`}
+            onClick={() => {
+              setMode("panel");
+              setPanelResult(null);
+              setYearResult(null);
+            }}
+          >
+            Panel (Top N by To Year)
+          </button>
+          <button
+            className={`px-3 py-2 rounded-md border text-sm ${
+              mode === "byYear"
+                ? "bg-blue-600 text-white border-blue-600"
+                : "bg-white"
+            }`}
+            onClick={() => {
+              setMode("byYear");
+              setPanelResult(null);
+              setYearResult(null);
+            }}
+          >
+            Year-by-year Top N
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">Metric</label>
             <select
               className="w-full px-3 py-2 border rounded-md text-sm"
-              value={selectedMetric}
-              onChange={(e) => setSelectedMetric(e.target.value)}
+              value={selectedMetricId ?? ""}
+              onChange={(e) => setSelectedMetricId(Number(e.target.value))}
             >
+              {!metrics.length && (
+                <option value="">No metrics available</option>
+              )}
+              {metrics.length > 0 && selectedMetricId === null && (
+                <option value="">-- Select Metric --</option>
+              )}
               {Object.entries(metricsBySection).map(([section, mets]) => (
                 <optgroup key={section} label={section.toUpperCase()}>
                   {mets.map((m) => (
-                    <option key={m.name} value={m.name}>
-                      {m.name} ({m.type})
+                    <option key={m.id} value={m.id}>
+                      {m.display_name_en} ({m.type || "n/a"})
                     </option>
                   ))}
                 </optgroup>
               ))}
             </select>
+            {activeMetric && (
+              <p className="text-xs text-gray-500 mt-1">
+                Unit: {activeMetric.unit_config?.unit || "n/a"} • Type:{" "}
+                {activeMetric.type || "unknown"}
+              </p>
+            )}
           </div>
 
-          {/* Year From */}
-          <div>
-            <label className="block text-sm font-medium mb-1">From Year</label>
-            <select
-              className="w-full px-3 py-2 border rounded-md text-sm"
-              value={yearFrom}
-              onChange={(e) => setYearFrom(Number(e.target.value))}
-            >
-              {years.map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Year To */}
-          <div>
-            <label className="block text-sm font-medium mb-1">To Year</label>
-            <select
-              className="w-full px-3 py-2 border rounded-md text-sm"
-              value={yearTo}
-              onChange={(e) => setYearTo(Number(e.target.value))}
-            >
-              {years.map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Top N */}
           <div>
             <label className="block text-sm font-medium mb-1">Top N</label>
-            <select
+            <input
+              type="number"
+              min={1}
+              max={datasetSize}
               className="w-full px-3 py-2 border rounded-md text-sm"
               value={topN}
-              onChange={(e) => setTopN(Number(e.target.value))}
-            >
-              {[1, 2, 3, 4, 5, 10].map((n) => (
-                <option key={n} value={n}>
-                  Top {n}
-                </option>
-              ))}
-            </select>
+              onChange={(e) => setTopN(clampTopN(Number(e.target.value)))}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Max {datasetSize} banks.
+            </p>
           </div>
+
+          {mode === "panel" ? (
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  From Year
+                </label>
+                <select
+                  className="w-full px-3 py-2 border rounded-md text-sm"
+                  value={yearFrom}
+                  onChange={(e) => {
+                    const y = Number(e.target.value);
+                    setYearFrom(y);
+                    if (y > yearTo) setYearTo(y);
+                  }}
+                >
+                  {years.map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  To Year
+                </label>
+                <select
+                  className="w-full px-3 py-2 border rounded-md text-sm"
+                  value={yearTo}
+                  onChange={(e) => {
+                    const y = Number(e.target.value);
+                    setYearTo(y);
+                    if (y < yearFrom) setYearFrom(y);
+                  }}
+                >
+                  {years.map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium mb-1">Year</label>
+              <select
+                className="w-full px-3 py-2 border rounded-md text-sm"
+                value={singleYear}
+                onChange={(e) => setSingleYear(Number(e.target.value))}
+              >
+                {years.map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
-        <Button onClick={handleFetch} disabled={loading}>
-          {loading ? "Processing..." : "🔍 View Ranking"}
-        </Button>
-
-        {error && <p className="mt-3 text-red-600 text-sm">{error}</p>}
+        <div className="flex items-center gap-3 mt-4">
+          <Button
+            onClick={mode === "panel" ? handleFetchPanel : handleFetchByYear}
+            disabled={loading || !metrics.length}
+          >
+            {loading ? "Processing..." : "🔍 View Ranking"}
+          </Button>
+          {warning && <span className="text-sm text-amber-600">{warning}</span>}
+          {error && <span className="text-sm text-red-600">{error}</span>}
+        </div>
       </Card>
 
-      {/* Results */}
-      {result && (
+      {panelResult && (
         <Card>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-3">
             <div>
-              <h3 className="text-lg font-bold">{result.metric_name}</h3>
+              <h3 className="text-lg font-bold">
+                {panelResult.display_name_en}
+              </h3>
               <p className="text-sm text-gray-500">
-                Type: {result.metric_type} •{" "}
-                {result.metric_type === "benefit"
-                  ? "Higher is better ↑"
-                  : "Lower is better ↓"}
+                Type: {panelResult.metric_type || "unknown"} • Unit:{" "}
+                {unit || "n/a"}
+              </p>
+              <p className="text-sm text-gray-500">
+                Top N determined by {panelResult.rank_year}; showing values{" "}
+                {panelResult.from_year}–{panelResult.to_year}.
               </p>
             </div>
-            <div className="flex gap-2 flex-wrap">
-              {getAllTickers().map((t) => (
-                <span
-                  key={t}
-                  className={`px-2 py-1 rounded text-xs font-mono ${
-                    tickerColors[t] || "bg-gray-100 text-gray-800"
-                  }`}
-                >
-                  {t}
-                </span>
-              ))}
-            </div>
           </div>
-
-          {/* Ranking Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-2 text-left font-medium">Rank</th>
-                  {result.years.map((y) => (
-                    <th key={y} className="px-4 py-2 text-center font-medium">
-                      {y}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {Array.from({ length: topN }).map((_, rankIdx) => (
-                  <tr key={rankIdx} className="border-t">
-                    <td className="px-4 py-3 font-bold text-lg">
-                      {getMedal(rankIdx + 1)}
-                    </td>
-                    {result.yearly_rankings.map((yr) => {
-                      const item = yr.rankings.find(
-                        (r) => r.rank === rankIdx + 1
-                      );
-                      return (
-                        <td key={yr.year} className="px-4 py-3 text-center">
-                          {item ? (
-                            <div>
-                              <div
-                                className={`inline-block px-2 py-1 rounded font-mono font-bold ${
-                                  tickerColors[item.ticker] || "bg-gray-100"
-                                }`}
-                              >
-                                {item.ticker}
-                              </div>
-                              <div className="text-xs text-gray-500 mt-1">
-                                {formatValue(item.value)}
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="text-gray-400">-</span>
-                          )}
-                        </td>
-                      );
-                    })}
+          {panelResult.rows.length === 0 ? (
+            <p className="text-gray-500">
+              No data available for this metric/year range.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left font-medium">#</th>
+                    <th className="px-4 py-2 text-left font-medium">Ticker</th>
+                    <th className="px-4 py-2 text-left font-medium">Bank</th>
+                    {Array.from(
+                      {
+                        length: panelResult.to_year - panelResult.from_year + 1,
+                      },
+                      (_, idx) => panelResult.from_year + idx
+                    ).map((y) => (
+                      <th key={y} className="px-4 py-2 text-right font-medium">
+                        {y}
+                      </th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {panelResult.rows.map((row, idx) => (
+                    <tr key={row.ticker} className="border-t hover:bg-gray-50">
+                      <td className="px-4 py-2">{idx + 1}</td>
+                      <td className="px-4 py-2 font-mono font-bold">
+                        {row.ticker}
+                      </td>
+                      <td className="px-4 py-2">{row.name}</td>
+                      {Array.from(
+                        {
+                          length:
+                            panelResult.to_year - panelResult.from_year + 1,
+                        },
+                        (_, i) => panelResult.from_year + i
+                      ).map((y) => (
+                        <td key={y} className="px-4 py-2 text-right">
+                          {formatValue(row.values[String(y)], unit)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+      )}
 
-          {/* Trend Summary */}
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-            <h4 className="font-medium mb-2">📊 Trend Summary</h4>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-              {getAllTickers()
-                .slice(0, 4)
-                .map((ticker) => {
-                  const appearances = result.yearly_rankings.filter((yr) =>
-                    yr.rankings.some((r) => r.ticker === ticker)
-                  ).length;
-                  const avgRank =
-                    result.yearly_rankings.reduce((sum, yr) => {
-                      const r = yr.rankings.find((x) => x.ticker === ticker);
-                      return sum + (r ? r.rank : 0);
-                    }, 0) / appearances;
-
-                  return (
-                    <div
-                      key={ticker}
-                      className="bg-white p-3 rounded shadow-sm"
-                    >
-                      <div className="font-mono font-bold">{ticker}</div>
-                      <div className="text-gray-500">
-                        Appears {appearances}/{result.years.length} years
-                      </div>
-                      <div className="text-gray-500">
-                        Avg rank: {avgRank.toFixed(1)}
-                      </div>
-                    </div>
-                  );
-                })}
+      {yearResult && (
+        <Card>
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h3 className="text-lg font-bold">
+                {yearResult.display_name_en}
+              </h3>
+              <p className="text-sm text-gray-500">
+                Year {yearResult.year} • Type:{" "}
+                {yearResult.metric_type || "unknown"} • Unit: {unit || "n/a"}
+              </p>
             </div>
           </div>
+          {yearResult.rankings.length === 0 ? (
+            <p className="text-gray-500">
+              No data available for this metric/year.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left font-medium">Rank</th>
+                    <th className="px-4 py-2 text-left font-medium">Ticker</th>
+                    <th className="px-4 py-2 text-left font-medium">Bank</th>
+                    <th className="px-4 py-2 text-right font-medium">Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {yearResult.rankings.map((r) => (
+                    <tr key={r.ticker} className="border-t hover:bg-gray-50">
+                      <td className="px-4 py-2">#{r.rank}</td>
+                      <td className="px-4 py-2 font-mono font-bold">
+                        {r.ticker}
+                      </td>
+                      <td className="px-4 py-2">{r.name}</td>
+                      <td className="px-4 py-2 text-right">
+                        {formatValue(r.value, unit)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </Card>
       )}
     </div>
