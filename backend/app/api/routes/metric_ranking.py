@@ -15,6 +15,8 @@ from app.schemas.metric_ranking import (
     MetricYearTopResponse,
 )
 
+from app.schemas.metrics import MetricOut
+
 router = APIRouter(prefix="/api/metric-ranking", tags=["metric-ranking"])
 
 
@@ -102,11 +104,11 @@ def get_metric_ranking(
     )
 
 
-@router.get("/available-metrics")
+@router.get("/available-metrics", response_model=list[MetricOut])
 def get_available_metrics(
     db: Session = Depends(get_db),
     _current_user: User = Depends(get_current_user),
-) -> list[dict]:
+) -> list[MetricOut]:
     """Get list of metrics available for ranking."""
     metrics = (
         db.query(MetricDefinition)
@@ -115,15 +117,15 @@ def get_available_metrics(
     )
 
     return [
-        {
-            "id": m.id,
-            "name": m.metric_name,
-            "display_name_en": m.display_name_en,
-            "section": m.section.value if m.section else "",
-            "type": m.type.value if m.type else "unknown",
-            "description": m.description or "",
-            "unit_config": m.unit_config,
-        }
+        MetricOut(
+            id=m.id,
+            metric_name=m.metric_name,
+            display_name_en=m.display_name_en,
+            section=m.section.value if m.section else "",
+            type=m.type.value if m.type else None,
+            description=m.description,
+            unit_config=m.unit_config,
+        )
         for m in metrics
     ]
 

@@ -1,13 +1,18 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
+import InfoTooltip from "../components/InfoTip";
 import {
+  getAvailableMetrics,
+  getYears,
   getMetricRankingPanel,
   getMetricRankingByYear,
+  getEmitens,
+  MetricItem,
   MetricPanelResponse,
   MetricYearTopResponse,
 } from "../services/api";
-import { useMetricCatalog } from "../features/analysis/useMetricCatalog";
+import { toCatalogMetric, CatalogMetric } from "../shared/metricCatalog";
 
 type Mode = "panel" | "byYear";
 
@@ -32,7 +37,10 @@ function formatValue(val: number | null, unit?: string | null) {
 }
 
 export default function MetricRanking() {
-  const { metrics, years, metricsBySection } = useMetricCatalog();
+  const [metrics, setMetrics] = useState<MetricItem[]>([]);
+  const [catalogMetrics, setCatalogMetrics] = useState<CatalogMetric[]>([]);
+  const [years, setYears] = useState<number[]>([]);
+  const [datasetSize, setDatasetSize] = useState<number>(32);
   const [mode, setMode] = useState<Mode>("panel");
   const [selectedMetricId, setSelectedMetricId] = useState<number | null>(null);
   const [yearFrom, setYearFrom] = useState<number>(2020);
@@ -49,36 +57,42 @@ export default function MetricRanking() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Initialize year range when data loads
-  const datasetSize = 32;
+  useEffect(() => {
+    getAvailableMetrics()
+      .then((list) => {
+        setMetrics(list);
+        // Convert to catalog metrics for standardized display
+        setCatalogMetrics(list.map(toCatalogMetric));
+        if (list.length > 0) setSelectedMetricId(list[0].id);
+        else setError("No metrics available. Please contact an administrator.");
+      })
+      .catch(() => setError("Failed to load metrics"));
 
-  const initYears = (() => {
-    if (years.length > 0) {
-      const maxYear = Math.max(...years);
-      const minYear = Math.min(...years);
-      return {
-        yearFrom: Math.max(minYear, maxYear - 4),
-        yearTo: maxYear,
-        singleYear: maxYear,
-      };
-    }
-    return null;
-  })();
+    getYears()
+      .then((res) => {
+        setYears(res.years);
+        if (res.years.length) {
+          const maxYear = Math.max(...res.years);
+          const minYear = Math.min(...res.years);
+          setYearTo(maxYear);
+          setYearFrom(Math.max(minYear, maxYear - 4));
+          setSingleYear(maxYear);
+        }
+      })
+      .catch(() => setError("Failed to load years"));
 
-  if (
-    initYears &&
-    (yearFrom !== initYears.yearFrom ||
-      yearTo !== initYears.yearTo ||
-      singleYear !== initYears.singleYear) &&
-    !loading &&
-    !panelResult &&
-    !yearResult
-  ) {
-    // One-time initialization
-    if (yearFrom === 2020) {
-      // Default value hasn't been overridden
-    }
-  }
+    getEmitens()
+      .then((res) => setDatasetSize(res.items.length || 32))
+      .catch(() => setDatasetSize(32));
+  }, []);
+
+  const metricsBySection = useMemo(() => {
+    return catalogMetrics.reduce((acc, m) => {
+      if (!acc[m.section]) acc[m.section] = [];
+      acc[m.section].push(m);
+      return acc;
+    }, {} as Record<string, CatalogMetric[]>);
+  }, [catalogMetrics]);
 
   const clampTopN = (value: number) => {
     if (!Number.isFinite(value) || value < 1) {
@@ -86,7 +100,7 @@ export default function MetricRanking() {
       return 1;
     }
     if (value > datasetSize) {
-      setWarning(`Top N cannot exceed 32 (dataset contains 32 bank tickers).`);
+      setWarning(`Top N capped at dataset size (${datasetSize}).`);
       return datasetSize;
     }
     setWarning("");
@@ -151,11 +165,40 @@ export default function MetricRanking() {
   return (
     <div className="space-y-6">
       <Card>
-        <h2 className="text-xl font-bold mb-2">🏆 Metric Ranking</h2>
-        <p className="text-gray-600 mb-4">
-          View Top N banks for a metric in English-only labels. Dataset contains{" "}
-          {datasetSize} tickers.
+        <div className="mb-2 flex items-center gap-2">
+          <h2 className="text-xl font-bold">🏆 Metric Ranking</h2>
+          <InfoTooltip
+            ariaLabel="Info: Metric Ranking"
+            content={
+              <ul className="list-disc space-y-1 pl-4">
+                <li>Single-Year Top N: ranks banks for one selected year.</li>
+                <li>
+                  Multi-Year Panel: picks Top N by the end year, then shows the
+                  same banks across the full year range.
+                </li>
+              </ul>
+            }
+          />
+        </div>
+        <p className="text-sm text-gray-500 mb-4">
+          Dataset size: {datasetSize} tickers
         </p>
+
+        <div className="mb-2 flex items-center gap-2">
+          <span className="text-sm font-semibold text-gray-700">Mode</span>
+          <InfoTooltip
+            ariaLabel="Info: Ranking modes"
+            content={
+              <ul className="list-disc space-y-1 pl-4">
+                <li>Single-Year Top N: ranks banks for one selected year.</li>
+                <li>
+                  Multi-Year Panel: picks Top N by the end year, then shows the
+                  same banks across the full year range.
+                </li>
+              </ul>
+            }
+          />
+        </div>
 
         <div className="flex flex-wrap gap-3 mb-4">
           <button
@@ -170,7 +213,7 @@ export default function MetricRanking() {
               setYearResult(null);
             }}
           >
-            Panel (Top N by To Year)
+            Multi-Year Panel (Top N fixed by End Year)
           </button>
           <button
             className={`px-3 py-2 rounded-md border text-sm ${
@@ -184,7 +227,7 @@ export default function MetricRanking() {
               setYearResult(null);
             }}
           >
-            Year-by-year Top N
+            Single-Year Top N
           </button>
         </div>
 
@@ -193,8 +236,19 @@ export default function MetricRanking() {
             <label className="block text-sm font-medium mb-1">Metric</label>
             <select
               className="w-full px-3 py-2 border rounded-md text-sm"
-              value={selectedMetricId ?? ""}
-              onChange={(e) => setSelectedMetricId(Number(e.target.value))}
+              value={
+                selectedMetricId
+                  ? metrics.find((m) => m.id === selectedMetricId)
+                      ?.metric_name || ""
+                  : ""
+              }
+              onChange={(e) => {
+                // Convert metric key to metric ID
+                const selectedMetric = metrics.find(
+                  (m) => m.metric_name === e.target.value
+                );
+                setSelectedMetricId(selectedMetric?.id || null);
+              }}
             >
               {!metrics.length && (
                 <option value="">No metrics available</option>
@@ -203,10 +257,10 @@ export default function MetricRanking() {
                 <option value="">-- Select Metric --</option>
               )}
               {Object.entries(metricsBySection).map(([section, mets]) => (
-                <optgroup key={section} label={section.toUpperCase()}>
+                <optgroup key={section} label={section}>
                   {mets.map((m) => (
-                    <option key={m.id} value={m.id}>
-                        {m.metric_name} ({m.type || "n/a"})
+                    <option key={m.key} value={m.key}>
+                      {m.label}
                     </option>
                   ))}
                 </optgroup>

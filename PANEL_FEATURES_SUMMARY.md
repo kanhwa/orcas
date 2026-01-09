@@ -1,7 +1,9 @@
 # ORCAS Panel Features Implementation Summary
 
 ## Overview
+
 Implemented three features for ORCAS (Vite React + TypeScript frontend, FastAPI backend):
+
 - **Feature A**: Default letter avatar display
 - **Feature B**: Remove avatar functionality
 - **Feature C**: Admin password reset + username edit
@@ -9,30 +11,37 @@ Implemented three features for ORCAS (Vite React + TypeScript frontend, FastAPI 
 ## Implementation Details
 
 ### FEATURE A — Default Avatar (Letter)
+
 **Component**: `frontend/src/components/AvatarBadge.tsx` (new)
 
 Reusable component that displays:
+
 - User avatar image if `avatar_url` exists
 - Fallback: circular badge with first letter of username (uppercase) on white background
 - Supports 3 sizes: `sm` (8x8), `md` (10x10), `lg` (16x16)
 
 **Usage Locations**:
+
 1. **Header** (`frontend/src/components/layout/AppShell.tsx`) - Top-right user menu
 2. **Profile page** (`frontend/src/pages/Profile.tsx`) - Avatar section
 
 **Backend**:
+
 - Migration added: `backend/alembic/versions/20260109_add_avatar_url.py`
 - Added `avatar_url` column to `users` table (nullable string)
 - Updated `UserMeResponse` schema to include `avatar_url`
 
 ### FEATURE B — Remove Avatar
+
 **Backend Endpoint**: `DELETE /api/auth/avatar`
+
 - Auth required (uses session cookie)
 - Deletes avatar file from disk (best-effort; ignores missing files)
 - Sets `avatar_url` to NULL in database
 - Returns updated user payload (same shape as `/api/auth/me`)
 
 **Frontend**:
+
 - Added `deleteAvatar()` function to `api.ts`
 - Added "Remove" button next to "Upload Avatar" in Profile page
 - Button only visible if user has an avatar
@@ -40,14 +49,17 @@ Reusable component that displays:
 - Error handling with user-friendly messages
 
 **Files Changed**:
+
 - `backend/app/api/routes/auth.py` - Added DELETE endpoint
 - `frontend/src/services/api.ts` - Added deleteAvatar() function
 - `frontend/src/pages/Profile.tsx` - Added Remove button and handler
 
 ### FEATURE C — Admin User Management
+
 **Backend Endpoints** (admin-only, require admin role):
 
 1. **PATCH `/api/admin/users/{user_id}/password`**
+
    - Body: `{ "password": "NewPassword123!" }`
    - Manual password reset (no verification of old password required)
    - Hashes password using existing `hash_password()` function
@@ -61,6 +73,7 @@ Reusable component that displays:
    - Audit logged
 
 **Frontend**:
+
 - Added modal dialogs for both operations
 - User Management table now has two new action buttons:
   - **"Username"** button - Opens modal to edit username
@@ -70,11 +83,13 @@ Reusable component that displays:
 - Does not reveal old passwords (manual set only)
 
 **Files Changed**:
+
 - `backend/app/api/routes/admin.py` - Added 2 new endpoints + 2 modal request classes
 - `frontend/src/pages/Admin.tsx` - Added modals + action buttons + handlers
 - `frontend/src/services/api.ts` - Added `adminResetPassword()` and `adminEditUsername()` functions
 
 ## Commits
+
 ```
 08f9aef - feat: default letter avatar (AvatarBadge component)
 a044013 - feat: delete/remove avatar (backend DELETE endpoint + frontend UI)
@@ -84,6 +99,7 @@ a044013 - feat: delete/remove avatar (backend DELETE endpoint + frontend UI)
 ## Testing Verification Commands
 
 ### Test DELETE Avatar
+
 ```bash
 # Login as user
 curl -X POST http://localhost:8000/api/auth/login \
@@ -106,6 +122,7 @@ curl -X GET http://localhost:8000/api/auth/me \
 ```
 
 ### Test Admin Reset Password
+
 ```bash
 # Login as admin
 curl -X POST http://localhost:8000/api/auth/login \
@@ -127,6 +144,7 @@ curl -X POST http://localhost:8000/api/auth/login \
 ```
 
 ### Test Admin Edit Username
+
 ```bash
 # Login as admin
 curl -X POST http://localhost:8000/api/auth/login \
@@ -151,7 +169,9 @@ curl -X POST http://localhost:8000/api/auth/login \
 ```
 
 ## Frontend Testing
+
 1. **Avatar Display**:
+
    - Navigate to Profile page
    - See first letter of username in circular badge
    - Upload avatar (PNG/JPG, ≤1MB) → image displays immediately
@@ -165,6 +185,7 @@ curl -X POST http://localhost:8000/api/auth/login \
    - After operation, user list refreshes automatically
 
 ## Key Design Decisions
+
 - **Session Integrity**: All endpoints maintain session cookie (user_id based)
 - **No Password Retrieval**: Admin can only SET passwords, never view/retrieve old ones
 - **Consistent Hashing**: Uses same `hash_password()` utility as login authentication
@@ -173,6 +194,7 @@ curl -X POST http://localhost:8000/api/auth/login \
 - **Client-side Validation**: File type/size checked before upload to reduce server load
 
 ## Session Notes
+
 - Session remains valid after profile/avatar changes (based on user_id)
 - After username change, user must re-login with new username (message shown in UI)
 - Admin can change their own password/username without forced logout

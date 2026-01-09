@@ -61,7 +61,12 @@ export default function SyncData({ user: _ }: SyncDataProps) {
     // Optional: validate max file size (5MB)
     const maxSize = 5 * 1024 * 1024;
     if (file.size > maxSize) {
-      setError(`File is too large. Maximum size is 5MB (current: ${(file.size / (1024 * 1024)).toFixed(1)}MB)`);
+      setError(
+        `File is too large. Maximum size is 5MB (current: ${(
+          file.size /
+          (1024 * 1024)
+        ).toFixed(1)}MB)`
+      );
       return;
     }
 
@@ -85,7 +90,9 @@ export default function SyncData({ user: _ }: SyncDataProps) {
       }
 
       const result = await res.json();
-      setSuccessMsg(result.message || `File ${file.name} uploaded successfully`);
+      setSuccessMsg(
+        result.message || `File ${file.name} uploaded successfully`
+      );
       fetchFiles();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
@@ -189,7 +196,9 @@ export default function SyncData({ user: _ }: SyncDataProps) {
               >
                 {uploading ? "⏳ Uploading..." : "📤 Upload CSV"}
               </Button>
-              <span className="text-xs text-gray-500 self-center">CSV only</span>
+              <span className="text-xs text-gray-500 self-center">
+                CSV only
+              </span>
             </div>
           </div>
 

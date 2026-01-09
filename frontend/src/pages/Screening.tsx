@@ -1,13 +1,20 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
+import InfoTooltip from "../components/InfoTip";
 import {
+  getMetrics,
+  getMetricSummary,
+  getYears,
+  getEmitens,
   screenEmitens,
+  MetricItem,
+  MetricSummaryResponse,
   FilterOperator,
   ScreeningResponse,
   MetricFilter,
 } from "../services/api";
-import { useMetricCatalog } from "../features/analysis/useMetricCatalog";
+import { toCatalogMetric, CatalogMetric } from "../shared/metricCatalog";
 
 const OPERATORS: { value: FilterOperator; label: string }[] = [
   { value: ">", label: "> (greater than)" },
@@ -67,11 +74,11 @@ function formatValueDisplay(value: number | null, unit?: string | null) {
 }
 
 export default function Screening() {
-  const { metrics, years, metricsBySection, getMetricStats } =
-    useMetricCatalog();
-  const [selectedYear, setSelectedYear] = useState<number>(
-    years.length > 0 ? years[0] : 2024
-  );
+  const [metrics, setMetrics] = useState<MetricItem[]>([]);
+  const [catalogMetrics, setCatalogMetrics] = useState<CatalogMetric[]>([]);
+  const [years, setYears] = useState<number[]>([]);
+  const [datasetSize, setDatasetSize] = useState<number>(32);
+  const [selectedYear, setSelectedYear] = useState<number>(2024);
   const [filters, setFilters] = useState<FilterRow[]>([
     {
       id: 1,
@@ -82,19 +89,55 @@ export default function Screening() {
       unit_choice: "bn",
     },
   ]);
-  const [activeSummary, setActiveSummary] = useState<any>(null);
+  const [activeSummary, setActiveSummary] =
+    useState<MetricSummaryResponse | null>(null);
   const [result, setResult] = useState<ScreeningResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleMetricChange = async (rowId: number, metricId: number) => {
+  useEffect(() => {
+    getMetrics()
+      .then((list) => {
+        setMetrics(list);
+        // Convert to catalog metrics for standardized display
+        setCatalogMetrics(list.map(toCatalogMetric));
+      })
+      .catch(() => setError("Failed to load metrics"));
+
+    getYears()
+      .then((res) => {
+        setYears(res.years);
+        if (res.years.length > 0) setSelectedYear(res.years[0]);
+      })
+      .catch(() => setError("Failed to load years"));
+
+    getEmitens()
+      .then((res) => setDatasetSize(res.items.length))
+      .catch(() => setDatasetSize(32));
+  }, []);
+
+  const metricsBySection = useMemo(() => {
+    return catalogMetrics.reduce((acc, m) => {
+      if (!acc[m.section]) acc[m.section] = [];
+      acc[m.section].push(m);
+      return acc;
+    }, {} as Record<string, CatalogMetric[]>);
+  }, [catalogMetrics]);
+
+  const handleMetricChange = async (rowId: number, metricKey: string) => {
+    // Find the metric by key to get its ID for the API
+    const selectedMetric = metrics.find((m) => m.metric_name === metricKey);
+    const metricId = selectedMetric?.id || null;
+
     setFilters((prev) =>
       prev.map((f) => (f.id === rowId ? { ...f, metric_id: metricId } : f))
     );
-    const summary = await getMetricStats(metricId, selectedYear);
-    if (summary) {
-      setActiveSummary(summary);
-    } else {
+    try {
+      if (metricId) {
+        const summary = await getMetricSummary(metricId, selectedYear);
+        setActiveSummary(summary);
+      }
+    } catch (e) {
       setActiveSummary(null);
     }
   };
@@ -187,15 +230,29 @@ export default function Screening() {
     ? metrics.find((m) => m.id === activeSummary.metric_id)
     : null;
 
-  const datasetSize = 32; // Fixed dataset size
-
   return (
     <div className="space-y-6">
       <Card>
-        <h2 className="text-xl font-bold mb-4">🔍 Stock Screening</h2>
-        <p className="text-gray-600 mb-4">
-          Filter banks using multiple metric conditions (AND logic). Dataset
-          contains {metrics.length > 0 ? 32 : "loading"} tickers.
+        <div className="mb-2 flex items-center gap-2">
+          <h2 className="text-xl font-bold">🔍 Stock Screening</h2>
+          <InfoTooltip
+            ariaLabel="Info: Screening"
+            content={
+              <ul className="list-disc space-y-1 pl-4">
+                <li>
+                  Choose a year, add multiple filters, then run screening (AND
+                  logic).
+                </li>
+                <li>
+                  Use Data Hint to pick realistic thresholds (range/median).
+                </li>
+                <li>Results show tickers that satisfy all conditions.</li>
+              </ul>
+            }
+          />
+        </div>
+        <p className="text-sm text-gray-500 mb-4">
+          Dataset size: {datasetSize} tickers
         </p>
 
         {/* Year Selection */}
@@ -207,11 +264,11 @@ export default function Screening() {
             onChange={async (e) => {
               const y = Number(e.target.value);
               setSelectedYear(y);
-              if (activeSummary) {
-                const summary = await getMetricStats(activeSummary.metric_id, y);
-                if (summary) {
+              if (activeMetric) {
+                try {
+                  const summary = await getMetricSummary(activeMetric.id, y);
                   setActiveSummary(summary);
-                } else {
+                } catch {
                   setActiveSummary(null);
                 }
               }
@@ -251,18 +308,21 @@ export default function Screening() {
                     {/* Metric Select */}
                     <select
                       className="flex-1 min-w-[220px] px-3 py-2 border rounded-md text-sm"
-                      value={f.metric_id ?? ""}
-                      onChange={(e) =>
-                        handleMetricChange(f.id, Number(e.target.value))
+                      value={
+                        f.metric_id
+                          ? metrics.find((m) => m.id === f.metric_id)
+                              ?.metric_name || ""
+                          : ""
                       }
+                      onChange={(e) => handleMetricChange(f.id, e.target.value)}
                     >
                       <option value="">-- Select Metric --</option>
                       {Object.entries(metricsBySection).map(
                         ([section, mets]) => (
-                          <optgroup key={section} label={section.toUpperCase()}>
+                          <optgroup key={section} label={section}>
                             {mets.map((m) => (
-                              <option key={m.id} value={m.id}>
-                                {m.metric_name}
+                              <option key={m.key} value={m.key}>
+                                {m.label}
                               </option>
                             ))}
                           </optgroup>

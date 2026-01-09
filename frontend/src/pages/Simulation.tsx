@@ -9,7 +9,7 @@ import InfoTip from "../components/InfoTip";
 interface MetricAdjustment {
   id: string;
   section: string;
-  metric_key: string; // Changed from metric_name to use catalog keys
+  metric_name: string;
   adjustment_percent: number; // -100 to +300
 }
 
@@ -58,7 +58,7 @@ const Simulation: React.FC = () => {
     loadEmitens();
   }, []);
 
-  // Map options to include section and label info (used in dropdowns)
+  // Get all metrics from all sections (flattened)
   const allMetrics = useMemo(() => {
     if (!catalog) return [];
     const metrics: {
@@ -82,7 +82,7 @@ const Simulation: React.FC = () => {
 
   // Get already selected metric keys (to prevent duplicates)
   const selectedMetricKeys = useMemo(() => {
-    return new Set(adjustments.map((a) => a.metric_key));
+    return new Set(adjustments.map((a) => a.metric_name));
   }, [adjustments]);
 
   // Available metrics for selection (excluding already selected)
@@ -99,7 +99,7 @@ const Simulation: React.FC = () => {
       {
         id: `adj-${nextId}`,
         section: "",
-        metric_key: "",
+        metric_name: "",
         adjustment_percent: 0,
       },
     ]);
@@ -121,12 +121,12 @@ const Simulation: React.FC = () => {
       adjustments.map((a) => {
         if (a.id !== id) return a;
 
-        if (field === "metric_key" && typeof value === "string") {
+        if (field === "metric_name" && typeof value === "string") {
           // When metric is selected, also set its section
           const metric = allMetrics.find((m) => m.key === value);
           return {
             ...a,
-            metric_key: value,
+            metric_name: value,
             section: metric?.section || "",
           };
         }
@@ -143,7 +143,7 @@ const Simulation: React.FC = () => {
       return;
     }
 
-    const validAdjustments = adjustments.filter((a) => a.metric_key);
+    const validAdjustments = adjustments.filter((a) => a.metric_name);
     if (validAdjustments.length === 0) {
       setError("Please add at least one metric adjustment");
       return;
@@ -154,14 +154,11 @@ const Simulation: React.FC = () => {
     setResult(null);
 
     try {
-      // Build overrides - convert metric key to label for backend
-      const overrides = validAdjustments.map((a) => {
-        const metric = allMetrics.find((m) => m.key === a.metric_key);
-        return {
-          metric_name: metric?.label || a.metric_key, // Use metric label as backend expects
-          value: a.adjustment_percent,
-        };
-      });
+      // Build overrides - backend expects value as the percentage adjustment
+      const overrides = validAdjustments.map((a) => ({
+        metric_name: a.metric_name,
+        value: a.adjustment_percent, // Percentage adjustment
+      }));
 
       const response = await simulate({
         ticker: selectedTicker,
@@ -305,21 +302,21 @@ const Simulation: React.FC = () => {
                     {/* Metric Dropdown */}
                     <div className="flex-1">
                       <Select
-                        value={adj.metric_key}
+                        value={adj.metric_name}
                         onChange={(e) =>
                           updateAdjustment(
                             adj.id,
-                            "metric_key",
+                            "metric_name",
                             e.target.value
                           )
                         }
                       >
                         <option value="">-- Select Metric --</option>
                         {/* Show current selection + available options */}
-                        {adj.metric_key && (
-                          <option value={adj.metric_key}>
-                            {allMetrics.find((m) => m.key === adj.metric_key)
-                              ?.label || adj.metric_key}
+                        {adj.metric_name && (
+                          <option value={adj.metric_name}>
+                            {allMetrics.find((m) => m.key === adj.metric_name)
+                              ?.label || adj.metric_name}
                           </option>
                         )}
                         {availableMetrics.map((m) => (
@@ -495,10 +492,10 @@ const Simulation: React.FC = () => {
                   </thead>
                   <tbody>
                     {adjustments
-                      .filter((a) => a.metric_key)
+                      .filter((a) => a.metric_name)
                       .map((a) => {
                         const metric = allMetrics.find(
-                          (m) => m.key === a.metric_key
+                          (m) => m.key === a.metric_name
                         );
                         return (
                           <tr
@@ -507,7 +504,7 @@ const Simulation: React.FC = () => {
                           >
                             <td className="px-4 py-2">
                               <div className="font-medium">
-                                {metric?.label || a.metric_key}
+                                {metric?.label || a.metric_name}
                               </div>
                               <div className="text-xs text-[rgb(var(--color-text-subtle))]">
                                 {metric?.sectionLabel}

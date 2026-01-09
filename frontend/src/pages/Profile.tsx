@@ -187,7 +187,9 @@ export default function Profile({ user, onUserUpdate }: ProfileProps) {
               size="lg"
             />
             <div className="space-y-1">
-              <div className="text-sm text-[rgb(var(--color-text-subtle))]">Display name</div>
+              <div className="text-sm text-[rgb(var(--color-text-subtle))]">
+                Display name
+              </div>
               <div className="text-base font-semibold text-[rgb(var(--color-text))]">
                 {user.full_name || user.username}
               </div>

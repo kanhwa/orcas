@@ -7,11 +7,13 @@ Refactored the Admin > User Management page to improve UX and reduce visual clut
 ## Changes Made
 
 ### 1. User Sorting
+
 - **Admins First**: Admin users are now displayed at the top of the user list
 - **Alphabetical Order**: Within each role (admin/employee), users are sorted by username (case-insensitive)
 - **Fallback Sorting**: If usernames match, sort by ID ascending
 
 **Implementation**: `sortUsers()` function
+
 ```typescript
 function sortUsers(users: AdminUser[]): AdminUser[] {
   return [...users].sort((a, b) => {
@@ -22,7 +24,9 @@ function sortUsers(users: AdminUser[]): AdminUser[] {
       return rolePriorityA - rolePriorityB;
     }
     // 2) Within same role, sort by username (case-insensitive)
-    const usernameCompare = a.username.toLowerCase().localeCompare(b.username.toLowerCase());
+    const usernameCompare = a.username
+      .toLowerCase()
+      .localeCompare(b.username.toLowerCase());
     if (usernameCompare !== 0) {
       return usernameCompare;
     }
@@ -33,13 +37,16 @@ function sortUsers(users: AdminUser[]): AdminUser[] {
 ```
 
 ### 2. Simplified Actions Column
+
 **Before**: 4 separate action buttons per row
+
 - Edit (profile/role/status)
 - Username (change username)
 - Reset Pwd (reset password)
 - Delete (delete user)
 
 **After**: Single "Edit" button per row
+
 - Opens comprehensive modal with all actions organized in tabs
 
 ### 3. Comprehensive Edit User Modal
@@ -47,6 +54,7 @@ function sortUsers(users: AdminUser[]): AdminUser[] {
 The new modal includes 4 tabs for different categories of user management:
 
 #### **Account Tab**
+
 - Edit username
 - Change user role (admin/employee)
 - Change user status (active/inactive)
@@ -54,6 +62,7 @@ The new modal includes 4 tabs for different categories of user management:
 - Save button for account settings
 
 #### **Profile Tab**
+
 - Edit first name
 - Edit middle name (optional)
 - Edit last name
@@ -61,6 +70,7 @@ The new modal includes 4 tabs for different categories of user management:
 - Save button for profile information
 
 #### **Security Tab**
+
 - Reset user password
 - Confirm password field
 - Password validation (min 6 characters, matching confirmation)
@@ -68,6 +78,7 @@ The new modal includes 4 tabs for different categories of user management:
 - Reset button for password
 
 #### **Danger Zone Tab**
+
 - Delete user account
 - Delete confirmation: type username or "DELETE" to confirm
 - Warnings:
@@ -76,11 +87,13 @@ The new modal includes 4 tabs for different categories of user management:
 - Red styling to indicate dangerous operation
 
 ### 4. Removed Components
+
 - ❌ `ResetPasswordModal` (merged into Security tab)
 - ❌ `EditUsernameModal` (merged into Account tab)
 - ❌ Old separate Edit modal (merged into comprehensive modal)
 
 ### 5. Success/Error Messaging
+
 - **Main page**: Success banner for create/delete operations (auto-dismiss after 3s)
 - **Within modal**: Success/error messages for individual tab operations
   - Account settings saved
@@ -89,6 +102,7 @@ The new modal includes 4 tabs for different categories of user management:
   - Delete errors (validation)
 
 ### 6. Validation Logic
+
 - ✅ Prevent deleting yourself (`editingUser.id === user.id`)
 - ✅ Prevent deleting last active admin (`adminCount <= 1`)
 - ✅ Warn about admin promotion when at max capacity (2/2 admins)
@@ -98,6 +112,7 @@ The new modal includes 4 tabs for different categories of user management:
 ## Benefits
 
 ### User Experience
+
 1. **Cleaner UI**: Single action button instead of 4 reduces visual noise
 2. **Better Organization**: Related settings grouped into logical tabs
 3. **Context Retention**: All user management actions in one modal - no context switching
@@ -105,12 +120,14 @@ The new modal includes 4 tabs for different categories of user management:
 5. **Clear Visual Hierarchy**: Danger Zone tab uses red styling to warn users
 
 ### Developer Experience
+
 1. **Less Code Duplication**: Reused modal structure for all operations
 2. **Easier Maintenance**: Single comprehensive component instead of multiple modals
 3. **Better State Management**: All edit state in one place with clear tab navigation
 4. **Consistent Validation**: All validation logic in one component
 
 ### Admin Visibility
+
 1. **Admins Always Visible**: Sorting ensures admin accounts are at the top
 2. **Easy Role Management**: Clear visual distinction with purple badges for admins
 3. **Quick Access**: Important privileged accounts are immediately visible

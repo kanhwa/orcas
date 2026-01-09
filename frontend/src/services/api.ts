@@ -195,8 +195,13 @@ export async function uploadAvatar(file: File): Promise<User> {
   });
 
   if (!res.ok) {
-    const errorBody = await res.json().catch(() => ({ detail: res.statusText }));
-    throw { status: res.status, detail: errorBody.detail || "Avatar upload failed" };
+    const errorBody = await res
+      .json()
+      .catch(() => ({ detail: res.statusText }));
+    throw {
+      status: res.status,
+      detail: errorBody.detail || "Avatar upload failed",
+    };
   }
 
   return res.json();

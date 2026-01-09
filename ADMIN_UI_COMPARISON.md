@@ -107,6 +107,7 @@ User can:
 ## Tab Organization
 
 ### Account Tab
+
 ```
 ┌──────────────────────────────────────┐
 │ Username: [________________]         │
@@ -120,6 +121,7 @@ User can:
 ```
 
 ### Profile Tab
+
 ```
 ┌──────────────────────────────────────┐
 │ First Name:  [________]              │
@@ -133,6 +135,7 @@ User can:
 ```
 
 ### Security Tab
+
 ```
 ┌──────────────────────────────────────┐
 │ ℹ️ Set a new password for this user. │
@@ -146,6 +149,7 @@ User can:
 ```
 
 ### Danger Zone Tab (Red theme)
+
 ```
 ┌──────────────────────────────────────┐
 │ ⚠️ WARNING: This action cannot be   │
@@ -175,12 +179,12 @@ function sortUsers(users) {
     const roleA = a.role === "admin" ? 0 : 1;
     const roleB = b.role === "admin" ? 0 : 1;
     if (roleA !== roleB) return roleA - roleB;
-    
+
     // Step 2: Alphabetical by username (case-insensitive)
     const nameCompare = a.username.toLowerCase()
                          .localeCompare(b.username.toLowerCase());
     if (nameCompare !== 0) return nameCompare;
-    
+
     // Step 3: Fallback to ID
     return a.id - b.id;
   });
@@ -223,6 +227,7 @@ Errors shown in modal:
 ## Success Feedback
 
 ### Main Page (Create/Delete)
+
 ```
 ┌────────────────────────────────────────────────┐
 │ ✅ User created successfully. (auto-hide 3s)  │
@@ -230,6 +235,7 @@ Errors shown in modal:
 ```
 
 ### Within Modal (Edit/Update)
+
 ```
 ┌────────────────────────────────────────────────┐
 │ ✅ Account settings updated successfully.     │
@@ -239,18 +245,19 @@ Errors shown in modal:
 
 ## Key Metrics
 
-| Metric                  | Before | After | Improvement |
-|------------------------|--------|-------|-------------|
-| Buttons per row        | 4      | 1     | -75%        |
-| Clicks to edit all     | 8+     | 2-4   | -50%        |
-| Modal components       | 4      | 1     | -75%        |
-| Context switches       | 3+     | 0     | -100%       |
-| Mobile usability       | ⚠️     | ✅    | Much better |
-| Admin visibility       | Mixed  | Top   | Always visible |
+| Metric             | Before | After | Improvement    |
+| ------------------ | ------ | ----- | -------------- |
+| Buttons per row    | 4      | 1     | -75%           |
+| Clicks to edit all | 8+     | 2-4   | -50%           |
+| Modal components   | 4      | 1     | -75%           |
+| Context switches   | 3+     | 0     | -100%          |
+| Mobile usability   | ⚠️     | ✅    | Much better    |
+| Admin visibility   | Mixed  | Top   | Always visible |
 
 ## Summary
 
 The refactored Admin UI provides:
+
 - ✅ Cleaner visual design (1 button vs 4)
 - ✅ Better organization (tabs instead of separate modals)
 - ✅ Improved admin visibility (sorted to top)

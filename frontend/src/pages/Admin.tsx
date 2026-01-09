@@ -1,5 +1,10 @@
 import { useState, useEffect } from "react";
-import { BASE_URL, User, adminResetPassword, adminEditUsername } from "../services/api";
+import {
+  BASE_URL,
+  User,
+  adminResetPassword,
+  adminEditUsername,
+} from "../services/api";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import { Table } from "../components/ui/Table";
@@ -104,7 +109,9 @@ function sortUsers(users: AdminUser[]): AdminUser[] {
       return rolePriorityA - rolePriorityB;
     }
     // 2) Within same role, sort by username (case-insensitive)
-    const usernameCompare = a.username.toLowerCase().localeCompare(b.username.toLowerCase());
+    const usernameCompare = a.username
+      .toLowerCase()
+      .localeCompare(b.username.toLowerCase());
     if (usernameCompare !== 0) {
       return usernameCompare;
     }
@@ -140,7 +147,9 @@ export default function Admin({ user }: AdminProps) {
   // Edit User modal (comprehensive)
   const [showEditUser, setShowEditUser] = useState(false);
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
-  const [activeTab, setActiveTab] = useState<"account" | "profile" | "security" | "danger">("account");
+  const [activeTab, setActiveTab] = useState<
+    "account" | "profile" | "security" | "danger"
+  >("account");
 
   // Account tab
   const [editUsername, setEditUsername] = useState("");
@@ -343,12 +352,19 @@ export default function Admin({ user }: AdminProps) {
     }
 
     // Check if trying to delete last admin
-    if (editingUser.role === "admin" && editingUser.status === "active" && adminCount <= 1) {
+    if (
+      editingUser.role === "admin" &&
+      editingUser.status === "active" &&
+      adminCount <= 1
+    ) {
       setModalError("Cannot delete the last active admin.");
       return;
     }
 
-    if (deleteConfirmation !== editingUser.username && deleteConfirmation !== "DELETE") {
+    if (
+      deleteConfirmation !== editingUser.username &&
+      deleteConfirmation !== "DELETE"
+    ) {
       setModalError(`Type "${editingUser.username}" or "DELETE" to confirm.`);
       return;
     }
@@ -668,15 +684,19 @@ export default function Admin({ user }: AdminProps) {
                     <option value="employee">Employee</option>
                     <option value="admin">Admin</option>
                   </Select>
-                  {editRole === "admin" && adminCount >= 2 && editingUser.role !== "admin" && (
-                    <p className="text-xs text-amber-600 mt-1">
-                      Warning: Maximum 2 admins allowed. Promoting may fail.
-                    </p>
-                  )}
+                  {editRole === "admin" &&
+                    adminCount >= 2 &&
+                    editingUser.role !== "admin" && (
+                      <p className="text-xs text-amber-600 mt-1">
+                        Warning: Maximum 2 admins allowed. Promoting may fail.
+                      </p>
+                    )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-1">Status</label>
+                  <label className="block text-sm font-medium mb-1">
+                    Status
+                  </label>
                   <Select
                     value={editStatus}
                     onChange={(e) => setEditStatus(e.target.value)}
@@ -748,7 +768,9 @@ export default function Admin({ user }: AdminProps) {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-1">Email</label>
+                  <label className="block text-sm font-medium mb-1">
+                    Email
+                  </label>
                   <input
                     type="email"
                     className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -778,7 +800,8 @@ export default function Admin({ user }: AdminProps) {
             {activeTab === "security" && (
               <div className="space-y-4">
                 <div className="rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-800">
-                  Set a new password for this user. Old passwords are never shown.
+                  Set a new password for this user. Old passwords are never
+                  shown.
                 </div>
 
                 <div>
@@ -828,8 +851,8 @@ export default function Admin({ user }: AdminProps) {
             {activeTab === "danger" && (
               <div className="space-y-4">
                 <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-                  Warning: This action cannot be undone. This will permanently delete
-                  the user account.
+                  Warning: This action cannot be undone. This will permanently
+                  delete the user account.
                 </div>
 
                 {editingUser.id === user.id && (
@@ -838,11 +861,13 @@ export default function Admin({ user }: AdminProps) {
                   </div>
                 )}
 
-                {editingUser.role === "admin" && editingUser.status === "active" && adminCount <= 1 && (
-                  <div className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-700">
-                    Cannot delete the last active admin.
-                  </div>
-                )}
+                {editingUser.role === "admin" &&
+                  editingUser.status === "active" &&
+                  adminCount <= 1 && (
+                    <div className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-700">
+                      Cannot delete the last active admin.
+                    </div>
+                  )}
 
                 <div>
                   <label className="block text-sm font-medium mb-1">
