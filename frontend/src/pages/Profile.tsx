@@ -9,6 +9,7 @@ interface ProfileProps {
 }
 
 export default function Profile({ user, onUserUpdate }: ProfileProps) {
+  const [username, setUsername] = useState(user.username);
   const [firstName, setFirstName] = useState(user.first_name ?? "");
   const [middleName, setMiddleName] = useState(user.middle_name ?? "");
   const [lastName, setLastName] = useState(user.last_name ?? "");
@@ -16,6 +17,7 @@ export default function Profile({ user, onUserUpdate }: ProfileProps) {
   const [profileMsg, setProfileMsg] = useState<string | null>(null);
   const [profileErr, setProfileErr] = useState<string | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
+  const [usernameChanged, setUsernameChanged] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -28,9 +30,12 @@ export default function Profile({ user, onUserUpdate }: ProfileProps) {
     e.preventDefault();
     setProfileErr(null);
     setProfileMsg(null);
+    setUsernameChanged(false);
     setProfileLoading(true);
+    const usernameWillChange = username.trim() !== user.username;
     try {
       const updated = await updateProfile({
+        username: username.trim() || undefined,
         first_name: firstName.trim() || undefined,
         middle_name: middleName.trim() || undefined,
         last_name: lastName.trim() || undefined,
@@ -38,6 +43,9 @@ export default function Profile({ user, onUserUpdate }: ProfileProps) {
       });
       onUserUpdate(updated);
       setProfileMsg("Profile updated.");
+      if (usernameWillChange) {
+        setUsernameChanged(true);
+      }
     } catch (err: unknown) {
       const e = err as { detail?: string };
       setProfileErr(e.detail || "Profile update failed.");
@@ -88,11 +96,7 @@ export default function Profile({ user, onUserUpdate }: ProfileProps) {
           </div>
         }
       >
-        <dl className="mb-4 grid grid-cols-1 gap-3 text-sm text-[rgb(var(--color-text))] sm:grid-cols-3">
-          <div>
-            <dt className="text-[rgb(var(--color-text-subtle))]">Username</dt>
-            <dd className="font-semibold">{user.username}</dd>
-          </div>
+        <dl className="mb-4 grid grid-cols-1 gap-3 text-sm text-[rgb(var(--color-text))] sm:grid-cols-2">
           <div>
             <dt className="text-[rgb(var(--color-text-subtle))]">Role</dt>
             <dd className="font-semibold capitalize">{user.role}</dd>
@@ -114,6 +118,20 @@ export default function Profile({ user, onUserUpdate }: ProfileProps) {
         </dl>
 
         <form className="space-y-4" onSubmit={handleProfileSubmit}>
+          <div className="space-y-1">
+            <label className="text-sm font-semibold text-[rgb(var(--color-text-muted))]">
+              Username
+            </label>
+            <input
+              className="w-full rounded-lg border border-[rgb(var(--color-border))] bg-white px-3 py-2 text-[rgb(var(--color-text))] focus:border-[rgb(var(--color-primary))] focus:outline-none"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              disabled={profileLoading}
+              placeholder="username"
+              minLength={3}
+              required
+            />
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1">
               <label className="text-sm font-semibold text-[rgb(var(--color-text-muted))]">
@@ -181,6 +199,14 @@ export default function Profile({ user, onUserUpdate }: ProfileProps) {
               role="status"
             >
               {profileMsg}
+            </p>
+          )}
+          {usernameChanged && (
+            <p
+              className="rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-800"
+              role="status"
+            >
+              ℹ️ Username updated. Please log out and log in again using the new username.
             </p>
           )}
 

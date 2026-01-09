@@ -119,8 +119,28 @@ def update_profile(
     current_user: User = Depends(get_current_user),
 ) -> UserMeResponse:
     """
-    Update current user's profile (name fields, email).
+    Update current user's profile (username, name fields, email).
     """
+    # Handle username change with uniqueness check
+    if payload.username is not None and payload.username != current_user.username:
+        username_trimmed = payload.username.strip()
+        if not username_trimmed:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username cannot be empty.",
+            )
+        # Check if username already taken by another user
+        existing = db.query(User).filter(
+            User.username == username_trimmed,
+            User.id != current_user.id
+        ).first()
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Username '{username_trimmed}' is already taken.",
+            )
+        current_user.username = username_trimmed
+    
     if payload.first_name is not None:
         current_user.first_name = payload.first_name
     if payload.middle_name is not None:

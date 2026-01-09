@@ -12,6 +12,7 @@ class LoginRequest(BaseModel):
 
 class UpdateProfileRequest(BaseModel):
     """Request for updating user profile - employee can update their own name."""
+    username: Optional[str] = Field(default=None, min_length=3, max_length=50)
     first_name: Optional[str] = Field(default=None, max_length=50)
     middle_name: Optional[str] = Field(default=None, max_length=50)
     last_name: Optional[str] = Field(default=None, max_length=50)
