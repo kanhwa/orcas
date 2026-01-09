@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Card } from "../components/ui/Card";
+import InfoTip from "../components/InfoTip";
 import Screening from "./Screening";
 import MetricRanking from "./MetricRanking";
 
@@ -7,6 +8,15 @@ type Tab = "screening" | "metric-ranking";
 
 export default function Analysis() {
   const [activeTab, setActiveTab] = useState<Tab>("screening");
+
+  const screeningInfo =
+    "Choose a year, add multiple filters, then run screening (AND logic). " +
+    "Use Data Hint to pick realistic thresholds (range/median). " +
+    "Results show tickers that satisfy all conditions.";
+
+  const rankingInfo =
+    "Single-Year Top N ranks banks for one selected year. " +
+    "Multi-Year Panel picks Top N by the end year, then shows the same banks across the full year range.";
 
   return (
     <div className="space-y-6">
@@ -25,6 +35,7 @@ export default function Analysis() {
             <span className="flex items-center gap-2">
               <span>🔍</span>
               Screening
+              <InfoTip content={screeningInfo} />
             </span>
             {activeTab === "screening" && (
               <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[rgb(var(--color-primary))]" />
@@ -42,26 +53,12 @@ export default function Analysis() {
             <span className="flex items-center gap-2">
               <span>🏆</span>
               Metric Ranking
+              <InfoTip content={rankingInfo} />
             </span>
             {activeTab === "metric-ranking" && (
               <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[rgb(var(--color-primary))]" />
             )}
           </button>
-        </div>
-
-        {/* Tab Description */}
-        <div className="p-4 bg-[rgb(var(--color-surface))]">
-          {activeTab === "screening" ? (
-            <p className="text-sm text-[rgb(var(--color-text-subtle))]">
-              Filter stocks based on multiple metric criteria. Set conditions
-              like ROE &gt; 15% AND NPL &lt; 3%.
-            </p>
-          ) : (
-            <p className="text-sm text-[rgb(var(--color-text-subtle))]">
-              View top N stocks ranked by a specific metric across multiple
-              years.
-            </p>
-          )}
         </div>
       </Card>
 

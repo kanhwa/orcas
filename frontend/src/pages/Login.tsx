@@ -1,5 +1,5 @@
 import { useState, FormEvent } from "react";
-import { authLogin, authMe, User } from "../services/api";
+import { authLogin, authMe, BASE_URL, User } from "../services/api";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 
@@ -24,7 +24,13 @@ export default function Login({ onLoginSuccess }: LoginProps) {
       onLoginSuccess(user);
     } catch (err: unknown) {
       const e = err as { status?: number; detail?: string };
-      setError(e.detail || "Login failed. Check username and password.");
+      if (err instanceof Error && err.message === "Failed to fetch") {
+        setError(`Cannot reach API at ${BASE_URL} (failed to fetch)`);
+      } else if (typeof e?.status === "number") {
+        setError(`HTTP ${e.status}: ${e.detail || "Login failed."}`);
+      } else {
+        setError(e.detail || "Login failed. Check username and password.");
+      }
     } finally {
       setLoading(false);
     }
@@ -89,7 +95,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
           </form>
 
           <div className="mt-4 text-center text-sm text-[rgb(var(--color-text-subtle))]">
-            <p>Belum punya akun? Hubungi administrator untuk dibuatkan akun.</p>
+            <p>Need an account? Contact an administrator.</p>
           </div>
         </Card>
       </div>
