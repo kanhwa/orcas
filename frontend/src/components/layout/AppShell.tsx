@@ -1,6 +1,7 @@
 import { ReactNode, useState, useRef, useEffect } from "react";
 import { cn } from "../../utils/cn";
 import InfoTip from "../InfoTip";
+import { AvatarBadge } from "../AvatarBadge";
 
 export interface NavItem {
   key: string;
@@ -103,19 +104,12 @@ export function AppShell({
               className="flex items-center gap-3 rounded-xl bg-white/10 px-4 py-2 transition hover:bg-white/20"
             >
               {/* Avatar */}
-              <div className="h-9 w-9 rounded-full bg-white/30 overflow-hidden flex items-center justify-center border-2 border-white/50">
-                {userAvatar ? (
-                  <img
-                    src={userAvatar}
-                    alt="Avatar"
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <span className="text-white text-sm font-semibold">
-                    {userDisplay?.charAt(0).toUpperCase() || "U"}
-                  </span>
-                )}
-              </div>
+              <AvatarBadge
+                username={userDisplay || "U"}
+                avatarUrl={userAvatar}
+                size="sm"
+                className="bg-white/30 border-2 border-white/50"
+              />
               <div className="flex flex-col items-start">
                 <span className="text-sm font-medium text-white">
                   {userDisplay || "User"}

@@ -32,5 +32,6 @@ class UserMeResponse(BaseModel):
     middle_name: Optional[str] = None
     last_name: Optional[str] = None
     full_name: str | None
+    avatar_url: Optional[str] = None
     role: str
     status: str

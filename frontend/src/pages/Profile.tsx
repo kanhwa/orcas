@@ -1,5 +1,13 @@
-import { FormEvent, useState } from "react";
-import { User, updateProfile, changePassword } from "../services/api";
+import { FormEvent, useState, ChangeEvent, useRef } from "react";
+import {
+  User,
+  updateProfile,
+  changePassword,
+  uploadAvatar,
+  deleteAvatar,
+  BASE_URL,
+} from "../services/api";
+import { AvatarBadge } from "../components/AvatarBadge";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 
@@ -17,6 +25,11 @@ export default function Profile({ user, onUserUpdate }: ProfileProps) {
   const [profileMsg, setProfileMsg] = useState<string | null>(null);
   const [profileErr, setProfileErr] = useState<string | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
+
+  const [avatarMsg, setAvatarMsg] = useState<string | null>(null);
+  const [avatarErr, setAvatarErr] = useState<string | null>(null);
+  const [avatarLoading, setAvatarLoading] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -67,6 +80,57 @@ export default function Profile({ user, onUserUpdate }: ProfileProps) {
     }
   };
 
+  const handleAvatarChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setAvatarErr(null);
+    setAvatarMsg(null);
+
+    const allowed = ["image/png", "image/jpeg"];
+    if (!allowed.includes(file.type)) {
+      setAvatarErr("Only PNG or JPG files are allowed.");
+      e.target.value = "";
+      return;
+    }
+    if (file.size > 1024 * 1024) {
+      setAvatarErr("Avatar must be 1 MB or smaller.");
+      e.target.value = "";
+      return;
+    }
+
+    setAvatarLoading(true);
+    try {
+      const updated = await uploadAvatar(file);
+      onUserUpdate(updated);
+      setAvatarMsg("Avatar updated.");
+    } catch (err: unknown) {
+      const e2 = err as { detail?: string };
+      setAvatarErr(e2.detail || "Avatar upload failed.");
+    } finally {
+      setAvatarLoading(false);
+      e.target.value = "";
+    }
+  };
+
+  const handleDeleteAvatar = async () => {
+    setAvatarErr(null);
+    setAvatarMsg(null);
+    setAvatarLoading(true);
+    try {
+      const updated = await deleteAvatar();
+      onUserUpdate(updated);
+      setAvatarMsg("Avatar removed.");
+    } catch (err: unknown) {
+      const e = err as { detail?: string };
+      setAvatarErr(e.detail || "Failed to remove avatar.");
+    } finally {
+      setAvatarLoading(false);
+    }
+  };
+
+  const avatarInputId = "avatar-upload";
+
   const handlePasswordSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setPwdErr(null);
@@ -109,6 +173,66 @@ export default function Profile({ user, onUserUpdate }: ProfileProps) {
           </div>
         }
       >
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+          <div className="flex items-center gap-4">
+            <AvatarBadge
+              username={user.username}
+              avatarUrl={
+                user.avatar_url
+                  ? user.avatar_url.startsWith("http")
+                    ? user.avatar_url
+                    : `${BASE_URL}${user.avatar_url}`
+                  : null
+              }
+              size="lg"
+            />
+            <div className="space-y-1">
+              <div className="text-sm text-[rgb(var(--color-text-subtle))]">Display name</div>
+              <div className="text-base font-semibold text-[rgb(var(--color-text))]">
+                {user.full_name || user.username}
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-col gap-2 sm:items-end">
+            <input
+              ref={avatarInputRef}
+              id={avatarInputId}
+              type="file"
+              accept="image/png,image/jpeg"
+              onChange={handleAvatarChange}
+              className="sr-only"
+              disabled={avatarLoading}
+            />
+            <div className="flex gap-2 flex-wrap sm:justify-end">
+              <Button
+                type="button"
+                className="w-full sm:w-auto"
+                disabled={avatarLoading}
+                onClick={() => avatarInputRef.current?.click()}
+              >
+                {avatarLoading ? "Uploading..." : "Upload Avatar"}
+              </Button>
+              {user.avatar_url && (
+                <Button
+                  type="button"
+                  variant="danger"
+                  className="w-full sm:w-auto"
+                  disabled={avatarLoading}
+                  onClick={handleDeleteAvatar}
+                >
+                  Remove
+                </Button>
+              )}
+            </div>
+            {avatarErr && (
+              <span className="text-sm text-red-700">{avatarErr}</span>
+            )}
+            {avatarMsg && (
+              <span className="text-sm text-green-700">{avatarMsg}</span>
+            )}
+          </div>
+        </div>
+
         <dl className="mb-4 grid grid-cols-1 gap-3 text-sm text-[rgb(var(--color-text))] sm:grid-cols-3">
           <div>
             <dt className="text-[rgb(var(--color-text-subtle))]">Username</dt>
