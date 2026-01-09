@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { isMetricVisible } from "../config/metricConfig";
 import {
   User,
   TemplateOut,
@@ -122,7 +123,9 @@ export default function Templates({ user }: TemplatesProps) {
   };
 
   const addMetric = () => {
-    const allMetrics = catalog?.sections.flatMap((s) => s.metrics) || [];
+    const allMetrics = (catalog?.sections.flatMap((s) => s.metrics) || []).filter(
+      (m) => isMetricVisible(m.key)
+    );
     if (allMetrics.length === 0) return;
     const first = allMetrics[0];
     setFormMetrics([
@@ -151,7 +154,9 @@ export default function Templates({ user }: TemplatesProps) {
     setFormMetrics(updated);
   };
 
-  const allMetricOptions = catalog?.sections.flatMap((s) => s.metrics) || [];
+  const allMetricOptions = (
+    catalog?.sections.flatMap((s) => s.metrics) || []
+  ).filter((m) => isMetricVisible(m.key));
 
   return (
     <div className="space-y-4">

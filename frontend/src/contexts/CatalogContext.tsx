@@ -5,6 +5,7 @@ import {
   useEffect,
   useState,
 } from "react";
+import { isMetricVisible } from "../config/metricConfig";
 import {
   getMetricsCatalog,
   MetricInfo,
@@ -79,7 +80,9 @@ export function CatalogProvider({ children }: CatalogProviderProps) {
   const getMetricsBySection = (sectionKey: string): MetricInfo[] => {
     if (!catalog) return [];
     const section = catalog.sections.find((s) => s.key === sectionKey);
-    return section?.metrics || [];
+    const metrics = section?.metrics || [];
+    // Filter out hidden metrics (e.g., "Operating Cash Flow")
+    return metrics.filter((m) => isMetricVisible(m.key));
   };
 
   const getMetricMeta = (metricKey: string): MetricInfo | null => {

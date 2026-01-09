@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import InfoTooltip from "../components/InfoTip";
+import { isMetricVisible } from "../config/metricConfig";
 import {
   getMetrics,
   getMetricSummary,
@@ -117,11 +118,13 @@ export default function Screening() {
   }, []);
 
   const metricsBySection = useMemo(() => {
-    return catalogMetrics.reduce((acc, m) => {
-      if (!acc[m.section]) acc[m.section] = [];
-      acc[m.section].push(m);
-      return acc;
-    }, {} as Record<string, CatalogMetric[]>);
+    return catalogMetrics
+      .filter((m) => isMetricVisible(m.metric_name))
+      .reduce((acc, m) => {
+        if (!acc[m.section]) acc[m.section] = [];
+        acc[m.section].push(m);
+        return acc;
+      }, {} as Record<string, CatalogMetric[]>);
   }, [catalogMetrics]);
 
   const handleMetricChange = async (rowId: number, metricKey: string) => {
