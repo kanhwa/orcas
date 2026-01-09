@@ -823,6 +823,7 @@ export async function getMetricRankingPanel(params: {
   to_year: number;
   top_n: number;
   rank_year?: number;
+  rank_type?: "best" | "worst";
 }): Promise<MetricPanelResponse> {
   const search = new URLSearchParams({
     metric_id: String(params.metric_id),
@@ -831,6 +832,7 @@ export async function getMetricRankingPanel(params: {
     top_n: String(params.top_n),
   });
   if (params.rank_year) search.set("rank_year", String(params.rank_year));
+  if (params.rank_type) search.set("rank_type", params.rank_type);
   return request<MetricPanelResponse>(`/api/metric-ranking/panel?${search}`, {
     method: "GET",
   });
@@ -840,12 +842,14 @@ export async function getMetricRankingByYear(params: {
   metric_id: number;
   year: number;
   top_n: number;
+  rank_type?: "best" | "worst";
 }): Promise<MetricYearTopResponse> {
   const search = new URLSearchParams({
     metric_id: String(params.metric_id),
     year: String(params.year),
     top_n: String(params.top_n),
   });
+  if (params.rank_type) search.set("rank_type", params.rank_type);
   return request<MetricYearTopResponse>(
     `/api/metric-ranking/by-year?${search}`,
     { method: "GET" }

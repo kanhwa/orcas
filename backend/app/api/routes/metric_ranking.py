@@ -20,6 +20,35 @@ from app.schemas.metrics import MetricOut
 router = APIRouter(prefix="/api/metric-ranking", tags=["metric-ranking"])
 
 
+def _get_sort_order(metric: MetricDefinition, rank_type: str = "best"):
+    """
+    Determine sort order based on metric type and rank_type.
+    
+    Args:
+        metric: The metric definition
+        rank_type: "best" or "worst" (default "best")
+    
+    Returns:
+        SQLAlchemy order function (desc or asc)
+    
+    Logic:
+    - Benefit metrics (higher is better):
+        - best => DESC (highest first)
+        - worst => ASC (lowest first)
+    - Cost metrics (lower is better):
+        - best => ASC (lowest first)
+        - worst => DESC (highest first)
+    """
+    is_benefit = metric.type and metric.type.value == "benefit"
+    
+    if rank_type == "worst":
+        # Invert the normal ordering
+        return asc if is_benefit else desc
+    else:
+        # Normal "best" ordering (default)
+        return desc if is_benefit else asc
+
+
 def _resolve_metric(db: Session, payload: MetricRankingRequest) -> MetricDefinition:
     """Resolve metric by id or legacy metric_name."""
     if payload.metric_id:
@@ -137,9 +166,16 @@ def metric_ranking_panel(
     to_year: int = Query(..., ge=2015, le=2030),
     top_n: int = Query(3, ge=1, le=32),
     rank_year: int | None = None,
+    rank_type: str = Query("best", regex="^(best|worst)$"),
     db: Session = Depends(get_db),
     _current_user: User = Depends(get_current_user),
 ) -> MetricPanelResponse:
+    """
+    Get multi-year panel data for top N emitens based on a specific metric.
+    
+    Args:
+        rank_type: "best" (top performers) or "worst" (bottom performers)
+    """
     metric = db.get(MetricDefinition, metric_id)
     if not metric:
         raise HTTPException(status_code=404, detail="Metric not found")
@@ -148,7 +184,7 @@ def metric_ranking_panel(
         raise HTTPException(status_code=400, detail="from_year must be <= to_year")
     rank_year = rank_year or to_year
 
-    order_fn = desc if (metric.type and metric.type.value == "benefit") else asc
+    order_fn = _get_sort_order(metric, rank_type)
 
     top_rows = (
         db.query(FinancialData)
@@ -223,14 +259,21 @@ def metric_ranking_by_year(
     metric_id: int = Query(..., ge=1),
     year: int = Query(..., ge=2015, le=2030),
     top_n: int = Query(3, ge=1, le=32),
+    rank_type: str = Query("best", regex="^(best|worst)$"),
     db: Session = Depends(get_db),
     _current_user: User = Depends(get_current_user),
 ) -> MetricYearTopResponse:
+    """
+    Get top N emitens for a single year based on a specific metric.
+    
+    Args:
+        rank_type: "best" (top performers) or "worst" (bottom performers)
+    """
     metric = db.get(MetricDefinition, metric_id)
     if not metric:
         raise HTTPException(status_code=404, detail="Metric not found")
 
-    order_fn = desc if (metric.type and metric.type.value == "benefit") else asc
+    order_fn = _get_sort_order(metric, rank_type)
 
     data = (
         db.query(FinancialData)

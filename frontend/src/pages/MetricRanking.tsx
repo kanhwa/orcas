@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import InfoTooltip from "../components/InfoTip";
-import { isMetricVisible } from "../config/metricConfig";
+import { isMetricVisible, formatMetricValue } from "../config/metricConfig";
 import {
   getAvailableMetrics,
   getYears,
@@ -17,26 +17,6 @@ import { toCatalogMetric, CatalogMetric } from "../shared/metricCatalog";
 
 type Mode = "panel" | "byYear";
 
-function formatValue(val: number | null, unit?: string | null) {
-  if (val === null || val === undefined) return "—";
-  if (unit === "%") return `${(val * 100).toFixed(2)}%`;
-  const abs = Math.abs(val);
-  if (unit && unit.toLowerCase().startsWith("idr")) {
-    if (abs >= 1_000_000_000_000)
-      return `${(val / 1_000_000_000_000).toFixed(2)}T`;
-    if (abs >= 1_000_000_000) return `${(val / 1_000_000_000).toFixed(2)}B`;
-    if (abs >= 1_000_000) return `${(val / 1_000_000).toFixed(2)}M`;
-    if (abs >= 1_000) return `${(val / 1_000).toFixed(2)}K`;
-  }
-  return abs >= 1_000_000_000
-    ? `${(val / 1_000_000_000).toFixed(2)}B`
-    : abs >= 1_000_000
-    ? `${(val / 1_000_000).toFixed(2)}M`
-    : abs >= 1_000
-    ? `${(val / 1_000).toFixed(2)}K`
-    : val.toFixed(4);
-}
-
 export default function MetricRanking() {
   const [metrics, setMetrics] = useState<MetricItem[]>([]);
   const [catalogMetrics, setCatalogMetrics] = useState<CatalogMetric[]>([]);
@@ -44,6 +24,7 @@ export default function MetricRanking() {
   const [datasetSize, setDatasetSize] = useState<number>(32);
   const [mode, setMode] = useState<Mode>("panel");
   const [selectedMetricId, setSelectedMetricId] = useState<number | null>(null);
+  const [rankType, setRankType] = useState<"best" | "worst">("best");
   const [yearFrom, setYearFrom] = useState<number>(2020);
   const [yearTo, setYearTo] = useState<number>(2024);
   const [singleYear, setSingleYear] = useState<number>(2024);
@@ -128,6 +109,7 @@ export default function MetricRanking() {
         to_year: yearTo,
         top_n: cappedTopN,
         rank_year: yearTo,
+        rank_type: rankType,
       });
       setPanelResult(res);
     } catch (err: any) {
@@ -153,6 +135,7 @@ export default function MetricRanking() {
         metric_id: selectedMetricId,
         year: singleYear,
         top_n: cappedTopN,
+        rank_type: rankType,
       });
       setYearResult(res);
     } catch (err: any) {
@@ -275,6 +258,35 @@ export default function MetricRanking() {
                 {activeMetric.type || "unknown"}
               </p>
             )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Rank Type</label>
+            <div className="flex gap-2">
+              <button
+                className={`flex-1 px-3 py-2 rounded-md border text-sm font-medium transition-colors ${
+                  rankType === "best"
+                    ? "bg-green-600 text-white border-green-600"
+                    : "bg-white text-gray-700 border-gray-300 hover:border-gray-400"
+                }`}
+                onClick={() => setRankType("best")}
+              >
+                ⬆️ Best
+              </button>
+              <button
+                className={`flex-1 px-3 py-2 rounded-md border text-sm font-medium transition-colors ${
+                  rankType === "worst"
+                    ? "bg-red-600 text-white border-red-600"
+                    : "bg-white text-gray-700 border-gray-300 hover:border-gray-400"
+                }`}
+                onClick={() => setRankType("worst")}
+              >
+                ⬇️ Worst
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              {rankType === "best" ? "Show top performers" : "Show bottom performers"}
+            </p>
           </div>
 
           <div>
@@ -422,7 +434,7 @@ export default function MetricRanking() {
                         (_, i) => panelResult.from_year + i
                       ).map((y) => (
                         <td key={y} className="px-4 py-2 text-right">
-                          {formatValue(row.values[String(y)], unit)}
+                          {activeMetric && formatMetricValue(activeMetric.metric_name, row.values[String(y)])}
                         </td>
                       ))}
                     </tr>
@@ -471,7 +483,7 @@ export default function MetricRanking() {
                       </td>
                       <td className="px-4 py-2">{r.name}</td>
                       <td className="px-4 py-2 text-right">
-                        {formatValue(r.value, unit)}
+                        {activeMetric && formatMetricValue(activeMetric.metric_name, r.value)}
                       </td>
                     </tr>
                   ))}

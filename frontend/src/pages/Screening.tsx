@@ -2,7 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import InfoTooltip from "../components/InfoTip";
-import { isMetricVisible } from "../config/metricConfig";
+import {
+  isMetricVisible,
+  formatMetricValue,
+  toBaseValue,
+  getMetricUIConfig,
+} from "../config/metricConfig";
 import {
   getMetrics,
   getMetricSummary,
@@ -29,49 +34,24 @@ const OPERATORS: { value: FilterOperator; label: string }[] = [
 interface FilterRow {
   id: number;
   metric_id: number | null;
+  metric_name?: string;
   operator: FilterOperator;
   value: string;
   value_max: string;
-  unit_choice: "base" | "mn" | "bn";
 }
 
-function convertInputToDataScale(
-  raw: string,
-  unit: string | null | undefined,
-  unit_choice: "base" | "mn" | "bn"
+/**
+ * Convert user input to base value for API using metricConfig.
+ * Handles percent_points conversion automatically.
+ */
+function convertUserInputToBase(
+  metricName: string,
+  rawInput: string
 ): number | null {
-  if (raw === "") return null;
-  const num = parseFloat(raw);
+  if (!rawInput || rawInput === "") return null;
+  const num = parseFloat(rawInput);
   if (Number.isNaN(num)) return null;
-
-  // Percent metrics stored as ratio (e.g., 0.15 for 15%)
-  if (unit === "%") {
-    return num / 100;
-  }
-
-  if (unit && unit.toLowerCase().startsWith("idr")) {
-    if (unit_choice === "mn") return num * 1_000_000;
-    if (unit_choice === "bn") return num * 1_000_000_000;
-  }
-
-  return num;
-}
-
-function formatValueDisplay(value: number | null, unit?: string | null) {
-  if (value === null || value === undefined) return "-";
-  if (unit === "%") {
-    return `${(value * 100).toFixed(2)} %`;
-  }
-  const abs = Math.abs(value);
-  const formatted =
-    abs >= 1_000_000_000
-      ? `${(value / 1_000_000_000).toFixed(2)}B`
-      : abs >= 1_000_000
-      ? `${(value / 1_000_000).toFixed(2)}M`
-      : abs >= 1_000
-      ? `${(value / 1_000).toFixed(2)}K`
-      : value.toFixed(4);
-  return unit ? `${formatted} ${unit}` : formatted;
+  return toBaseValue(metricName, num);
 }
 
 export default function Screening() {
@@ -84,10 +64,10 @@ export default function Screening() {
     {
       id: 1,
       metric_id: null,
+      metric_name: undefined,
       operator: ">",
       value: "",
       value_max: "",
-      unit_choice: "bn",
     },
   ]);
   const [activeSummary, setActiveSummary] =
@@ -133,7 +113,7 @@ export default function Screening() {
     const metricId = selectedMetric?.id || null;
 
     setFilters((prev) =>
-      prev.map((f) => (f.id === rowId ? { ...f, metric_id: metricId } : f))
+      prev.map((f) => (f.id === rowId ? { ...f, metric_id: metricId, metric_name: metricKey } : f))
     );
     try {
       if (metricId) {
@@ -152,10 +132,10 @@ export default function Screening() {
       {
         id: newId,
         metric_id: null,
+        metric_name: undefined,
         operator: ">",
         value: "",
         value_max: "",
-        unit_choice: "bn",
       },
     ]);
   };
@@ -178,7 +158,7 @@ export default function Screening() {
     // Validate filters
     const metricFilters: MetricFilter[] = [];
     for (const f of filters) {
-      if (!f.metric_id) {
+      if (!f.metric_id || !f.metric_name) {
         setError("Please select a metric for each filter");
         return;
       }
@@ -186,17 +166,20 @@ export default function Screening() {
         setError("Please provide a value for each filter");
         return;
       }
+
       const metric = metrics.find((m) => m.id === f.metric_id);
-      const unit = metric?.unit_config?.unit || null;
-      const baseValue = convertInputToDataScale(f.value, unit, f.unit_choice);
+      if (!metric) {
+        setError("Metric not found");
+        return;
+      }
+
+      const config = getMetricUIConfig(f.metric_name);
+      const baseValue = convertUserInputToBase(f.metric_name, f.value);
       const baseMax = f.value_max
-        ? convertInputToDataScale(f.value_max, unit, f.unit_choice)
+        ? convertUserInputToBase(f.metric_name, f.value_max)
         : null;
-      if (
-        metric?.unit_config?.allow_negative === false &&
-        baseValue !== null &&
-        baseValue < 0
-      ) {
+
+      if (!config.allowNegative && baseValue !== null && baseValue < 0) {
         setError("Negative values are not allowed for this metric");
         return;
       }
@@ -204,6 +187,7 @@ export default function Screening() {
         setError("Invalid numeric value");
         return;
       }
+
       metricFilters.push({
         metric_id: f.metric_id,
         operator: f.operator,
@@ -232,6 +216,9 @@ export default function Screening() {
   const activeMetric = activeSummary
     ? metrics.find((m) => m.id === activeSummary.metric_id)
     : null;
+  const activeMetricName = filters
+    .find((f) => f.metric_id === activeSummary?.metric_id)
+    ?.metric_name || "";
 
   return (
     <div className="space-y-6">
@@ -297,15 +284,7 @@ export default function Screening() {
 
               {(() => {
                 const metric = metrics.find((m) => m.id === f.metric_id);
-                const unit = metric?.unit_config?.unit || "";
-                const unitIsIdr = unit.toLowerCase().startsWith("idr");
-                const unitLabel = unitIsIdr
-                  ? f.unit_choice === "bn"
-                    ? "IDR bn"
-                    : f.unit_choice === "mn"
-                    ? "IDR mn"
-                    : "IDR"
-                  : unit || "unitless";
+                const unit = metric?.unit_config?.unit || "unitless";
                 return (
                   <>
                     {/* Metric Select */}
@@ -352,32 +331,18 @@ export default function Screening() {
                       ))}
                     </select>
 
-                    {/* Unit choice for IDR metrics */}
-                    <select
-                      className="w-28 px-3 py-2 border rounded-md text-sm"
-                      value={f.unit_choice}
-                      disabled={!unitIsIdr}
-                      onChange={(e) =>
-                        updateFilter(f.id, "unit_choice", e.target.value)
-                      }
-                    >
-                      <option value="base">Unit</option>
-                      <option value="mn">IDR mn</option>
-                      <option value="bn">IDR bn</option>
-                    </select>
-
                     {/* Value Input */}
                     <div className="flex items-center gap-1">
                       <input
                         type="number"
                         className="w-32 px-3 py-2 border rounded-md text-sm"
-                        placeholder={`Value (${unitLabel})`}
+                        placeholder={`Value (${unit})`}
                         value={f.value}
                         onChange={(e) =>
                           updateFilter(f.id, "value", e.target.value)
                         }
                       />
-                      <span className="text-xs text-gray-500">{unitLabel}</span>
+                      <span className="text-xs text-gray-500">{unit}</span>
                     </div>
 
                     {/* Max Value for Between */}
@@ -387,7 +352,7 @@ export default function Screening() {
                         <input
                           type="number"
                           className="w-32 px-3 py-2 border rounded-md text-sm"
-                          placeholder={`Max (${unitLabel})`}
+                          placeholder={`Max (${unit})`}
                           value={f.value_max}
                           onChange={(e) =>
                             updateFilter(f.id, "value_max", e.target.value)
@@ -439,7 +404,7 @@ export default function Screening() {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-bold">
-                Data Hint — {activeSummary.metric_name}
+                Data Hint — {activeMetric?.metric_name || "Unknown"}
               </h3>
               <p className="text-sm text-gray-600">
                 Type: {activeSummary.type || "unknown"}{" "}
@@ -455,20 +420,11 @@ export default function Screening() {
           {activeSummary.has_data ? (
             <p className="text-sm text-gray-700 mt-2">
               Range ({activeSummary.year}): min{" "}
-              {formatValueDisplay(
-                activeSummary.min,
-                activeSummary.unit_config?.unit
-              )}{" "}
+              {formatMetricValue(activeMetricName, activeSummary.min)}{" "}
               • median{" "}
-              {formatValueDisplay(
-                activeSummary.median,
-                activeSummary.unit_config?.unit
-              )}{" "}
+              {formatMetricValue(activeMetricName, activeSummary.median)}{" "}
               • max{" "}
-              {formatValueDisplay(
-                activeSummary.max,
-                activeSummary.unit_config?.unit
-              )}
+              {formatMetricValue(activeMetricName, activeSummary.max)}
             </p>
           ) : (
             <p className="text-sm text-red-600 mt-2">
@@ -521,10 +477,10 @@ export default function Screening() {
                       <td className="px-4 py-2">{e.name}</td>
                       {result.conditions.map((c) => (
                         <td key={c.metric_id} className="px-4 py-2 text-right">
-                          {formatValueDisplay(
+                          {formatMetricValue(
+                            c.metric_name,
                             e.values[String(c.metric_id)] ??
-                              (e.values as any)[c.metric_id],
-                            c.unit_config?.unit
+                              (e.values as any)[c.metric_id]
                           )}
                         </td>
                       ))}

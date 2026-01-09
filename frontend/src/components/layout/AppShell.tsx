@@ -213,7 +213,6 @@ export function AppShell({
                     <InfoTip
                       content={item.description}
                       ariaLabel={`Info: ${item.label}`}
-                      stopPropagation
                     />
                   </span>
                 )}
