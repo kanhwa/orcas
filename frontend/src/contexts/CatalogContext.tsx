@@ -18,6 +18,13 @@ import {
 // Context Types
 // =============================================================================
 
+interface MetricOption {
+  value: string;
+  label: string;
+  section?: string;
+  description?: string;
+}
+
 interface CatalogContextValue {
   catalog: MetricsCatalog | null;
   loading: boolean;
@@ -31,6 +38,7 @@ interface CatalogContextValue {
   getModeOptions: () => ModeOption[];
   getMissingPolicyOptions: () => MissingPolicyOption[];
   getYearOptions: () => number[];
+  getMetricOptions: (sectionKey?: string) => MetricOption[];
 }
 
 const CatalogContext = createContext<CatalogContextValue | undefined>(
@@ -113,6 +121,30 @@ export function CatalogProvider({ children }: CatalogProviderProps) {
     return years;
   };
 
+  const getMetricOptions = (sectionKey?: string): MetricOption[] => {
+    if (!catalog) return [];
+    
+    const metrics: MetricInfo[] = sectionKey
+      ? getMetricsBySection(sectionKey)
+      : catalog.sections.flatMap((s) => s.metrics);
+    
+    // Guard: Verify all metrics have keys (development check)
+    const missingKeys = metrics.filter((m) => !m.key);
+    if (missingKeys.length > 0) {
+      console.warn(
+        "WARNING: Metrics without keys detected:",
+        missingKeys.map((m) => m.label)
+      );
+    }
+    
+    return metrics.map((m) => ({
+      value: m.key,
+      label: m.label,
+      description: m.description,
+      section: sectionKey,
+    }));
+  };
+
   const value: CatalogContextValue = {
     catalog,
     loading,
@@ -124,6 +156,7 @@ export function CatalogProvider({ children }: CatalogProviderProps) {
     getModeOptions,
     getMissingPolicyOptions,
     getYearOptions,
+    getMetricOptions,
   };
 
   return (
