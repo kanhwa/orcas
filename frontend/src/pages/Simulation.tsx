@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { isMetricVisible } from "../config/metricConfig";
 import { useCatalog } from "../contexts/CatalogContext";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
@@ -69,12 +70,15 @@ const Simulation: React.FC = () => {
     }[] = [];
     for (const section of catalog.sections) {
       for (const metric of section.metrics) {
-        metrics.push({
-          section: section.key,
-          sectionLabel: section.label,
-          key: metric.key,
-          label: metric.label,
-        });
+        // Filter out hidden metrics
+        if (isMetricVisible(metric.key)) {
+          metrics.push({
+            section: section.key,
+            sectionLabel: section.label,
+            key: metric.key,
+            label: metric.label,
+          });
+        }
       }
     }
     return metrics;

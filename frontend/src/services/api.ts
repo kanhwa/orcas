@@ -3,7 +3,13 @@
  * Uses fetch with credentials: "include" for cookie-based session auth.
  */
 
-const BASE_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+function normalizeBaseUrl(url: string): string {
+  return url.replace(/\/+$/, "");
+}
+
+export const BASE_URL = normalizeBaseUrl(
+  import.meta.env.VITE_API_URL || "http://localhost:8000"
+);
 
 // =============================================================================
 // Types
@@ -17,6 +23,7 @@ export interface User {
   middle_name: string | null;
   last_name: string | null;
   full_name: string | null;
+  avatar_url: string | null;
   role: string;
   status: string;
 }
@@ -27,6 +34,7 @@ export interface LoginRequest {
 }
 
 export interface UpdateProfileRequest {
+  username?: string;
   first_name?: string;
   middle_name?: string;
   last_name?: string;
@@ -173,6 +181,59 @@ export async function changePassword(
   return request<{ detail: string }>("/api/auth/change-password", {
     method: "POST",
     body: JSON.stringify(payload),
+  });
+}
+
+export async function uploadAvatar(file: File): Promise<User> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const res = await fetch(`${BASE_URL}/api/auth/avatar`, {
+    method: "POST",
+    credentials: "include",
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const errorBody = await res
+      .json()
+      .catch(() => ({ detail: res.statusText }));
+    throw {
+      status: res.status,
+      detail: errorBody.detail || "Avatar upload failed",
+    };
+  }
+
+  return res.json();
+}
+
+export async function deleteAvatar(): Promise<User> {
+  return request<User>("/api/auth/avatar", {
+    method: "DELETE",
+  });
+}
+
+// =============================================================================
+// Admin API (User Management)
+// =============================================================================
+
+export async function adminResetPassword(
+  userId: number,
+  newPassword: string
+): Promise<User> {
+  return request<User>(`/api/admin/users/${userId}/password`, {
+    method: "PATCH",
+    body: JSON.stringify({ password: newPassword }),
+  });
+}
+
+export async function adminEditUsername(
+  userId: number,
+  newUsername: string
+): Promise<User> {
+  return request<User>(`/api/admin/users/${userId}/username`, {
+    method: "PATCH",
+    body: JSON.stringify({ username: newUsername }),
   });
 }
 
@@ -577,13 +638,60 @@ export function getExportAllScoringRunsUrl(
 }
 
 // =============================================================================
-// Screening API
+// Screening & Metrics API
 // =============================================================================
 
 export type FilterOperator = ">" | "<" | ">=" | "<=" | "=" | "between";
 
-export interface MetricFilter {
+export interface MetricUnitConfig {
+  unit?: string | null;
+  scale?: string | null;
+  allow_negative?: boolean | null;
+}
+
+export interface MetricItem {
+  id: number;
   metric_name: string;
+  display_name_en: string;
+  section: string;
+  type: string | null;
+  description?: string | null;
+  unit_config?: MetricUnitConfig | null;
+}
+
+export interface MetricSummaryResponse {
+  metric_id: number;
+  display_name_en: string;
+  year: number;
+  type: string | null;
+  unit_config?: MetricUnitConfig | null;
+  has_data: boolean;
+  min: number | null;
+  median: number | null;
+  max: number | null;
+  missing_count: number;
+  total_count: number;
+}
+
+export async function getMetrics(): Promise<MetricItem[]> {
+  return request<MetricItem[]>("/api/metrics", { method: "GET" });
+}
+
+export async function getMetricSummary(
+  metricId: number,
+  year: number
+): Promise<MetricSummaryResponse> {
+  const params = new URLSearchParams({ year: String(year) });
+  return request<MetricSummaryResponse>(
+    `/api/metrics/${metricId}/summary?${params}`,
+    {
+      method: "GET",
+    }
+  );
+}
+
+export interface MetricFilter {
+  metric_id: number;
   operator: FilterOperator;
   value: number;
   value_max?: number | null;
@@ -594,17 +702,35 @@ export interface ScreeningRequest {
   filters: MetricFilter[];
 }
 
+export interface ConditionSummary {
+  metric_id: number;
+  metric_name: string;
+  display_name_en: string;
+  operator: FilterOperator;
+  value: number;
+  value_max?: number | null;
+  has_data: boolean;
+  unit_config?: MetricUnitConfig | null;
+}
+
 export interface ScreenedEmiten {
   ticker: string;
   name: string;
-  metrics: Record<string, string | number>;
+  values: Record<string, number | null>;
+}
+
+export interface ScreeningStats {
+  total: number;
+  passed: number;
+  missing_data_banks: number;
 }
 
 export interface ScreeningResponse {
   year: number;
-  filters_applied: number;
-  total_matched: number;
-  emitens: ScreenedEmiten[];
+  conditions: ConditionSummary[];
+  stats: ScreeningStats;
+  passed: ScreenedEmiten[];
+  has_data: boolean;
 }
 
 export async function screenEmitens(
@@ -616,16 +742,8 @@ export async function screenEmitens(
   });
 }
 
-export interface ScreeningMetric {
-  id: number;
-  name: string;
-  section: string;
-  type: string;
-  description: string;
-}
-
-export async function getScreeningMetrics(): Promise<ScreeningMetric[]> {
-  return request<ScreeningMetric[]>("/api/screening/metrics", {
+export async function getScreeningMetrics(): Promise<MetricItem[]> {
+  return request<MetricItem[]>("/api/screening/metrics", {
     method: "GET",
   });
 }
@@ -635,7 +753,8 @@ export async function getScreeningMetrics(): Promise<ScreeningMetric[]> {
 // =============================================================================
 
 export interface MetricRankingRequest {
-  metric_name: string;
+  metric_id?: number;
+  metric_name?: string;
   year_from: number;
   year_to: number;
   top_n?: number;
@@ -655,6 +774,7 @@ export interface YearlyRanking {
 
 export interface MetricRankingResponse {
   metric_name: string;
+  display_name_en?: string | null;
   metric_type: string;
   years: number[];
   yearly_rankings: YearlyRanking[];
@@ -669,15 +789,75 @@ export async function getMetricRanking(
   });
 }
 
-export interface AvailableMetric {
+export interface MetricPanelResponseRow {
+  ticker: string;
   name: string;
-  section: string;
-  type: string;
-  description: string;
+  values: Record<string, number | null>;
 }
 
-export async function getAvailableMetrics(): Promise<AvailableMetric[]> {
-  return request<AvailableMetric[]>("/api/metric-ranking/available-metrics", {
+export interface MetricPanelResponse {
+  metric_id: number;
+  metric_name: string;
+  display_name_en?: string | null;
+  metric_type?: string | null;
+  from_year: number;
+  to_year: number;
+  rank_year: number;
+  top_n: number;
+  rows: MetricPanelResponseRow[];
+}
+
+export interface MetricYearTopResponse {
+  metric_id: number;
+  metric_name: string;
+  display_name_en?: string | null;
+  metric_type?: string | null;
+  year: number;
+  top_n: number;
+  rankings: RankingItem[];
+}
+
+export async function getMetricRankingPanel(params: {
+  metric_id: number;
+  from_year: number;
+  to_year: number;
+  top_n: number;
+  rank_year?: number;
+  rank_type?: "best" | "worst";
+}): Promise<MetricPanelResponse> {
+  const search = new URLSearchParams({
+    metric_id: String(params.metric_id),
+    from_year: String(params.from_year),
+    to_year: String(params.to_year),
+    top_n: String(params.top_n),
+  });
+  if (params.rank_year) search.set("rank_year", String(params.rank_year));
+  if (params.rank_type) search.set("rank_type", params.rank_type);
+  return request<MetricPanelResponse>(`/api/metric-ranking/panel?${search}`, {
+    method: "GET",
+  });
+}
+
+export async function getMetricRankingByYear(params: {
+  metric_id: number;
+  year: number;
+  top_n: number;
+  rank_type?: "best" | "worst";
+}): Promise<MetricYearTopResponse> {
+  const search = new URLSearchParams({
+    metric_id: String(params.metric_id),
+    year: String(params.year),
+    top_n: String(params.top_n),
+  });
+  if (params.rank_type) search.set("rank_type", params.rank_type);
+  return request<MetricYearTopResponse>(
+    `/api/metric-ranking/by-year?${search}`,
+    { method: "GET" }
+  );
+}
+
+export async function getAvailableMetrics(): Promise<MetricItem[]> {
+  return request<MetricItem[]>("/api/metric-ranking/available-metrics", {
     method: "GET",
   });
 }

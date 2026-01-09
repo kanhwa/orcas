@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from passlib.hash import bcrypt
 
 from app.api.deps import get_current_user, get_db
+from app.core.security import hash_password
 from app.models import User, UserRole, UserStatus
 from app.schemas.admin import (
     UserListResponse, 
@@ -122,8 +123,8 @@ def create_user(
     if role == "admin" and admin_count >= MAX_ADMINS:
         role = "employee"  # Force to employee if admin limit reached
     
-    # Hash password
-    password_hash = bcrypt.hash(payload.password)
+    # Hash password (must match the algorithm used by login verification)
+    password_hash = hash_password(payload.password)
     
     # Build full name
     parts = [payload.first_name, payload.middle_name, payload.last_name]
@@ -325,3 +326,108 @@ def delete_user(
         details={"username": deleted_username, "role": deleted_role},
         ip_address=request.client.host if request.client else None,
     )
+
+
+class AdminResetPasswordRequest(BaseModel):
+    """Admin endpoint: reset a user's password (manual set)."""
+    password: str
+
+
+class AdminEditUsernameRequest(BaseModel):
+    """Admin endpoint: edit a user's username."""
+    username: str
+
+
+@router.patch("/users/{user_id}/password", response_model=UserOut)
+def admin_reset_password(
+    user_id: int,
+    payload: AdminResetPasswordRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+) -> UserOut:
+    """
+    Admin: Reset a user's password (manual set, no verification of old password).
+    """
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if not payload.password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password cannot be empty.",
+        )
+
+    # Hash and set new password
+    user.password_hash = hash_password(payload.password)
+    db.commit()
+    db.refresh(user)
+
+    # Audit log
+    log_audit(
+        db=db,
+        user_id=admin.id,
+        action="user_password_reset",
+        target_type="user",
+        target_id=user.id,
+        details={"username": user.username, "reset_by_admin": True},
+        ip_address=request.client.host if request.client else None,
+    )
+
+    return user_to_out(user)
+
+
+@router.patch("/users/{user_id}/username", response_model=UserOut)
+def admin_edit_username(
+    user_id: int,
+    payload: AdminEditUsernameRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+) -> UserOut:
+    """
+    Admin: Edit a user's username.
+    Validates uniqueness.
+    """
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    new_username = payload.username.strip()
+    if not new_username:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username cannot be empty.",
+        )
+
+    # Check uniqueness
+    existing = (
+        db.query(User)
+        .filter(User.username == new_username, User.id != user.id)
+        .first()
+    )
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username already taken.",
+        )
+
+    old_username = user.username
+    user.username = new_username
+    db.commit()
+    db.refresh(user)
+
+    # Audit log
+    log_audit(
+        db=db,
+        user_id=admin.id,
+        action="user_username_changed",
+        target_type="user",
+        target_id=user.id,
+        details={"old_username": old_username, "new_username": new_username},
+        ip_address=request.client.host if request.client else None,
+    )
+
+    return user_to_out(user)
+

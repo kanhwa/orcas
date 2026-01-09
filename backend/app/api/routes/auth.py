@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
@@ -16,6 +18,8 @@ from app.schemas.auth import (
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
+AVATAR_DIR = Path(__file__).resolve().parents[3] / "uploads" / "avatars"
+
 
 def user_to_response(user: User) -> UserMeResponse:
     """Convert User model to UserMeResponse."""
@@ -27,6 +31,7 @@ def user_to_response(user: User) -> UserMeResponse:
         middle_name=user.middle_name,
         last_name=user.last_name,
         full_name=user.computed_full_name,
+        avatar_url=user.avatar_url,
         role=user.role.value,
         status=user.status.value,
     )
@@ -121,6 +126,27 @@ def update_profile(
     """
     Update current user's profile (name fields, email).
     """
+    if payload.username is not None:
+        username_candidate = payload.username.strip()
+        if not username_candidate:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username cannot be empty.",
+            )
+
+        exists = (
+            db.query(User)
+            .filter(User.username == username_candidate, User.id != current_user.id)
+            .first()
+        )
+        if exists:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username already taken.",
+            )
+
+        current_user.username = username_candidate
+
     if payload.first_name is not None:
         current_user.first_name = payload.first_name
     if payload.middle_name is not None:
@@ -128,7 +154,19 @@ def update_profile(
     if payload.last_name is not None:
         current_user.last_name = payload.last_name
     if payload.email is not None:
-        current_user.email = payload.email if payload.email else None
+        email_candidate = payload.email.strip() if payload.email else None
+        if email_candidate:
+            exists_email = (
+                db.query(User)
+                .filter(User.email == email_candidate, User.id != current_user.id)
+                .first()
+            )
+            if exists_email:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Email already taken.",
+                )
+        current_user.email = email_candidate
     
     # Update computed full_name
     parts = [current_user.first_name, current_user.middle_name, current_user.last_name]
@@ -138,6 +176,76 @@ def update_profile(
     db.refresh(current_user)
 
     return user_to_response(current_user)
+
+
+@router.post("/avatar", response_model=UserMeResponse)
+async def upload_avatar(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> UserMeResponse:
+    """Upload avatar for current user (png/jpg, <=1MB)."""
+    allowed_types = {"image/png": "png", "image/jpeg": "jpg"}
+    if file.content_type not in allowed_types:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only PNG or JPG images are allowed.",
+        )
+
+    content = await file.read()
+    if len(content) > 1_048_576:  # 1 MB
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Avatar file is too large (max 1 MB).",
+        )
+
+    AVATAR_DIR.mkdir(parents=True, exist_ok=True)
+    # Remove previous avatars for this user to avoid stale files
+    for existing in AVATAR_DIR.glob(f"user_{current_user.id}.*"):
+        try:
+            existing.unlink()
+        except OSError:
+            pass
+
+    ext = allowed_types[file.content_type]
+    filename = f"user_{current_user.id}.{ext}"
+    target_path = AVATAR_DIR / filename
+    target_path.write_bytes(content)
+
+    current_user.avatar_url = f"/uploads/avatars/{filename}"
+    db.commit()
+    db.refresh(current_user)
+
+    return user_to_response(current_user)
+
+
+@router.delete("/avatar", response_model=UserMeResponse)
+def delete_avatar(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> UserMeResponse:
+    """
+    Delete avatar for current user.
+    Removes the file from disk (best-effort) and clears avatar_url in DB.
+    """
+    # Remove avatar file if it exists
+    if current_user.avatar_url:
+        # Extract filename from path (e.g., "/uploads/avatars/user_1.png" -> "user_1.png")
+        filename = current_user.avatar_url.split("/")[-1]
+        avatar_file = AVATAR_DIR / filename
+        try:
+            avatar_file.unlink()
+        except OSError:
+            # File may not exist; ignore gracefully
+            pass
+    
+    # Clear avatar_url in database
+    current_user.avatar_url = None
+    db.commit()
+    db.refresh(current_user)
+
+    return user_to_response(current_user)
+
 
 
 @router.post("/change-password")

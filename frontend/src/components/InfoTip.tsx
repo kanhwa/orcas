@@ -1,18 +1,45 @@
 import { useState, useRef, useEffect } from "react";
 
 interface InfoTipProps {
-  content: string;
+  content: string | React.ReactNode;
+  ariaLabel?: string;
 }
 
-export default function InfoTip({ content }: InfoTipProps) {
+/**
+ * InfoTip: Accessible tooltip component that displays on hover and keyboard focus.
+ * - Opens on pointer hover and keyboard focus
+ * - Closes on pointer leave, blur, and Escape key
+ * - Trigger is only the ⓘ icon button (not the whole container)
+ */
+export default function InfoTip({ content, ariaLabel = "Info" }: InfoTipProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const popoverRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLSpanElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
+  // Handle escape key to close tooltip
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && isOpen) {
+        setIsOpen(false);
+        buttonRef.current?.focus();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("keydown", handleKeyDown);
+    }
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen]);
+
+  // Handle click outside to close tooltip
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
-        popoverRef.current &&
-        !popoverRef.current.contains(event.target as Node)
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
       ) {
         setIsOpen(false);
       }
@@ -28,25 +55,30 @@ export default function InfoTip({ content }: InfoTipProps) {
   }, [isOpen]);
 
   return (
-    <span style={styles.container} ref={popoverRef}>
+    <span style={styles.container} ref={containerRef}>
       <button
+        ref={buttonRef}
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        // Hover opens/keeps open
+        onMouseEnter={() => setIsOpen(true)}
+        // Leave closes
+        onMouseLeave={() => setIsOpen(false)}
+        // Focus opens
+        onFocus={() => setIsOpen(true)}
+        // Blur closes
+        onBlur={() => setIsOpen(false)}
+        // Click toggles as fallback (optional "pin" behavior)
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsOpen(!isOpen);
+        }}
         style={styles.iconButton}
-        aria-label="Info"
+        aria-label={ariaLabel}
       >
         ⓘ
       </button>
       {isOpen && (
-        <div style={styles.popover}>
-          <button
-            type="button"
-            onClick={() => setIsOpen(false)}
-            style={styles.closeBtn}
-            aria-label="Close"
-          >
-            ×
-          </button>
+        <div style={styles.popover} role="tooltip">
           <p style={styles.content}>{content}</p>
         </div>
       )}
@@ -75,7 +107,7 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "center",
     justifyContent: "center",
     borderRadius: "50%",
-    transition: "background 0.2s",
+    transition: "background 0.2s, color 0.2s",
   },
   popover: {
     position: "absolute",
@@ -89,20 +121,7 @@ const styles: Record<string, React.CSSProperties> = {
     zIndex: 1000,
     minWidth: "220px",
     maxWidth: "320px",
-  },
-  closeBtn: {
-    position: "absolute",
-    top: "0.25rem",
-    right: "0.25rem",
-    background: "transparent",
-    border: "none",
-    fontSize: "1.25rem",
-    color: "var(--text-subtle)",
-    cursor: "pointer",
-    padding: "0",
-    lineHeight: "1",
-    width: "20px",
-    height: "20px",
+    pointerEvents: "none",
   },
   content: {
     margin: "0",
