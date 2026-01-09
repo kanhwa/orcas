@@ -22,6 +22,6 @@ export function toCatalogMetric(metric: MetricItem): CatalogMetric {
     description: metric.description,
     unit: metric.unit_config?.unit || null,
     key: metric.metric_name, // Use metric_name as key for dropdown
-    label: metric.display_name_en, // Use display_name_en as label for UI
+    label: metric.metric_name, // Use metric_name as label for UI (canonical DB identifier)
   };
 }

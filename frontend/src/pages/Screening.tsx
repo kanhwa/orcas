@@ -436,7 +436,7 @@ export default function Screening() {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-bold">
-                Data Hint — {activeSummary.display_name_en}
+                Data Hint — {activeSummary.metric_name}
               </h3>
               <p className="text-sm text-gray-600">
                 Type: {activeSummary.type || "unknown"}{" "}
@@ -503,7 +503,7 @@ export default function Screening() {
                         key={c.metric_id}
                         className="px-4 py-2 text-right font-medium"
                       >
-                        {c.display_name_en}
+                        {c.metric_name}
                       </th>
                     ))}
                   </tr>

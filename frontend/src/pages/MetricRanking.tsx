@@ -367,7 +367,7 @@ export default function MetricRanking() {
           <div className="flex items-center justify-between mb-3">
             <div>
               <h3 className="text-lg font-bold">
-                {panelResult.display_name_en}
+                {panelResult.metric_name}
               </h3>
               <p className="text-sm text-gray-500">
                 Type: {panelResult.metric_type || "unknown"} • Unit:{" "}
@@ -436,7 +436,7 @@ export default function MetricRanking() {
           <div className="flex items-center justify-between mb-3">
             <div>
               <h3 className="text-lg font-bold">
-                {yearResult.display_name_en}
+                {yearResult.metric_name}
               </h3>
               <p className="text-sm text-gray-500">
                 Year {yearResult.year} • Type:{" "}
