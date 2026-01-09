@@ -1,15 +1,13 @@
 import { useState, useEffect } from "react";
-import { authMe, authLogout, User } from "./services/api";
+import { BASE_URL, authMe, authLogout, User } from "./services/api";
 import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
 import ComparePage from "./pages/ComparePage";
 import Simulation from "./pages/Simulation";
 import Profile from "./pages/Profile";
-import Templates from "./pages/Templates";
 import Reports from "./pages/Reports";
-import Admin from "./pages/Admin";
 import SyncData from "./pages/SyncData";
 import Analysis from "./pages/Analysis";
+import Admin from "./pages/Admin";
 import {
   AppShell,
   NavItem,
@@ -20,12 +18,10 @@ import { Button } from "./components/ui/Button";
 import { Card } from "./components/ui/Card";
 
 type Page =
-  | "dashboard"
   | "analysis"
   | "compare"
   | "simulation"
   | "reports"
-  | "templates"
   | "profile"
   | "admin"
   | "sync-data";
@@ -34,7 +30,8 @@ function AppContent() {
   const { loading: catalogLoading, error: catalogError, retry } = useCatalog();
   const [user, setUser] = useState<User | null>(null);
   const [checking, setChecking] = useState(true);
-  const [currentPage, setCurrentPage] = useState<Page>("dashboard");
+  const [currentPage, setCurrentPage] = useState<Page>("analysis");
+  const apiBase = BASE_URL;
 
   // Check existing session on mount
   useEffect(() => {
@@ -54,6 +51,7 @@ function AppContent() {
 
   const handleLoginSuccess = async (loggedInUser: User) => {
     setUser(loggedInUser);
+    setCurrentPage("analysis");
   };
 
   const handleLogout = async () => {
@@ -63,7 +61,7 @@ function AppContent() {
       // Ignore logout errors
     }
     setUser(null);
-    setCurrentPage("dashboard");
+    setCurrentPage("analysis");
   };
 
   const handleUserUpdate = (updated: User) => {
@@ -72,10 +70,6 @@ function AppContent() {
 
   // Page configuration
   const pageConfig: Record<Page, { title: string; subtitle?: string }> = {
-    dashboard: {
-      title: "Dashboard",
-      subtitle: "Overview ranking & quick stats for bank stocks",
-    },
     analysis: {
       title: "Analysis",
       subtitle: "Screening & metric ranking for stocks",
@@ -91,10 +85,6 @@ function AppContent() {
     reports: {
       title: "Reports",
       subtitle: "View and export scoring history",
-    },
-    templates: {
-      title: "My Templates",
-      subtitle: "Manage your scoring templates",
     },
     profile: {
       title: "Profile",
@@ -113,23 +103,23 @@ function AppContent() {
   const role = user?.role || "viewer";
   const isAdmin = role === "admin";
 
+  // Guard admin-only pages (prevent access by manually switching state)
+  useEffect(() => {
+    if (!isAdmin && (currentPage === "admin" || currentPage === "sync-data")) {
+      setCurrentPage("analysis");
+    }
+  }, [currentPage, isAdmin]);
+
   // Sidebar navigation - 5 main features
   const navItems: NavItem[] = [
-    {
-      key: "dashboard",
-      label: "Dashboard",
-      icon: "📊",
-      onSelect: () => setCurrentPage("dashboard"),
-      active: currentPage === "dashboard",
-      description: "Overview & quick stats",
-    },
     {
       key: "analysis",
       label: "Analysis",
       icon: "🔍",
       onSelect: () => setCurrentPage("analysis"),
       active: currentPage === "analysis",
-      description: "Screening & metric ranking",
+      description:
+        "Screen stocks using rule-based filters and explore metric rankings.",
     },
     {
       key: "compare",
@@ -137,7 +127,8 @@ function AppContent() {
       icon: "📈",
       onSelect: () => setCurrentPage("compare"),
       active: currentPage === "compare",
-      description: "Compare stocks & historical",
+      description:
+        "Compare banks side-by-side and review historical performance.",
     },
     {
       key: "simulation",
@@ -145,7 +136,7 @@ function AppContent() {
       icon: "🧪",
       onSelect: () => setCurrentPage("simulation"),
       active: currentPage === "simulation",
-      description: "What-if scenarios",
+      description: "Test scenarios by adjusting assumptions (no predictions).",
     },
     {
       key: "reports",
@@ -153,7 +144,7 @@ function AppContent() {
       icon: "📋",
       onSelect: () => setCurrentPage("reports"),
       active: currentPage === "reports",
-      description: "History & export",
+      description: "Export and organize saved results into a report.",
     },
   ];
 
@@ -164,12 +155,6 @@ function AppContent() {
       label: "My Profile",
       icon: "👤",
       onClick: () => setCurrentPage("profile"),
-    },
-    {
-      key: "templates",
-      label: "My Templates",
-      icon: "📝",
-      onClick: () => setCurrentPage("templates"),
     },
     ...(isAdmin
       ? [
@@ -199,9 +184,6 @@ function AppContent() {
   ];
 
   const renderPage = () => {
-    if (currentPage === "dashboard" && user) {
-      return <Dashboard user={user} onLogout={handleLogout} />;
-    }
     if (currentPage === "analysis") {
       return <Analysis />;
     }
@@ -214,17 +196,14 @@ function AppContent() {
     if (currentPage === "reports" && user) {
       return <Reports user={user} />;
     }
-    if (currentPage === "templates" && user) {
-      return <Templates user={user} />;
-    }
     if (currentPage === "profile" && user) {
       return <Profile user={user} onUserUpdate={handleUserUpdate} />;
     }
-    if (currentPage === "admin" && isAdmin && user) {
-      return <Admin user={user} />;
-    }
     if (currentPage === "sync-data" && isAdmin && user) {
       return <SyncData user={user} />;
+    }
+    if (currentPage === "admin" && isAdmin && user) {
+      return <Admin user={user} />;
     }
     // Placeholder content for sections that are not yet implemented
     return (
@@ -242,7 +221,21 @@ function AppContent() {
   };
 
   // Show loading while checking session or catalog
-  if (checking || catalogLoading) {
+  if (checking) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[rgb(var(--color-surface))] text-[rgb(var(--color-text-subtle))]">
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
+  // Show login if not authenticated (do not block on catalog)
+  if (!user) {
+    return <Login onLoginSuccess={handleLoginSuccess} />;
+  }
+
+  // After login, wait for catalog
+  if (catalogLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[rgb(var(--color-surface))] text-[rgb(var(--color-text-subtle))]">
         <p>Loading...</p>
@@ -269,17 +262,19 @@ function AppContent() {
     );
   }
 
-  // Show login if not authenticated
-  if (!user) {
-    return <Login onLoginSuccess={handleLoginSuccess} />;
-  }
-
   return (
     <AppShell
       pageTitle={pageConfig[currentPage].title}
       pageSubtitle={pageConfig[currentPage].subtitle}
       userDisplay={user.username}
       userRole={user.role}
+      userAvatar={
+        user.avatar_url
+          ? user.avatar_url.startsWith("http")
+            ? user.avatar_url
+            : `${apiBase}${user.avatar_url}`
+          : undefined
+      }
       navItems={navItems}
       profileMenuItems={profileMenuItems}
     >

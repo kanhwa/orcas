@@ -207,8 +207,21 @@ export function AppShell({
               >
                 {item.icon && <span className="text-lg">{item.icon}</span>}
                 <span className="flex-1">{item.label}</span>
-                {item.description && !item.active && (
-                  <InfoTip content={item.description} />
+                {item.description && (
+                  <span
+                    className="shrink-0"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                  >
+                    <InfoTip
+                      content={item.description}
+                      ariaLabel={`Info: ${item.label}`}
+                      stopPropagation
+                    />
+                  </span>
                 )}
               </button>
             ))}
