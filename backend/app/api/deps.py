@@ -31,7 +31,7 @@ def get_current_user(
     if not user_id:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Belum login. Silakan login terlebih dahulu.",
+            detail="Not logged in. Please log in.",
         )
 
     user = db.query(User).filter(User.id == user_id).first()
@@ -40,14 +40,14 @@ def get_current_user(
         request.session.clear()
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User tidak ditemukan. Silakan login ulang.",
+            detail="User not found. Please log in again.",
         )
 
     if user.status.value != "active":
         request.session.clear()
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Akun tidak aktif. Hubungi administrator.",
+            detail="Account inactive. Contact administrator.",
         )
 
     return user

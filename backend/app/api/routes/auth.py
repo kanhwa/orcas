@@ -149,7 +149,19 @@ def update_profile(
     if payload.last_name is not None:
         current_user.last_name = payload.last_name
     if payload.email is not None:
-        current_user.email = payload.email if payload.email else None
+        email_candidate = payload.email.strip() if payload.email else None
+        if email_candidate:
+            exists_email = (
+                db.query(User)
+                .filter(User.email == email_candidate, User.id != current_user.id)
+                .first()
+            )
+            if exists_email:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Email already taken.",
+                )
+        current_user.email = email_candidate
     
     # Update computed full_name
     parts = [current_user.first_name, current_user.middle_name, current_user.last_name]
