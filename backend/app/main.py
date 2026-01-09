@@ -2,6 +2,7 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 import redis
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -49,6 +50,11 @@ app.include_router(metrics.router)
 app.include_router(historical.router)
 app.include_router(stocks.router)
 app.include_router(sync_data.router)
+
+# Static file serving for avatars
+uploads_dir = Path(__file__).parent.parent / "uploads"
+uploads_dir.mkdir(exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
 
 
 def _seed_metrics_if_empty() -> None:

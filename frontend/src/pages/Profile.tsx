@@ -1,5 +1,5 @@
-import { FormEvent, useState } from "react";
-import { User, updateProfile, changePassword } from "../services/api";
+import { FormEvent, useRef, useState } from "react";
+import { User, updateProfile, changePassword, uploadAvatar } from "../services/api";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 
@@ -25,6 +25,47 @@ export default function Profile({ user, onUserUpdate }: ProfileProps) {
   const [pwdMsg, setPwdMsg] = useState<string | null>(null);
   const [pwdErr, setPwdErr] = useState<string | null>(null);
   const [pwdLoading, setPwdLoading] = useState(false);
+
+  const [avatarUrl, setAvatarUrl] = useState(user.avatar_url);
+  const [avatarLoading, setAvatarLoading] = useState(false);
+  const [avatarErr, setAvatarErr] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setAvatarErr(null);
+
+    // Validate file type
+    if (!file.type.match(/^image\/(jpeg|png)$/)) {
+      setAvatarErr("Only JPG and PNG images are allowed.");
+      return;
+    }
+
+    // Validate file size (1MB)
+    if (file.size > 1024 * 1024) {
+      setAvatarErr("Avatar must be less than 1MB.");
+      return;
+    }
+
+    setAvatarLoading(true);
+    try {
+      const result = await uploadAvatar(file);
+      setAvatarUrl(result.avatar_url);
+      // Update user context
+      onUserUpdate({ ...user, avatar_url: result.avatar_url });
+    } catch (err: unknown) {
+      const e = err as { detail?: string };
+      setAvatarErr(e.detail || "Avatar upload failed.");
+    } finally {
+      setAvatarLoading(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
 
   const handleProfileSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -96,6 +137,47 @@ export default function Profile({ user, onUserUpdate }: ProfileProps) {
           </div>
         }
       >
+        <div className="mb-4 flex items-center gap-4">
+          <div className="relative">
+            {avatarUrl ? (
+              <img
+                src={`http://localhost:8000${avatarUrl}`}
+                alt="Avatar"
+                className="h-20 w-20 rounded-full object-cover border-2 border-[rgb(var(--color-border))]"
+              />
+            ) : (
+              <div className="h-20 w-20 rounded-full bg-[rgb(var(--color-border))] flex items-center justify-center text-2xl font-bold text-[rgb(var(--color-text-subtle))]">
+                {user.username.charAt(0).toUpperCase()}
+              </div>
+            )}
+          </div>
+          <div className="flex-1">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png"
+              onChange={handleAvatarUpload}
+              className="hidden"
+              id="avatar-upload"
+            />
+            <label htmlFor="avatar-upload">
+              <Button
+                type="button"
+                className="text-sm"
+                disabled={avatarLoading}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {avatarLoading ? "Uploading..." : "Upload Avatar"}
+              </Button>
+            </label>
+            <p className="mt-1 text-xs text-[rgb(var(--color-text-subtle))]">
+              JPG or PNG, max 1MB
+            </p>
+            {avatarErr && (
+              <p className="mt-1 text-xs text-red-600">{avatarErr}</p>
+            )}
+          </div>
+        </div>
         <dl className="mb-4 grid grid-cols-1 gap-3 text-sm text-[rgb(var(--color-text))] sm:grid-cols-2">
           <div>
             <dt className="text-[rgb(var(--color-text-subtle))]">Role</dt>

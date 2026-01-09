@@ -63,6 +63,7 @@ class User(Base):
     middle_name = Column(String(50), nullable=True)
     last_name = Column(String(50), nullable=True)
     full_name = Column(String(100), nullable=True)  # Legacy, computed from first/middle/last
+    avatar_url = Column(String(255), nullable=True)
     role = Column(Enum(UserRole, name="user_role"), nullable=False, server_default=UserRole.employee.value)
     status = Column(Enum(UserStatus, name="user_status"), nullable=False, server_default=UserStatus.active.value)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

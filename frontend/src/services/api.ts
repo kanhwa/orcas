@@ -23,6 +23,7 @@ export interface User {
   middle_name: string | null;
   last_name: string | null;
   full_name: string | null;
+  avatar_url: string | null;
   role: string;
   status: string;
 }
@@ -181,6 +182,21 @@ export async function changePassword(
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+export async function uploadAvatar(file: File): Promise<{ avatar_url: string }> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await fetch(`${BASE_URL}/api/auth/upload-avatar`, {
+    method: "POST",
+    credentials: "include",
+    body: formData,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Upload failed" }));
+    throw err;
+  }
+  return res.json();
 }
 
 // =============================================================================
