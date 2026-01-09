@@ -23,6 +23,7 @@ export interface User {
   middle_name: string | null;
   last_name: string | null;
   full_name: string | null;
+  avatar_url: string | null;
   role: string;
   status: string;
 }
@@ -180,6 +181,54 @@ export async function changePassword(
   return request<{ detail: string }>("/api/auth/change-password", {
     method: "POST",
     body: JSON.stringify(payload),
+  });
+}
+
+export async function uploadAvatar(file: File): Promise<User> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const res = await fetch(`${BASE_URL}/api/auth/avatar`, {
+    method: "POST",
+    credentials: "include",
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => ({ detail: res.statusText }));
+    throw { status: res.status, detail: errorBody.detail || "Avatar upload failed" };
+  }
+
+  return res.json();
+}
+
+export async function deleteAvatar(): Promise<User> {
+  return request<User>("/api/auth/avatar", {
+    method: "DELETE",
+  });
+}
+
+// =============================================================================
+// Admin API (User Management)
+// =============================================================================
+
+export async function adminResetPassword(
+  userId: number,
+  newPassword: string
+): Promise<User> {
+  return request<User>(`/api/admin/users/${userId}/password`, {
+    method: "PATCH",
+    body: JSON.stringify({ password: newPassword }),
+  });
+}
+
+export async function adminEditUsername(
+  userId: number,
+  newUsername: string
+): Promise<User> {
+  return request<User>(`/api/admin/users/${userId}/username`, {
+    method: "PATCH",
+    body: JSON.stringify({ username: newUsername }),
   });
 }
 
