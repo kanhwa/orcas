@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { User } from "../services/api";
+import { BASE_URL, User } from "../services/api";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import { Table } from "../components/ui/Table";
@@ -31,9 +31,6 @@ interface AdminCountResponse {
   max_admins: number;
   can_create_admin: boolean;
 }
-
-// Admin API calls
-const BASE_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`${BASE_URL}${path}`, {

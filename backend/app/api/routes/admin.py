@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
-from passlib.hash import bcrypt
 
 from app.api.deps import get_current_user, get_db
+from app.core.security import hash_password
 from app.models import User, UserRole, UserStatus
 from app.schemas.admin import (
     UserListResponse, 
@@ -122,8 +122,8 @@ def create_user(
     if role == "admin" and admin_count >= MAX_ADMINS:
         role = "employee"  # Force to employee if admin limit reached
     
-    # Hash password
-    password_hash = bcrypt.hash(payload.password)
+    # Hash password (must match the algorithm used by login verification)
+    password_hash = hash_password(payload.password)
     
     # Build full name
     parts = [payload.first_name, payload.middle_name, payload.last_name]

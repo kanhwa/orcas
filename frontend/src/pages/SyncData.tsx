@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { User } from "../services/api";
+import { BASE_URL, User } from "../services/api";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 
@@ -14,8 +14,6 @@ interface SyncDataProps {
   user: User;
 }
 
-const API_BASE = "http://localhost:8000";
-
 export default function SyncData({ user: _ }: SyncDataProps) {
   const [files, setFiles] = useState<CsvFileInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,7 +26,7 @@ export default function SyncData({ user: _ }: SyncDataProps) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/api/sync-data/files`, {
+      const res = await fetch(`${BASE_URL}/api/sync-data/files`, {
         credentials: "include",
       });
       if (!res.ok) {
@@ -59,7 +57,7 @@ export default function SyncData({ user: _ }: SyncDataProps) {
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await fetch(`${API_BASE}/api/sync-data/upload`, {
+      const res = await fetch(`${BASE_URL}/api/sync-data/upload`, {
         method: "POST",
         credentials: "include",
         body: formData,
@@ -91,7 +89,7 @@ export default function SyncData({ user: _ }: SyncDataProps) {
 
     try {
       const res = await fetch(
-        `${API_BASE}/api/sync-data/files/${encodeURIComponent(filename)}`,
+        `${BASE_URL}/api/sync-data/files/${encodeURIComponent(filename)}`,
         {
           method: "DELETE",
           credentials: "include",
