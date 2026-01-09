@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { BASE_URL, User } from "../services/api";
+import { BASE_URL, User, adminResetPassword, adminEditUsername } from "../services/api";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import { Table } from "../components/ui/Table";
@@ -94,6 +94,181 @@ async function deleteUser(userId: number): Promise<void> {
   return request<void>(`/api/admin/users/${userId}`, { method: "DELETE" });
 }
 
+interface ResetPasswordModalProps {
+  user: AdminUser;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+function ResetPasswordModal({
+  user,
+  onClose,
+  onSuccess,
+}: ResetPasswordModalProps) {
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async () => {
+    setError("");
+
+    if (!newPassword) {
+      setError("Password cannot be empty.");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await adminResetPassword(user.id, newPassword);
+      onSuccess();
+      onClose();
+    } catch (err: unknown) {
+      const e = err as { detail?: string };
+      setError(e.detail || "Failed to reset password.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Modal title={`Reset Password: ${user.username}`} onClose={onClose}>
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            New Password <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="password"
+            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            placeholder="At least 6 characters"
+            disabled={loading}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            Confirm Password <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="password"
+            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder="Confirm password"
+            disabled={loading}
+          />
+        </div>
+
+        {error && (
+          <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+            {error}
+          </p>
+        )}
+
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={onClose} disabled={loading}>
+            Cancel
+          </Button>
+          <Button onClick={handleSubmit} disabled={loading}>
+            {loading ? "Resetting..." : "Reset Password"}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+interface EditUsernameModalProps {
+  user: AdminUser;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+function EditUsernameModal({
+  user,
+  onClose,
+  onSuccess,
+}: EditUsernameModalProps) {
+  const [newUsername, setNewUsername] = useState(user.username);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async () => {
+    setError("");
+
+    const trimmed = newUsername.trim();
+    if (!trimmed) {
+      setError("Username cannot be empty.");
+      return;
+    }
+
+    if (trimmed === user.username) {
+      setError("Please enter a different username.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await adminEditUsername(user.id, trimmed);
+      onSuccess();
+      onClose();
+    } catch (err: unknown) {
+      const e = err as { detail?: string };
+      setError(e.detail || "Failed to update username.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Modal title={`Edit Username: ${user.username}`} onClose={onClose}>
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            New Username <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            value={newUsername}
+            onChange={(e) => setNewUsername(e.target.value)}
+            placeholder="New username"
+            disabled={loading}
+          />
+        </div>
+
+        {error && (
+          <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+            {error}
+          </p>
+        )}
+
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={onClose} disabled={loading}>
+            Cancel
+          </Button>
+          <Button onClick={handleSubmit} disabled={loading}>
+            {loading ? "Updating..." : "Update Username"}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 interface AdminProps {
   user: User;
 }
@@ -127,6 +302,18 @@ export default function Admin({ user }: AdminProps) {
   const [editRole, setEditRole] = useState<string>("");
   const [editStatus, setEditStatus] = useState<string>("");
   const [saving, setSaving] = useState(false);
+
+  // Reset password modal
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [resetPasswordUser, setResetPasswordUser] = useState<AdminUser | null>(
+    null
+  );
+
+  // Edit username modal
+  const [showEditUsername, setShowEditUsername] = useState(false);
+  const [editUsernameUser, setEditUsernameUser] = useState<AdminUser | null>(
+    null
+  );
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -300,23 +487,45 @@ export default function Admin({ user }: AdminProps) {
                     </span>
                   </td>
                   <td>{new Date(u.created_at).toLocaleDateString()}</td>
-                  <td className="space-x-1">
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => openEdit(u)}
-                    >
-                      Edit
-                    </Button>
-                    {u.id !== user.id && (
+                  <td className="space-x-1 space-y-1">
+                    <div className="flex flex-wrap gap-1">
                       <Button
                         size="sm"
-                        variant="danger"
-                        onClick={() => handleDelete(u)}
+                        variant="secondary"
+                        onClick={() => openEdit(u)}
                       >
-                        Delete
+                        Edit
                       </Button>
-                    )}
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => {
+                          setEditUsernameUser(u);
+                          setShowEditUsername(true);
+                        }}
+                      >
+                        Username
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => {
+                          setResetPasswordUser(u);
+                          setShowResetPassword(true);
+                        }}
+                      >
+                        Reset Pwd
+                      </Button>
+                      {u.id !== user.id && (
+                        <Button
+                          size="sm"
+                          variant="danger"
+                          onClick={() => handleDelete(u)}
+                        >
+                          Delete
+                        </Button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -546,6 +755,24 @@ export default function Admin({ user }: AdminProps) {
             </div>
           </div>
         </Modal>
+      )}
+
+      {/* Reset Password Modal */}
+      {showResetPassword && resetPasswordUser && (
+        <ResetPasswordModal
+          user={resetPasswordUser}
+          onClose={() => setResetPasswordUser(null)}
+          onSuccess={() => fetchUsers()}
+        />
+      )}
+
+      {/* Edit Username Modal */}
+      {showEditUsername && editUsernameUser && (
+        <EditUsernameModal
+          user={editUsernameUser}
+          onClose={() => setEditUsernameUser(null)}
+          onSuccess={() => fetchUsers()}
+        />
       )}
     </div>
   );
