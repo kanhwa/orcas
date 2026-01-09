@@ -85,6 +85,7 @@ logs/
 **/logs/
 
 ### Data
+backend/app/uploads/
 
 ### Docs (remove from repo)
 docs/

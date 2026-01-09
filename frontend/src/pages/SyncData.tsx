@@ -116,7 +116,7 @@ export default function SyncData({ user: _ }: SyncDataProps) {
 
   const formatDate = (isoString: string) => {
     const date = new Date(isoString);
-    return date.toLocaleDateString("id-ID", {
+    return date.toLocaleDateString("en-US", {
       day: "2-digit",
       month: "short",
       year: "numeric",
@@ -136,7 +136,7 @@ export default function SyncData({ user: _ }: SyncDataProps) {
                 Sync Data
               </h2>
               <p className="text-sm text-[rgb(var(--color-text-subtle))] mt-1">
-                Upload dan kelola file data CSV untuk laporan tahunan
+                Upload and manage annual CSV data files for reporting
               </p>
             </div>
             <div className="flex gap-2">
