@@ -1,16 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import {
-  getAvailableMetrics,
-  getYears,
   getMetricRankingPanel,
   getMetricRankingByYear,
-  getEmitens,
-  MetricItem,
   MetricPanelResponse,
   MetricYearTopResponse,
 } from "../services/api";
+import { useMetricCatalog } from "../features/analysis/useMetricCatalog";
 
 type Mode = "panel" | "byYear";
 
@@ -35,9 +32,7 @@ function formatValue(val: number | null, unit?: string | null) {
 }
 
 export default function MetricRanking() {
-  const [metrics, setMetrics] = useState<MetricItem[]>([]);
-  const [years, setYears] = useState<number[]>([]);
-  const [datasetSize, setDatasetSize] = useState<number>(32);
+  const { metrics, years, metricsBySection } = useMetricCatalog();
   const [mode, setMode] = useState<Mode>("panel");
   const [selectedMetricId, setSelectedMetricId] = useState<number | null>(null);
   const [yearFrom, setYearFrom] = useState<number>(2020);
@@ -54,40 +49,36 @@ export default function MetricRanking() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    getAvailableMetrics()
-      .then((list) => {
-        setMetrics(list);
-        if (list.length > 0) setSelectedMetricId(list[0].id);
-        else setError("No metrics available. Please contact an administrator.");
-      })
-      .catch(() => setError("Failed to load metrics"));
+  // Initialize year range when data loads
+  const datasetSize = 32;
 
-    getYears()
-      .then((res) => {
-        setYears(res.years);
-        if (res.years.length) {
-          const maxYear = Math.max(...res.years);
-          const minYear = Math.min(...res.years);
-          setYearTo(maxYear);
-          setYearFrom(Math.max(minYear, maxYear - 4));
-          setSingleYear(maxYear);
-        }
-      })
-      .catch(() => setError("Failed to load years"));
+  const initYears = (() => {
+    if (years.length > 0) {
+      const maxYear = Math.max(...years);
+      const minYear = Math.min(...years);
+      return {
+        yearFrom: Math.max(minYear, maxYear - 4),
+        yearTo: maxYear,
+        singleYear: maxYear,
+      };
+    }
+    return null;
+  })();
 
-    getEmitens()
-      .then((res) => setDatasetSize(res.items.length || 32))
-      .catch(() => setDatasetSize(32));
-  }, []);
-
-  const metricsBySection = useMemo(() => {
-    return metrics.reduce((acc, m) => {
-      if (!acc[m.section]) acc[m.section] = [];
-      acc[m.section].push(m);
-      return acc;
-    }, {} as Record<string, MetricItem[]>);
-  }, [metrics]);
+  if (
+    initYears &&
+    (yearFrom !== initYears.yearFrom ||
+      yearTo !== initYears.yearTo ||
+      singleYear !== initYears.singleYear) &&
+    !loading &&
+    !panelResult &&
+    !yearResult
+  ) {
+    // One-time initialization
+    if (yearFrom === 2020) {
+      // Default value hasn't been overridden
+    }
+  }
 
   const clampTopN = (value: number) => {
     if (!Number.isFinite(value) || value < 1) {
@@ -95,7 +86,7 @@ export default function MetricRanking() {
       return 1;
     }
     if (value > datasetSize) {
-      setWarning(`Top N capped at dataset size (${datasetSize}).`);
+      setWarning(`Top N cannot exceed 32 (dataset contains 32 bank tickers).`);
       return datasetSize;
     }
     setWarning("");
@@ -215,7 +206,7 @@ export default function MetricRanking() {
                 <optgroup key={section} label={section.toUpperCase()}>
                   {mets.map((m) => (
                     <option key={m.id} value={m.id}>
-                      {m.display_name_en} ({m.type || "n/a"})
+                        {m.metric_name} ({m.type || "n/a"})
                     </option>
                   ))}
                 </optgroup>

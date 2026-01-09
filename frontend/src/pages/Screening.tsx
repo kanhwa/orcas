@@ -1,18 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import {
-  getMetrics,
-  getMetricSummary,
-  getYears,
-  getEmitens,
   screenEmitens,
-  MetricItem,
-  MetricSummaryResponse,
   FilterOperator,
   ScreeningResponse,
   MetricFilter,
 } from "../services/api";
+import { useMetricCatalog } from "../features/analysis/useMetricCatalog";
 
 const OPERATORS: { value: FilterOperator; label: string }[] = [
   { value: ">", label: "> (greater than)" },
@@ -72,10 +67,11 @@ function formatValueDisplay(value: number | null, unit?: string | null) {
 }
 
 export default function Screening() {
-  const [metrics, setMetrics] = useState<MetricItem[]>([]);
-  const [years, setYears] = useState<number[]>([]);
-  const [datasetSize, setDatasetSize] = useState<number>(32);
-  const [selectedYear, setSelectedYear] = useState<number>(2024);
+  const { metrics, years, metricsBySection, getMetricStats } =
+    useMetricCatalog();
+  const [selectedYear, setSelectedYear] = useState<number>(
+    years.length > 0 ? years[0] : 2024
+  );
   const [filters, setFilters] = useState<FilterRow[]>([
     {
       id: 1,
@@ -86,47 +82,19 @@ export default function Screening() {
       unit_choice: "bn",
     },
   ]);
-  const [activeSummary, setActiveSummary] =
-    useState<MetricSummaryResponse | null>(null);
+  const [activeSummary, setActiveSummary] = useState<any>(null);
   const [result, setResult] = useState<ScreeningResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    getMetrics()
-      .then((list) => {
-        setMetrics(list);
-      })
-      .catch(() => setError("Failed to load metrics"));
-
-    getYears()
-      .then((res) => {
-        setYears(res.years);
-        if (res.years.length > 0) setSelectedYear(res.years[0]);
-      })
-      .catch(() => setError("Failed to load years"));
-
-    getEmitens()
-      .then((res) => setDatasetSize(res.items.length))
-      .catch(() => setDatasetSize(32));
-  }, []);
-
-  const metricsBySection = useMemo(() => {
-    return metrics.reduce((acc, m) => {
-      if (!acc[m.section]) acc[m.section] = [];
-      acc[m.section].push(m);
-      return acc;
-    }, {} as Record<string, MetricItem[]>);
-  }, [metrics]);
 
   const handleMetricChange = async (rowId: number, metricId: number) => {
     setFilters((prev) =>
       prev.map((f) => (f.id === rowId ? { ...f, metric_id: metricId } : f))
     );
-    try {
-      const summary = await getMetricSummary(metricId, selectedYear);
+    const summary = await getMetricStats(metricId, selectedYear);
+    if (summary) {
       setActiveSummary(summary);
-    } catch (e) {
+    } else {
       setActiveSummary(null);
     }
   };
@@ -219,13 +187,15 @@ export default function Screening() {
     ? metrics.find((m) => m.id === activeSummary.metric_id)
     : null;
 
+  const datasetSize = 32; // Fixed dataset size
+
   return (
     <div className="space-y-6">
       <Card>
         <h2 className="text-xl font-bold mb-4">🔍 Stock Screening</h2>
         <p className="text-gray-600 mb-4">
           Filter banks using multiple metric conditions (AND logic). Dataset
-          contains {datasetSize} tickers.
+          contains {metrics.length > 0 ? 32 : "loading"} tickers.
         </p>
 
         {/* Year Selection */}
@@ -237,11 +207,11 @@ export default function Screening() {
             onChange={async (e) => {
               const y = Number(e.target.value);
               setSelectedYear(y);
-              if (activeMetric) {
-                try {
-                  const summary = await getMetricSummary(activeMetric.id, y);
+              if (activeSummary) {
+                const summary = await getMetricStats(activeSummary.metric_id, y);
+                if (summary) {
                   setActiveSummary(summary);
-                } catch {
+                } else {
                   setActiveSummary(null);
                 }
               }
@@ -292,7 +262,7 @@ export default function Screening() {
                           <optgroup key={section} label={section.toUpperCase()}>
                             {mets.map((m) => (
                               <option key={m.id} value={m.id}>
-                                {m.display_name_en}
+                                {m.metric_name}
                               </option>
                             ))}
                           </optgroup>
