@@ -45,9 +45,25 @@ export default function SyncData({ user: _ }: SyncDataProps) {
     fetchFiles();
   }, []);
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const validateAndUpload = async (file: File) => {
+    // Validate file extension
+    if (!file.name.endsWith(".csv")) {
+      setError("File must be a CSV file (.csv extension required)");
+      return;
+    }
+
+    // Validate MIME type
+    if (!file.type.includes("csv") && file.type !== "text/plain") {
+      setError("File must be a CSV file (text/csv or text/plain MIME type)");
+      return;
+    }
+
+    // Optional: validate max file size (5MB)
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setError(`File is too large. Maximum size is 5MB (current: ${(file.size / (1024 * 1024)).toFixed(1)}MB)`);
+      return;
+    }
 
     setUploading(true);
     setError(null);
@@ -69,16 +85,28 @@ export default function SyncData({ user: _ }: SyncDataProps) {
       }
 
       const result = await res.json();
-      setSuccessMsg(result.message);
+      setSuccessMsg(result.message || `File ${file.name} uploaded successfully`);
       fetchFiles();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
     }
+  };
+
+  const handleFilePicked = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    await validateAndUpload(file);
+
+    // Reset input value to allow re-uploading the same file
+    e.target.value = "";
+  };
+
+  const handleUploadClick = () => {
+    // Synchronously trigger the file picker - must happen in user gesture context
+    fileInputRef.current?.click();
   };
 
   const handleDelete = async (filename: string) => {
@@ -147,19 +175,21 @@ export default function SyncData({ user: _ }: SyncDataProps) {
               >
                 🔄 Refresh
               </Button>
-              <label>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".csv"
-                  onChange={handleUpload}
-                  className="hidden"
-                  disabled={uploading}
-                />
-                <Button disabled={uploading}>
-                  {uploading ? "⏳ Uploading..." : "📤 Upload CSV"}
-                </Button>
-              </label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv,text/csv"
+                onChange={handleFilePicked}
+                style={{ display: "none" }}
+              />
+              <Button
+                type="button"
+                onClick={handleUploadClick}
+                disabled={uploading}
+              >
+                {uploading ? "⏳ Uploading..." : "📤 Upload CSV"}
+              </Button>
+              <span className="text-xs text-gray-500 self-center">CSV only</span>
             </div>
           </div>
 
