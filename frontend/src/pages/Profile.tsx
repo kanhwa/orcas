@@ -1,5 +1,5 @@
-import { FormEvent, useRef, useState } from "react";
-import { User, updateProfile, changePassword, uploadAvatar } from "../services/api";
+import { FormEvent, useState } from "react";
+import { User, updateProfile, changePassword } from "../services/api";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 
@@ -17,7 +17,6 @@ export default function Profile({ user, onUserUpdate }: ProfileProps) {
   const [profileMsg, setProfileMsg] = useState<string | null>(null);
   const [profileErr, setProfileErr] = useState<string | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
-  const [usernameChanged, setUsernameChanged] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -26,66 +25,39 @@ export default function Profile({ user, onUserUpdate }: ProfileProps) {
   const [pwdErr, setPwdErr] = useState<string | null>(null);
   const [pwdLoading, setPwdLoading] = useState(false);
 
-  const [avatarUrl, setAvatarUrl] = useState(user.avatar_url);
-  const [avatarLoading, setAvatarLoading] = useState(false);
-  const [avatarErr, setAvatarErr] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setAvatarErr(null);
-
-    // Validate file type
-    if (!file.type.match(/^image\/(jpeg|png)$/)) {
-      setAvatarErr("Only JPG and PNG images are allowed.");
-      return;
-    }
-
-    // Validate file size (1MB)
-    if (file.size > 1024 * 1024) {
-      setAvatarErr("Avatar must be less than 1MB.");
-      return;
-    }
-
-    setAvatarLoading(true);
-    try {
-      const result = await uploadAvatar(file);
-      setAvatarUrl(result.avatar_url);
-      // Update user context
-      onUserUpdate({ ...user, avatar_url: result.avatar_url });
-    } catch (err: unknown) {
-      const e = err as { detail?: string };
-      setAvatarErr(e.detail || "Avatar upload failed.");
-    } finally {
-      setAvatarLoading(false);
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-    }
-  };
-
   const handleProfileSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setProfileErr(null);
     setProfileMsg(null);
-    setUsernameChanged(false);
+
+    const nextUsername = username.trim();
+    if (!nextUsername) {
+      setProfileErr("Username is required.");
+      return;
+    }
+
     setProfileLoading(true);
-    const usernameWillChange = username.trim() !== user.username;
     try {
+      const usernameChanged = nextUsername !== user.username;
       const updated = await updateProfile({
-        username: username.trim() || undefined,
+        username: nextUsername,
         first_name: firstName.trim() || undefined,
         middle_name: middleName.trim() || undefined,
         last_name: lastName.trim() || undefined,
         email: email.trim() || undefined,
       });
       onUserUpdate(updated);
-      setProfileMsg("Profile updated.");
-      if (usernameWillChange) {
-        setUsernameChanged(true);
+      setUsername(updated.username);
+      setFirstName(updated.first_name ?? "");
+      setMiddleName(updated.middle_name ?? "");
+      setLastName(updated.last_name ?? "");
+      setEmail(updated.email ?? "");
+      if (usernameChanged) {
+        setProfileMsg(
+          "Username updated. Please log out and log in again using the new username."
+        );
+      } else {
+        setProfileMsg("Profile updated.");
       }
     } catch (err: unknown) {
       const e = err as { detail?: string };
@@ -137,48 +109,11 @@ export default function Profile({ user, onUserUpdate }: ProfileProps) {
           </div>
         }
       >
-        <div className="mb-4 flex items-center gap-4">
-          <div className="relative">
-            {avatarUrl ? (
-              <img
-                src={`http://localhost:8000${avatarUrl}`}
-                alt="Avatar"
-                className="h-20 w-20 rounded-full object-cover border-2 border-[rgb(var(--color-border))]"
-              />
-            ) : (
-              <div className="h-20 w-20 rounded-full bg-[rgb(var(--color-border))] flex items-center justify-center text-2xl font-bold text-[rgb(var(--color-text-subtle))]">
-                {user.username.charAt(0).toUpperCase()}
-              </div>
-            )}
+        <dl className="mb-4 grid grid-cols-1 gap-3 text-sm text-[rgb(var(--color-text))] sm:grid-cols-3">
+          <div>
+            <dt className="text-[rgb(var(--color-text-subtle))]">Username</dt>
+            <dd className="font-semibold">{user.username}</dd>
           </div>
-          <div className="flex-1">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png"
-              onChange={handleAvatarUpload}
-              className="hidden"
-              id="avatar-upload"
-            />
-            <label htmlFor="avatar-upload">
-              <Button
-                type="button"
-                className="text-sm"
-                disabled={avatarLoading}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                {avatarLoading ? "Uploading..." : "Upload Avatar"}
-              </Button>
-            </label>
-            <p className="mt-1 text-xs text-[rgb(var(--color-text-subtle))]">
-              JPG or PNG, max 1MB
-            </p>
-            {avatarErr && (
-              <p className="mt-1 text-xs text-red-600">{avatarErr}</p>
-            )}
-          </div>
-        </div>
-        <dl className="mb-4 grid grid-cols-1 gap-3 text-sm text-[rgb(var(--color-text))] sm:grid-cols-2">
           <div>
             <dt className="text-[rgb(var(--color-text-subtle))]">Role</dt>
             <dd className="font-semibold capitalize">{user.role}</dd>
@@ -210,10 +145,9 @@ export default function Profile({ user, onUserUpdate }: ProfileProps) {
               onChange={(e) => setUsername(e.target.value)}
               disabled={profileLoading}
               placeholder="username"
-              minLength={3}
-              required
             />
           </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1">
               <label className="text-sm font-semibold text-[rgb(var(--color-text-muted))]">
@@ -281,14 +215,6 @@ export default function Profile({ user, onUserUpdate }: ProfileProps) {
               role="status"
             >
               {profileMsg}
-            </p>
-          )}
-          {usernameChanged && (
-            <p
-              className="rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-800"
-              role="status"
-            >
-              ℹ️ Username updated. Please log out and log in again using the new username.
             </p>
           )}
 

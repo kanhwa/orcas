@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
@@ -27,7 +27,6 @@ def user_to_response(user: User) -> UserMeResponse:
         middle_name=user.middle_name,
         last_name=user.last_name,
         full_name=user.computed_full_name,
-        avatar_url=user.avatar_url,
         role=user.role.value,
         status=user.status.value,
     )
@@ -120,28 +119,29 @@ def update_profile(
     current_user: User = Depends(get_current_user),
 ) -> UserMeResponse:
     """
-    Update current user's profile (username, name fields, email).
+    Update current user's profile (name fields, email).
     """
-    # Handle username change with uniqueness check
-    if payload.username is not None and payload.username != current_user.username:
-        username_trimmed = payload.username.strip()
-        if not username_trimmed:
+    if payload.username is not None:
+        username_candidate = payload.username.strip()
+        if not username_candidate:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Username cannot be empty.",
             )
-        # Check if username already taken by another user
-        existing = db.query(User).filter(
-            User.username == username_trimmed,
-            User.id != current_user.id
-        ).first()
-        if existing:
+
+        exists = (
+            db.query(User)
+            .filter(User.username == username_candidate, User.id != current_user.id)
+            .first()
+        )
+        if exists:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Username '{username_trimmed}' is already taken.",
+                detail="Username already taken.",
             )
-        current_user.username = username_trimmed
-    
+
+        current_user.username = username_candidate
+
     if payload.first_name is not None:
         current_user.first_name = payload.first_name
     if payload.middle_name is not None:
@@ -193,53 +193,6 @@ def change_password(
     )
 
     return {"detail": "Password changed successfully."}
-
-
-@router.post("/upload-avatar")
-async def upload_avatar(
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> dict:
-    """
-    Upload user avatar (JPG/PNG, max 1MB).
-    """
-    # Validate file type
-    if file.content_type not in ["image/jpeg", "image/png"]:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only JPG and PNG images are allowed.",
-        )
-    
-    # Read file content to check size
-    contents = await file.read()
-    if len(contents) > 1024 * 1024:  # 1MB
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Avatar file size must be less than 1MB.",
-        )
-    
-    # Create uploads directory if not exists
-    from pathlib import Path
-    upload_dir = Path(__file__).parent.parent.parent / "uploads" / "avatars"
-    upload_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Generate unique filename
-    import uuid
-    file_ext = file.filename.split(".")[-1] if "." in file.filename else "jpg"
-    unique_filename = f"{current_user.id}_{uuid.uuid4().hex[:8]}.{file_ext}"
-    file_path = upload_dir / unique_filename
-    
-    # Save file
-    with open(file_path, "wb") as f:
-        f.write(contents)
-    
-    # Update user avatar_url
-    current_user.avatar_url = f"/uploads/avatars/{unique_filename}"
-    db.commit()
-    db.refresh(current_user)
-    
-    return {"avatar_url": current_user.avatar_url}
 
 
 # =============================================================================
