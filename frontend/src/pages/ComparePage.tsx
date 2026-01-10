@@ -79,7 +79,7 @@ function CompareTab() {
   const [tickers, setTickers] = useState<string[]>([]);
   const [yearFrom, setYearFrom] = useState(2019);
   const [yearTo, setYearTo] = useState(2024);
-  const [mode, setMode] = useState<Mode>("section");
+  const [mode, setMode] = useState<Mode>("overall");
   const [section, setSection] = useState<Section>("income");
   const [metricKeys, setMetricKeys] = useState<string[]>([]);
   const [includeBenchmark, setIncludeBenchmark] = useState(false);
@@ -95,30 +95,53 @@ function CompareTab() {
     [getMissingPolicyOptions]
   );
 
+  // Handle mode change - clear section/metrics when switching to overall
+  const handleModeChange = (newMode: Mode) => {
+    setMode(newMode);
+    if (newMode === "overall") {
+      // Clear section-specific state when switching to overall
+      setMetricKeys([]);
+    }
+  };
+
+  // Handle section change - clear metrics when section changes
+  const handleSectionChange = (newSection: Section) => {
+    setSection(newSection);
+    setMetricKeys([]); // Reset metrics when section changes
+  };
+
   const metricsOptions: MetricOption[] = useMemo(() => {
+    if (mode !== "section") return [];
     const metrics = getMetricsBySection(section);
     return metrics.map((m) => ({
       value: m.key,
       label: m.label,
       description: m.description,
     }));
-  }, [getMetricsBySection, section]);
+  }, [getMetricsBySection, section, mode]);
+
+  // Validation helpers
+  const validationErrors = useMemo(() => {
+    const errors: string[] = [];
+    if (tickers.length < 2) errors.push("Select at least 2 tickers");
+    if (tickers.length > 4) errors.push("Maximum 4 tickers allowed");
+    if (yearFrom > yearTo) errors.push("Start year must be ≤ End year");
+    if (mode === "section" && metricKeys.length === 0) {
+      errors.push("Select at least one metric for Section Ranking mode");
+    }
+    return errors;
+  }, [tickers, yearFrom, yearTo, mode, metricKeys]);
+
+  const isValid = validationErrors.length === 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setResult(null);
 
-    if (tickers.length === 0) {
-      setError("Select at least one ticker.");
-      return;
-    }
-    if (tickers.length > 4) {
-      setError("Maximum 4 tickers.");
-      return;
-    }
-    if (yearFrom > yearTo) {
-      setError("Start year must be before or equal to end year.");
+    // Validation is handled by isValid, but double-check
+    if (!isValid) {
+      setError(validationErrors.join("; "));
       return;
     }
 
@@ -310,8 +333,8 @@ function CompareTab() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <label className="flex items-center gap-1 text-sm font-semibold text-[rgb(var(--color-text-muted))]">
-              Select Tickers (1-4)
-              <InfoTip content="Choose up to four tickers to compare. No free-text input is allowed." />
+              Select Tickers (2-4 required)
+              <InfoTip content="Choose 2 to 4 tickers to compare their WSM scores over time." />
             </label>
             <MultiSelect
               options={TICKER_OPTIONS}
@@ -320,6 +343,9 @@ function CompareTab() {
               maxSelected={4}
               placeholder="Pick tickers"
             />
+            {tickers.length > 0 && tickers.length < 2 && (
+              <p className="text-xs text-red-600">At least 2 tickers required</p>
+            )}
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -361,13 +387,13 @@ function CompareTab() {
                 <InfoTip
                   content={
                     getModeOptions().find((m) => m.key === mode)?.description ||
-                    "Overall uses default metrics; Section compares within a specific section."
+                    "Overall uses all sections; Section focuses on specific metrics."
                   }
                 />
               </label>
               <Select
                 value={mode}
-                onChange={(e) => setMode(e.target.value as Mode)}
+                onChange={(e) => handleModeChange(e.target.value as Mode)}
               >
                 {modeOptions.map((m) => (
                   <option key={m.key} value={m.key}>
@@ -375,6 +401,11 @@ function CompareTab() {
                   </option>
                 ))}
               </Select>
+              {mode === "overall" && (
+                <p className="text-xs text-[rgb(var(--color-text-subtle))] italic">
+                  Overall Score uses all sections and metrics from the catalog.
+                </p>
+              )}
             </div>
 
             {mode === "section" && (
@@ -384,13 +415,13 @@ function CompareTab() {
                   <InfoTip
                     content={
                       getSectionMeta(section)?.description ||
-                      "Select which financial statement section to compare."
+                      "Select financial statement section for focused comparison."
                     }
                   />
                 </label>
                 <Select
                   value={section}
-                  onChange={(e) => setSection(e.target.value as Section)}
+                  onChange={(e) => handleSectionChange(e.target.value as Section)}
                 >
                   {["income", "balance", "cashflow"].map((s) => {
                     const meta = getSectionMeta(s);
@@ -430,45 +461,79 @@ function CompareTab() {
               </Select>
             </div>
 
-            <div className="space-y-1">
-              <label className="flex items-center gap-1 text-sm font-semibold text-[rgb(var(--color-text-muted))]">
-                Metrics (catalog)
-                <InfoTip content="Driven by catalog for the selected section. Used for context only; scoring stays backend-defined." />
-              </label>
-              <MultiSelect
-                options={metricsOptions}
-                value={metricKeys}
-                onChange={setMetricKeys}
-                maxSelected={8}
-                placeholder="Select metrics"
-                disabled={metricsOptions.length === 0}
-              />
-              {metricKeys.length > 0 && (
-                <p className="text-xs text-[rgb(var(--color-text-subtle))]">
-                  Showing {metricKeys.length} selected metric(s) for context.
-                </p>
-              )}
-            </div>
+            {mode === "section" && (
+              <div className="space-y-1">
+                <label className="flex items-center gap-1 text-sm font-semibold text-[rgb(var(--color-text-muted))]">
+                  Metrics (catalog)
+                  <InfoTip content="Select metrics from the chosen section. At least one metric is required for Section Ranking." />
+                </label>
+                <MultiSelect
+                  options={metricsOptions}
+                  value={metricKeys}
+                  onChange={setMetricKeys}
+                  maxSelected={8}
+                  placeholder="Select metrics"
+                  disabled={metricsOptions.length === 0}
+                />
+                {metricKeys.length === 0 && mode === "section" && (
+                  <p className="text-xs text-red-600">
+                    At least one metric required for Section Ranking
+                  </p>
+                )}
+                {metricKeys.length > 0 && (
+                  <p className="text-xs text-[rgb(var(--color-text-subtle))]">
+                    {metricKeys.length} metric(s) selected
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
             <Toggle
               pressed={includeBenchmark}
               onChange={setIncludeBenchmark}
-              label="Include Average benchmark"
+              label="Include Average (computed from selected tickers)"
             />
-            <Button type="submit" disabled={loading || tickers.length === 0}>
+            <Button type="submit" disabled={loading || !isValid}>
               {loading ? "Loading..." : "Run Compare"}
             </Button>
           </div>
+
+          {/* Validation Errors */}
+          {!isValid && validationErrors.length > 0 && (
+            <div className="rounded-lg bg-yellow-50 px-4 py-3 text-sm text-yellow-700">
+              <p className="font-semibold mb-1">Please fix the following:</p>
+              <ul className="list-disc list-inside space-y-1">
+                {validationErrors.map((err, idx) => (
+                  <li key={idx}>{err}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </form>
 
+        {/* Loading State */}
+        {loading && (
+          <div className="mt-4 rounded-lg bg-blue-50 px-4 py-3 text-sm text-blue-700">
+            Processing comparison...
+          </div>
+        )}
+
+        {/* Error State */}
         {error && (
           <p
             className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700"
             role="alert"
           >
-            {error}
+            ❌ {error}
+          </p>
+        )}
+
+        {/* Empty Results State */}
+        {result && result.series.length === 0 && (
+          <p className="mt-4 rounded-lg bg-gray-50 px-4 py-3 text-sm text-gray-700">
+            No data available for the selected inputs.
           </p>
         )}
 
