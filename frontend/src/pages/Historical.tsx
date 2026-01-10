@@ -42,13 +42,14 @@ export default function Historical() {
 
   const handleCompare = async () => {
     if (!selectedTicker) {
-      setError("Please select an emiten first");
+      setError("Please select a ticker first");
       return;
     }
-    if (year1 === year2) {
-      setError("Please select 2 different years");
-      return;
-    }
+    // Allow same year comparison (will show no change)
+    // if (year1 === year2) {
+    //   setError("Please select 2 different years");
+    //   return;
+    // }
 
     setLoading(true);
     setError("");
@@ -77,7 +78,7 @@ export default function Historical() {
   };
 
   const formatPct = (val: number | null): string => {
-    if (val === null) return "-";
+    if (val === null || !isFinite(val)) return "N/A";
     return `${val >= 0 ? "+" : ""}${val.toFixed(1)}%`;
   };
 
@@ -111,15 +112,14 @@ export default function Historical() {
       <Card>
         <h2 className="text-xl font-bold mb-4">📊 Historical Comparison</h2>
         <p className="text-gray-600 mb-4">
-          Compare 1 emiten's performance across 2 periods. See trend (up/down)
-          for each metric.
+          Compare a single ticker's performance between two years. View metric-by-metric changes with trend indicators.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-          {/* Emiten Select */}
+          {/* Ticker Select */}
           <div>
             <label className="block text-sm font-medium mb-1">
-              Bank/Emiten
+              Select Ticker
             </label>
             <select
               className="w-full px-3 py-2 border rounded-md text-sm"
@@ -169,7 +169,7 @@ export default function Historical() {
           <div className="flex items-end">
             <Button
               onClick={handleCompare}
-              disabled={loading}
+              disabled={loading || !selectedTicker}
               className="w-full"
             >
               {loading ? "Processing..." : "🔍 Compare"}
@@ -177,7 +177,26 @@ export default function Historical() {
           </div>
         </div>
 
-        {error && <p className="mt-3 text-red-600 text-sm">{error}</p>}
+        {/* Validation */}
+        {!selectedTicker && (
+          <p className="mt-3 text-yellow-600 text-sm">
+            ⚠️ Please select a ticker to compare
+          </p>
+        )}
+
+        {/* Error */}
+        {error && (
+          <p className="mt-3 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+            ❌ {error}
+          </p>
+        )}
+
+        {/* Loading */}
+        {loading && (
+          <p className="mt-3 rounded-lg bg-blue-50 px-4 py-3 text-sm text-blue-700">
+            Processing comparison...
+          </p>
+        )}
       </Card>
 
       {/* Results */}
@@ -229,7 +248,7 @@ export default function Historical() {
                   <option value="all">All Sections</option>
                   {sections.map((s) => (
                     <option key={s} value={s}>
-                      {s.toUpperCase()}
+                      {s.charAt(0).toUpperCase() + s.slice(1)}
                     </option>
                   ))}
                 </select>
@@ -307,7 +326,13 @@ export default function Historical() {
 
             {filteredMetrics?.length === 0 && (
               <p className="text-center text-gray-500 py-8">
-                No metrics match the current filter.
+                📭 No metrics match the current filters. Try adjusting your section or significance filter.
+              </p>
+            )}
+
+            {!result && !loading && !error && (
+              <p className="text-center text-gray-500 py-8">
+                Select a ticker and years, then click Compare to view results.
               </p>
             )}
           </Card>
