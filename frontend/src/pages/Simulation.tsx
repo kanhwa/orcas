@@ -4,22 +4,38 @@ import { useCatalog } from "../contexts/CatalogContext";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import { Select } from "../components/ui/Select";
-import { getEmitens, EmitenItem, simulate } from "../services/api";
+import { getEmitens, EmitenItem, simulate, getYears } from "../services/api";
 import InfoTip from "../components/InfoTip";
 
 interface MetricAdjustment {
   id: string;
   section: string;
   metric_name: string;
+  baseline_value: number | null;
   adjustment_percent: number; // -100 to +300
 }
 
+interface SimulationResult {
+  ticker: string;
+  ticker_name: string;
+  baseline_year: number;
+  simulation_year: string;
+  baseline_score: number;
+  simulated_score: number;
+  delta: number;
+  delta_percent: number;
+  warnings: string[];
+}
+
 const Simulation: React.FC = () => {
-  const { catalog } = useCatalog();
+  const { catalog, getYearOptions } = useCatalog();
 
   // Emiten dropdown data
   const [emitens, setEmitens] = useState<EmitenItem[]>([]);
   const [loadingEmitens, setLoadingEmitens] = useState(true);
+
+  // Years
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
 
   // Form state
   const [selectedTicker, setSelectedTicker] = useState("");
@@ -27,24 +43,11 @@ const Simulation: React.FC = () => {
   const [nextId, setNextId] = useState(1);
 
   // Results
-  const [result, setResult] = useState<{
-    ticker: string;
-    ticker_name: string;
-    baseline_year: number;
-    simulation_year: number;
-    baseline_score: number;
-    simulated_score: number;
-    delta: number;
-    delta_percent: number;
-  } | null>(null);
+  const [result, setResult] = useState<SimulationResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Constants
-  const BASELINE_YEAR = 2024;
-  const SIMULATION_YEAR = 2025;
-
-  // Load emitens on mount
+  // Load emitens and years on mount
   useEffect(() => {
     const loadEmitens = async () => {
       try {
@@ -56,8 +59,29 @@ const Simulation: React.FC = () => {
         setLoadingEmitens(false);
       }
     };
+
+    const loadYears = async () => {
+      try {
+        const res = await getYears();
+        setAvailableYears(res.years || []);
+      } catch (err) {
+        console.error("Failed to load years:", err);
+        // Fallback: use hardcoded years
+        setAvailableYears(getYearOptions());
+      }
+    };
+
     loadEmitens();
+    loadYears();
   }, []);
+
+  // Compute baseline year (latest available year)
+  const baselineYear = useMemo(() => {
+    if (availableYears.length === 0) return null;
+    return Math.max(...availableYears);
+  }, [availableYears]);
+
+  const scenarioYearLabel = baselineYear ? `${baselineYear + 1}` : "N/A";
 
   // Get all metrics from all sections (flattened)
   const allMetrics = useMemo(() => {
@@ -104,6 +128,7 @@ const Simulation: React.FC = () => {
         id: `adj-${nextId}`,
         section: "",
         metric_name: "",
+        baseline_value: null,
         adjustment_percent: 0,
       },
     ]);
@@ -147,6 +172,11 @@ const Simulation: React.FC = () => {
       return;
     }
 
+    if (baselineYear === null) {
+      setError("Baseline year not available");
+      return;
+    }
+
     const validAdjustments = adjustments.filter((a) => a.metric_name);
     if (validAdjustments.length === 0) {
       setError("Please add at least one metric adjustment");
@@ -166,15 +196,20 @@ const Simulation: React.FC = () => {
 
       const response = await simulate({
         ticker: selectedTicker,
-        year: BASELINE_YEAR,
-        mode: "section",
+        year: baselineYear,
+        mode: "overall",
         section: null,
         overrides,
         missing_policy: "zero",
       });
 
-      // Find emiten name
+      // Find emiten name and format (remove "Unknown" suffix)
       const emiten = emitens.find((e) => e.ticker_code === selectedTicker);
+      let tickerName = emiten?.bank_name || selectedTicker;
+      // Remove "- Unknown" or "Unknown" suffix
+      if (tickerName && (tickerName.includes("Unknown") || tickerName.endsWith("- "))) {
+        tickerName = tickerName.replace(/\s*-\s*Unknown$/, "").replace(/^Unknown\s*-?\s*/, "").trim() || selectedTicker;
+      }
 
       const baselineScore = response.baseline_score || 0;
       const simulatedScore = response.simulated_score || 0;
@@ -182,13 +217,14 @@ const Simulation: React.FC = () => {
 
       setResult({
         ticker: selectedTicker,
-        ticker_name: emiten?.bank_name || selectedTicker,
-        baseline_year: BASELINE_YEAR,
-        simulation_year: SIMULATION_YEAR,
+        ticker_name: tickerName,
+        baseline_year: baselineYear,
+        simulation_year: scenarioYearLabel,
         baseline_score: baselineScore,
         simulated_score: simulatedScore,
         delta: delta,
         delta_percent: baselineScore ? (delta / baselineScore) * 100 : 0,
+        warnings: response.message ? [response.message] : [],
       });
     } catch (err) {
       const e = err as { detail?: string };
@@ -239,17 +275,19 @@ const Simulation: React.FC = () => {
 
           {/* Simulation Info */}
           <div className="bg-[rgb(var(--color-surface))] rounded-lg p-4 mb-6">
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2 text-sm mb-3">
               <span className="font-medium">Baseline Year:</span>
               <span className="bg-[rgb(var(--color-primary))] text-white px-2 py-0.5 rounded">
-                {BASELINE_YEAR}
+                {baselineYear || "Loading..."}
               </span>
               <span className="mx-2">→</span>
-              <span className="font-medium">Simulation Year:</span>
+              <span className="font-medium">Scenario Year:</span>
               <span className="bg-[rgb(var(--color-action))] text-white px-2 py-0.5 rounded">
-                {SIMULATION_YEAR}
+                {scenarioYearLabel}
               </span>
-              <InfoTip content="Simulation projects the score for next year based on your metric adjustments from the latest available data." />
+            </div>
+            <div className="text-xs text-[rgb(var(--color-text-subtle))] bg-blue-50 border border-blue-200 rounded p-2">
+              ℹ️ Scenario year is a label for what-if analysis, not a forecast.
             </div>
           </div>
 
@@ -265,11 +303,20 @@ const Simulation: React.FC = () => {
               disabled={loadingEmitens}
             >
               <option value="">-- Select Ticker --</option>
-              {emitens.map((e) => (
-                <option key={e.ticker_code} value={e.ticker_code}>
-                  {e.ticker_code} - {e.bank_name || "Unknown"}
-                </option>
-              ))}
+              {emitens.map((e) => {
+                // Format emiten name: remove "Unknown" suffix
+                let displayName = e.bank_name || "";
+                if (displayName && displayName.includes("Unknown")) {
+                  displayName = displayName.replace(/\s*-\s*Unknown$/, "").replace(/^Unknown\s*-?\s*/, "").trim();
+                }
+                const finalName = displayName || "Unknown";
+                return (
+                  <option key={e.ticker_code} value={e.ticker_code}>
+                    {e.ticker_code}
+                    {finalName && finalName !== "Unknown" ? ` - ${finalName}` : ""}
+                  </option>
+                );
+              })}
             </Select>
           </div>
 
