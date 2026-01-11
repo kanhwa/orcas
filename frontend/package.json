@@ -3,8 +3,10 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "_notes": "To start the dev server on port 5173, run 'npm run dev:5173'. This enforces --strictPort so the server will NOT auto-switch to 5174/5175 if 5173 is in use. If you see 'Port 5173 is in use', run: lsof -i :5173 && kill -9 <PID>, then retry npm run dev:5173",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host localhost --port 5173 --strictPort",
+    "dev:5173": "vite --host localhost --port 5173 --strictPort",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"

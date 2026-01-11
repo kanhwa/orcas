@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
@@ -73,6 +73,7 @@ def wsm_score(
 @router.post("/simulate", response_model=SimulationResponse)
 def simulate(
     payload: SimulationRequest,
+    debug_sim: bool = Query(False, alias="debugSim"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> SimulationResponse:
@@ -80,7 +81,7 @@ def simulate(
     Simulate WSM score with metric overrides.
     Compare baseline vs simulated scores.
     """
-    result = run_simulation(db, payload)
+    result = run_simulation(db, payload, debug=debug_sim)
     try:
         db.add(
             SimulationLog(

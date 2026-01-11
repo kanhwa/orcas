@@ -16,7 +16,9 @@ from app.schemas.wsm import (
     MissingPolicyOption,
     ModeOption,
     SectionInfo,
+    SimulationAdjustmentDetail,
     SimulationRequest,
+    SimulationDebugInfo,
     SimulationResponse,
     TickerSeries,
     WSMRankingItem,
@@ -253,6 +255,7 @@ def _get_section_metrics(db: Session, section: str) -> List[MetricWeightInput]:
         db.query(MetricDefinition)
         .filter(MetricDefinition.section == section)
         .filter(~MetricDefinition.metric_name.in_(DISABLED_METRICS))
+        .order_by(MetricDefinition.metric_name)
         .all()
     )
     result = []
@@ -268,13 +271,28 @@ def _get_section_metrics(db: Session, section: str) -> List[MetricWeightInput]:
     return result
 
 
-def _get_overall_default_metrics() -> List[MetricWeightInput]:
-    """Get default metrics for overall WSM mode."""
-    return [
-        MetricWeightInput(metric_name="Return on Assets (ROA)", type="benefit", weight=1.0),
-        MetricWeightInput(metric_name="Return on Equity (ROE)", type="benefit", weight=1.0),
-        MetricWeightInput(metric_name="Beban Usaha", type="cost", weight=1.0),
-    ]
+def _get_overall_scope_metrics(db: Session) -> List[MetricWeightInput]:
+    """DB-driven overall scope: enabled metrics with a positive default_weight."""
+    metrics = (
+        db.query(MetricDefinition)
+        .filter(~MetricDefinition.metric_name.in_(DISABLED_METRICS))
+        .filter(MetricDefinition.default_weight.isnot(None))
+        .filter(MetricDefinition.default_weight > 0)
+        .order_by(MetricDefinition.section, MetricDefinition.metric_name)
+        .all()
+    )
+
+    result: List[MetricWeightInput] = []
+    for m in metrics:
+        result.append(
+            MetricWeightInput(
+                metric_name=m.metric_name,
+                type=m.type or "benefit",
+                weight=float(m.default_weight),
+            )
+        )
+
+    return result
 
 
 def _compute_single_ticker_score(
@@ -284,6 +302,7 @@ def _compute_single_ticker_score(
     metrics: List[MetricWeightInput],
     missing_policy: str,
     overrides: Dict[str, float] | None = None,
+    debug: Dict[str, float | int | bool] | None = None,
 ) -> float | None:
     """
     Compute WSM score for a single ticker.
@@ -321,6 +340,10 @@ def _compute_single_ticker_score(
     if total_weight <= 0:
         return None
     normalized_weights = {m.metric_name: m.weight / total_weight for m in metrics}
+    if debug is not None:
+        debug["requested_metric_count"] = len(metric_names)
+        debug["total_weight"] = total_weight
+        debug["normalization_year"] = year
 
     # Fetch all data for normalization (need min/max across all tickers)
     metric_ids = list(metric_id_by_name.values())
@@ -385,8 +408,16 @@ def _compute_single_ticker_score(
         if available_weight_sum <= 0:
             return None
         weight_divisor = available_weight_sum
+        if debug is not None:
+            debug["weights_renormalized"] = True
+            debug["available_weight_sum"] = available_weight_sum
     else:  # zero
         weight_divisor = 1.0
+        if debug is not None:
+            debug["weights_renormalized"] = False
+
+    if debug is not None:
+        debug["metrics_used_count"] = len(available_metric_ids)
 
     # Compute score
     score = 0.0
@@ -412,10 +443,55 @@ def _compute_single_ticker_score(
         weight_share = normalized_weights.get(metric_name, 0) / weight_divisor
         score += weight_share * normalized_value
 
+    if debug is not None:
+        total_weight_used = sum(
+            normalized_weights.get(name_by_id[mid], 0) / weight_divisor
+            for mid in available_metric_ids
+        )
+        debug["total_weight_used"] = total_weight_used
+
     return round(score, 6)
 
 
-def run_simulation(db: Session, payload: SimulationRequest, user_id: int | None = None) -> SimulationResponse:
+def _get_metric_raw_value(
+    db: Session,
+    ticker: str,
+    year: int,
+    metric_name: str,
+    overrides: Dict[str, float] | None = None,
+) -> float | None:
+    """Get raw metric value for a ticker/year, applying optional override."""
+    # Check if metric has an override
+    if overrides and metric_name in overrides:
+        # For overrides, we return the override value directly
+        # (the backend multiplies by baseline to get the simulated value)
+        return overrides[metric_name]
+
+    # Otherwise, fetch from database
+    metric_def = db.query(MetricDefinition).filter(MetricDefinition.metric_name == metric_name).first()
+    if not metric_def:
+        return None
+
+    data = (
+        db.query(FinancialData.value)
+        .join(Emiten, FinancialData.emiten_id == Emiten.id)
+        .filter(
+            Emiten.ticker_code == ticker,
+            FinancialData.metric_id == metric_def.id,
+            FinancialData.year == year,
+        )
+        .first()
+    )
+
+    return float(data[0]) if data and data[0] is not None else None
+
+
+def run_simulation(
+    db: Session,
+    payload: SimulationRequest,
+    user_id: int | None = None,
+    debug: bool = False,
+) -> SimulationResponse:
     """Run simulation with metric overrides for a single ticker."""
     # Validate section requirement
     if payload.mode == "section" and not payload.section:
@@ -432,27 +508,22 @@ def run_simulation(db: Session, payload: SimulationRequest, user_id: int | None 
             detail=f"Ticker not found: {payload.ticker}",
         )
 
-    # Validate overrides metric names exist
-    if payload.overrides:
-        override_names = [o.metric_name for o in payload.overrides]
-        existing = (
-            db.query(MetricDefinition.metric_name)
+    # Validate overrides metric names exist (collect definitions for detail rows)
+    override_names = [o.metric_name for o in payload.overrides] if payload.overrides else []
+    metric_defs_for_overrides = {}
+    if override_names:
+        existing_defs = (
+            db.query(MetricDefinition)
             .filter(MetricDefinition.metric_name.in_(override_names))
             .all()
         )
-        existing_names = {r.metric_name for r in existing}
-        unknown = [n for n in override_names if n not in existing_names]
-        if unknown:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Unknown metric(s): {', '.join(unknown[:5])}",
-            )
+        metric_defs_for_overrides = {d.metric_name: d for d in existing_defs}
 
     # Get metrics based on mode
     if payload.mode == "section":
         metrics = _get_section_metrics(db, payload.section)
     else:
-        metrics = _get_overall_default_metrics()
+        metrics = _get_overall_scope_metrics(db)
 
     if not metrics:
         return SimulationResponse(
@@ -474,15 +545,51 @@ def run_simulation(db: Session, payload: SimulationRequest, user_id: int | None 
             else:
                 ignored_overrides.append(o.metric_name)
 
+    baseline_debug: Dict[str, float | int | bool] | None = {} if debug else None
+    simulated_debug: Dict[str, float | int | bool] | None = {} if debug else None
+
     # Compute baseline score (without overrides)
     baseline_score = _compute_single_ticker_score(
-        db, payload.ticker, payload.year, metrics, payload.missing_policy, overrides=None
+        db,
+        payload.ticker,
+        payload.year,
+        metrics,
+        payload.missing_policy,
+        overrides=None,
+        debug=baseline_debug,
     )
 
-    # Compute simulated score (with overrides)
-    overrides_dict = {o.metric_name: o.value for o in effective_overrides} if effective_overrides else None
+    # Precompute baseline raw values for overrides to apply percentage deltas
+    baseline_raw_cache: Dict[str, float | None] = {}
+    overrides_dict = None
+    if effective_overrides:
+        overrides_dict = {}
+        for o in effective_overrides:
+            base_raw = baseline_raw_cache.get(o.metric_name)
+            if base_raw is None and o.metric_name not in baseline_raw_cache:
+                base_raw = _get_metric_raw_value(
+                    db,
+                    payload.ticker,
+                    payload.year,
+                    o.metric_name,
+                    overrides=None,
+                )
+                baseline_raw_cache[o.metric_name] = base_raw
+
+            if base_raw is None:
+                continue
+
+            overrides_dict[o.metric_name] = base_raw * (1.0 + o.value / 100.0)
+
+    # Compute simulated score (with overrides as absolute values)
     simulated_score = _compute_single_ticker_score(
-        db, payload.ticker, payload.year, metrics, payload.missing_policy, overrides=overrides_dict
+        db,
+        payload.ticker,
+        payload.year,
+        metrics,
+        payload.missing_policy,
+        overrides=overrides_dict,
+        debug=simulated_debug,
     )
 
     # Calculate delta
@@ -496,6 +603,74 @@ def run_simulation(db: Session, payload: SimulationRequest, user_id: int | None 
     elif ignored_overrides:
         message = f"Ignored overrides not in {payload.section or 'overall'} scope: {', '.join(ignored_overrides)}"
 
+    # Build adjustments_detail: one entry per requested override (preserve order)
+    adjustments_detail: List[SimulationAdjustmentDetail] = []
+    for override in payload.overrides or []:
+        metric_name = override.metric_name
+        adjustment_percent = override.value
+
+        metric_def = metric_defs_for_overrides.get(metric_name)
+        metric_section = metric_def.section if metric_def else None
+        metric_type = None
+        if metric_def is not None:
+            metric_type = metric_def.type.value if hasattr(metric_def.type, "value") else metric_def.type
+
+        in_scope = metric_name in metric_names_in_scope
+        affects_score = in_scope and metric_def is not None
+
+        reason = None
+        unmatched_reason = None
+
+        if metric_def is None:
+            unmatched_reason = "Metric definition not found"
+            affects_score = False
+        elif not in_scope:
+            unmatched_reason = f"Metric not in {payload.section or 'overall'} scope"
+            affects_score = False
+
+        baseline_val = None
+        simulated_val = None
+        if metric_def is not None:
+            baseline_val = baseline_raw_cache.get(metric_name)
+            if baseline_val is None and metric_name not in baseline_raw_cache:
+                baseline_val = _get_metric_raw_value(db, payload.ticker, payload.year, metric_name, overrides=None)
+                baseline_raw_cache[metric_name] = baseline_val
+
+            if baseline_val is None:
+                reason = "missing data"
+            else:
+                simulated_val = baseline_val * (1.0 + adjustment_percent / 100.0)
+
+        adjustments_detail.append(
+            SimulationAdjustmentDetail(
+                metric_key=metric_name,
+                metric_name=metric_name,
+                section=metric_section,
+                type=metric_type or ("benefit" if metric_def is not None else None),
+                baseline_value=baseline_val,
+                simulated_value=simulated_val,
+                adjustment_percent=adjustment_percent,
+                affects_score=affects_score,
+                out_of_range=False,
+                capped=False,
+                ignored=False,
+                reason=reason,
+                unmatched_reason=unmatched_reason,
+            )
+        )
+
+    debug_info = None
+    if debug and simulated_debug is not None:
+        normalization_scope = payload.section if payload.mode == "section" else "overall"
+        debug_info = SimulationDebugInfo(
+            metrics_used_count=int(simulated_debug.get("metrics_used_count", 0)),
+            requested_metric_count=int(simulated_debug.get("requested_metric_count", 0)),
+            total_weight_used=float(simulated_debug.get("total_weight_used", 0.0)),
+            normalization_year=int(simulated_debug.get("normalization_year", payload.year)),
+            normalization_scope=normalization_scope,
+            weights_renormalized=bool(simulated_debug.get("weights_renormalized", False)),
+        )
+
     response = SimulationResponse(
         ticker=payload.ticker,
         year=payload.year,
@@ -504,8 +679,10 @@ def run_simulation(db: Session, payload: SimulationRequest, user_id: int | None 
         baseline_score=baseline_score,
         simulated_score=simulated_score,
         delta=delta,
-        applied_overrides=effective_overrides,
+        applied_overrides=payload.overrides,
+        adjustments_detail=adjustments_detail,
         message=message,
+        debug=debug_info,
     )
 
     if user_id is not None:
@@ -563,7 +740,7 @@ def run_compare(db: Session, payload: CompareRequest, user_id: int | None = None
     if payload.mode == "section":
         metrics = _get_section_metrics(db, payload.section)
     else:
-        metrics = _get_overall_default_metrics()
+        metrics = _get_overall_scope_metrics(db)
 
     if not metrics:
         raise HTTPException(
@@ -628,7 +805,9 @@ def get_metrics_catalog(db: Session) -> MetricsCatalog:
                 MetricInfo(
                     key=m.metric_name,
                     label=m.metric_name,  # Use metric name as label
-                    description=f"Type: {m.type or 'benefit'}, Weight: {getattr(m, 'default_weight', 1.0)}"
+                    description=m.description or "",
+                    type=(m.type.value if hasattr(m.type, "value") else m.type) or "benefit",
+                    default_weight=float(m.default_weight) if getattr(m, "default_weight", None) is not None else None,
                 )
             )
         

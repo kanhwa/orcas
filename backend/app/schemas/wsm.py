@@ -62,6 +62,22 @@ class SimulationRequest(BaseModel):
     missing_policy: Literal["redistribute", "zero", "drop"] = "zero"
 
 
+class SimulationAdjustmentDetail(BaseModel):
+    metric_key: Optional[str] = None
+    metric_name: str
+    section: Optional[str] = None
+    type: Optional[Literal["benefit", "cost"]] = None
+    baseline_value: Optional[float] = None
+    simulated_value: Optional[float] = None
+    adjustment_percent: float
+    affects_score: bool = True
+    out_of_range: bool = False
+    capped: bool = False
+    ignored: bool = False
+    reason: Optional[str] = None
+    unmatched_reason: Optional[str] = None
+
+
 class SimulationResponse(BaseModel):
     ticker: str
     year: int
@@ -71,7 +87,18 @@ class SimulationResponse(BaseModel):
     simulated_score: Optional[float] = None
     delta: Optional[float] = None
     applied_overrides: List[MetricOverride] = Field(default_factory=list)
+    adjustments_detail: List[SimulationAdjustmentDetail] = Field(default_factory=list)
     message: Optional[str] = None
+    debug: Optional["SimulationDebugInfo"] = None
+
+
+class SimulationDebugInfo(BaseModel):
+    metrics_used_count: int
+    requested_metric_count: int
+    total_weight_used: float
+    normalization_year: int
+    normalization_scope: str
+    weights_renormalized: bool
 
 
 # =============================================================================
@@ -108,6 +135,8 @@ class MetricInfo(BaseModel):
     key: str
     label: str
     description: str = ""
+    type: Optional[Literal["benefit", "cost"]] = None
+    default_weight: Optional[float] = None
 
 
 class SectionInfo(BaseModel):
