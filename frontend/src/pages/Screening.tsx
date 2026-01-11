@@ -113,7 +113,11 @@ export default function Screening() {
     const metricId = selectedMetric?.id || null;
 
     setFilters((prev) =>
-      prev.map((f) => (f.id === rowId ? { ...f, metric_id: metricId, metric_name: metricKey } : f))
+      prev.map((f) =>
+        f.id === rowId
+          ? { ...f, metric_id: metricId, metric_name: metricKey }
+          : f
+      )
     );
     try {
       if (metricId) {
@@ -216,9 +220,9 @@ export default function Screening() {
   const activeMetric = activeSummary
     ? metrics.find((m) => m.id === activeSummary.metric_id)
     : null;
-  const activeMetricName = filters
-    .find((f) => f.metric_id === activeSummary?.metric_id)
-    ?.metric_name || "";
+  const activeMetricName =
+    filters.find((f) => f.metric_id === activeSummary?.metric_id)
+      ?.metric_name || "";
 
   return (
     <div className="space-y-6">
@@ -420,10 +424,8 @@ export default function Screening() {
           {activeSummary.has_data ? (
             <p className="text-sm text-gray-700 mt-2">
               Range ({activeSummary.year}): min{" "}
-              {formatMetricValue(activeMetricName, activeSummary.min)}{" "}
-              • median{" "}
-              {formatMetricValue(activeMetricName, activeSummary.median)}{" "}
-              • max{" "}
+              {formatMetricValue(activeMetricName, activeSummary.min)} • median{" "}
+              {formatMetricValue(activeMetricName, activeSummary.median)} • max{" "}
               {formatMetricValue(activeMetricName, activeSummary.max)}
             </p>
           ) : (

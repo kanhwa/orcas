@@ -285,7 +285,9 @@ export default function MetricRanking() {
               </button>
             </div>
             <p className="text-xs text-gray-500 mt-1">
-              {rankType === "best" ? "Show top performers" : "Show bottom performers"}
+              {rankType === "best"
+                ? "Show top performers"
+                : "Show bottom performers"}
             </p>
           </div>
 
@@ -381,9 +383,7 @@ export default function MetricRanking() {
         <Card>
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h3 className="text-lg font-bold">
-                {panelResult.metric_name}
-              </h3>
+              <h3 className="text-lg font-bold">{panelResult.metric_name}</h3>
               <p className="text-sm text-gray-500">
                 Type: {panelResult.metric_type || "unknown"} • Unit:{" "}
                 {unit || "n/a"}
@@ -434,7 +434,11 @@ export default function MetricRanking() {
                         (_, i) => panelResult.from_year + i
                       ).map((y) => (
                         <td key={y} className="px-4 py-2 text-right">
-                          {activeMetric && formatMetricValue(activeMetric.metric_name, row.values[String(y)])}
+                          {activeMetric &&
+                            formatMetricValue(
+                              activeMetric.metric_name,
+                              row.values[String(y)]
+                            )}
                         </td>
                       ))}
                     </tr>
@@ -450,9 +454,7 @@ export default function MetricRanking() {
         <Card>
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h3 className="text-lg font-bold">
-                {yearResult.metric_name}
-              </h3>
+              <h3 className="text-lg font-bold">{yearResult.metric_name}</h3>
               <p className="text-sm text-gray-500">
                 Year {yearResult.year} • Type:{" "}
                 {yearResult.metric_type || "unknown"} • Unit: {unit || "n/a"}
@@ -483,7 +485,8 @@ export default function MetricRanking() {
                       </td>
                       <td className="px-4 py-2">{r.name}</td>
                       <td className="px-4 py-2 text-right">
-                        {activeMetric && formatMetricValue(activeMetric.metric_name, r.value)}
+                        {activeMetric &&
+                          formatMetricValue(activeMetric.metric_name, r.value)}
                       </td>
                     </tr>
                   ))}

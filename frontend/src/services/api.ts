@@ -286,7 +286,39 @@ export interface SimulationResponse {
   simulated_score?: number | null;
   delta?: number | null;
   applied_overrides?: MetricOverride[] | null;
+  adjustments_detail?: SimulationAdjustmentDetail[] | null;
   message?: string | null;
+}
+
+export interface SimulationAdjustmentDetail {
+  metric_key?: string | null;
+  metric_name: string;
+  section?: string | null;
+  type?: "benefit" | "cost" | null;
+  baseline_value?: number | null;
+  simulated_value?: number | null;
+  adjustment_percent: number;
+  affects_score?: boolean;
+  normalization_min?: number | null;
+  normalization_max?: number | null;
+  out_of_range?: boolean;
+  capped?: boolean;
+  ignored?: boolean;
+  reason?: string | null;
+  unmatched_reason?: string | null;
+}
+
+export interface OverallScoringMetric {
+  metric_name: string;
+  section?: string | null;
+}
+
+export async function getOverallScoringMetrics(): Promise<
+  OverallScoringMetric[]
+> {
+  return request<OverallScoringMetric[]>("/api/wsm/overall-scoring-metrics", {
+    method: "GET",
+  });
 }
 
 export async function simulate(
@@ -339,6 +371,8 @@ export interface MetricInfo {
   key: string;
   label: string;
   description: string;
+  type?: "benefit" | "cost" | null;
+  default_weight?: number | null;
 }
 
 export interface SectionInfo {
