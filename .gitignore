@@ -83,7 +83,6 @@ pnpm-debug.log*
 _backup_frontend_diff.patch
 _backup_frontend_files/
 tmp_compare.py
-frontend/public/
 
 ### Logs
 *.log
