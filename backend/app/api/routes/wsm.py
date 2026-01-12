@@ -8,13 +8,23 @@ from app.models import Comparison, Emiten, ScoringResult, ScoringRun, ScoringRun
 from app.schemas.wsm import (
     CompareRequest,
     CompareResponse,
+    ScorecardRequest,
+    ScorecardResponse,
     MetricsCatalog,
     SimulationRequest,
     SimulationResponse,
     WSMScoreRequest,
+    WSMScorePreviewResponse,
     WSMScoreResponse,
 )
-from app.services.wsm_service import calculate_wsm_score, get_metrics_catalog, run_compare, run_simulation
+from app.services.wsm_service import (
+    calculate_wsm_score,
+    calculate_wsm_score_preview,
+    compute_scorecard,
+    get_metrics_catalog,
+    run_compare,
+    run_simulation,
+)
 
 router = APIRouter(prefix="/api/wsm", tags=["wsm"])
 
@@ -25,7 +35,7 @@ def wsm_score(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> WSMScoreResponse:
-    result = calculate_wsm_score(db, payload)
+    result = calculate_wsm_score(db, payload, user_id=current_user.id)
     try:
         # Normalized persisted run (for history/report)
         run = ScoringRun(
@@ -70,6 +80,28 @@ def wsm_score(
     return result
 
 
+@router.post("/score-preview", response_model=WSMScorePreviewResponse)
+def wsm_score_preview(
+    payload: WSMScoreRequest,
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(get_current_user),
+) -> WSMScorePreviewResponse:
+    """
+    Return official scoring preview for a year without persisting a scoring run.
+    Adds coverage and confidence per ticker and deterministic tie-break sorting.
+    """
+    return calculate_wsm_score_preview(db, payload, user_id=_current_user.id)
+
+
+@router.post("/scorecard", response_model=ScorecardResponse)
+def wsm_scorecard(
+    payload: ScorecardRequest,
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(get_current_user),
+) -> ScorecardResponse:
+    return compute_scorecard(db, payload, user_id=_current_user.id)
+
+
 @router.post("/simulate", response_model=SimulationResponse)
 def simulate(
     payload: SimulationRequest,
@@ -106,7 +138,7 @@ def compare(
     Compare WSM scores for multiple tickers (1-4) across a year range.
     Returns scores for each ticker per year.
     """
-    result = run_compare(db, payload)
+    result = run_compare(db, payload, user_id=current_user.id)
     try:
         db.add(
             Comparison(
