@@ -6,25 +6,241 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.config import DISABLED_METRICS
-from app.models import Comparison, Emiten, FinancialData, MetricDefinition, ScoringResult, SimulationLog
+from app.models import Comparison, Emiten, FinancialData, MetricDefinition, ScoringResult, SimulationLog, WeightTemplate
 from app.schemas.wsm import (
     CompareRequest,
     CompareResponse,
+    CoverageSummary,
+    DroppedTicker,
     MetricInfo,
     MetricsCatalog,
     MetricWeightInput,
     MissingPolicyOption,
     ModeOption,
+    ScorecardCoverage,
+    ScorecardMetric,
+    ScorecardRequest,
+    ScorecardResponse,
+    ScorecardSectionSubtotals,
     SectionInfo,
     SimulationAdjustmentDetail,
-    SimulationRequest,
     SimulationDebugInfo,
+    SimulationRequest,
     SimulationResponse,
     TickerSeries,
     WSMRankingItem,
+    WSMRankingPreviewItem,
+    WSMScorePreviewResponse,
     WSMScoreRequest,
     WSMScoreResponse,
 )
+from app.services.metric_mapping_loader import (
+    MetricMappingEntry,
+    load_metric_mapping_dict,
+    load_metric_mapping_list,
+)
+
+
+# =============================================================================
+# Weight helpers
+# =============================================================================
+
+
+def _normalize_section_key(section: str) -> str:
+    key = (section or "").strip().lower()
+    if key in {"cashflow", "cash_flow", "cash flow"}:
+        return "cash_flow"
+    if key in {"balance", "balance sheet"}:
+        return "balance"
+    if key in {"income", "income statement"}:
+        return "income"
+    return key or "unknown"
+
+
+def _clean_weight_numbers(weights: Dict[str, float]) -> Dict[str, float]:
+    cleaned: Dict[str, float] = {}
+    for key, raw in weights.items():
+        if raw is None:
+            continue
+        if not isinstance(raw, (int, float)):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Weights must be numbers.",
+            )
+        if raw < 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Weights must be non-negative.",
+            )
+        cleaned[key] = float(raw)
+    return cleaned
+
+
+def _normalize_weight_map(weights: Dict[str, float]) -> Dict[str, float]:
+    cleaned = _clean_weight_numbers(weights)
+    total = sum(cleaned.values())
+    if total <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Total weight must be greater than zero.",
+        )
+    return {k: (v / total if total else 0.0) for k, v in cleaned.items()}
+
+
+def _load_weight_template_owned(db: Session, template_id: int, user_id: int | None) -> WeightTemplate:
+    if user_id is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required for templates.")
+
+    template = (
+        db.query(WeightTemplate)
+        .filter(WeightTemplate.id == template_id, WeightTemplate.owner_user_id == user_id)
+        .first()
+    )
+    if template is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
+    return template
+
+
+def _prepare_mapping_defaults() -> tuple[List[MetricMappingEntry], Dict[str, float], Dict[str, float]]:
+    mapping_entries = load_metric_mapping_list()
+    if not mapping_entries:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Metric mapping is empty.",
+        )
+
+    default_weight_raw = {
+        entry.metric_name: max(entry.default_weight, 0.0) for entry in mapping_entries
+    }
+    total_weight = sum(default_weight_raw.values())
+    if total_weight <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Total weight from mapping must be greater than zero.",
+        )
+
+    normalized_default_weights = {
+        name: value / total_weight for name, value in default_weight_raw.items()
+    }
+    return mapping_entries, default_weight_raw, normalized_default_weights
+
+
+def _metric_weights_from_section(
+    section_weights: Dict[str, float],
+    mapping_entries: List[MetricMappingEntry],
+    default_weight_raw: Dict[str, float],
+    normalized_default_weights: Dict[str, float],
+) -> Dict[str, float]:
+    normalized_section_weights = _normalize_weight_map(
+        {_normalize_section_key(k): v for k, v in section_weights.items()}
+    )
+
+    metrics_by_section: Dict[str, List[str]] = {"balance": [], "income": [], "cash_flow": []}
+    for entry in mapping_entries:
+        sec = _normalize_section_key(entry.section)
+        if sec in metrics_by_section:
+            metrics_by_section[sec].append(entry.metric_name)
+
+    metric_weights: Dict[str, float] = {entry.metric_name: 0.0 for entry in mapping_entries}
+
+    for section_key, metrics in metrics_by_section.items():
+        section_weight = normalized_section_weights.get(section_key, 0.0)
+        if not metrics:
+            continue
+        sec_default_sum = sum(default_weight_raw.get(m, 0.0) for m in metrics)
+        if sec_default_sum <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Default weights must be positive for section {section_key}.",
+            )
+        for metric_name in metrics:
+            share = default_weight_raw.get(metric_name, 0.0) / sec_default_sum
+            metric_weights[metric_name] += section_weight * share
+
+    return _normalize_weight_map(metric_weights)
+
+
+def _resolve_metric_weight_map(
+    weight_scope: str | None,
+    weights_json: Dict[str, float] | None,
+    mapping_entries: List[MetricMappingEntry],
+    default_weight_raw: Dict[str, float],
+    normalized_default_weights: Dict[str, float],
+) -> Dict[str, float]:
+    metric_names = {entry.metric_name for entry in mapping_entries}
+
+    if weights_json is None or weight_scope is None:
+        return normalized_default_weights
+
+    if weight_scope not in {"metric", "section"}:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="weight_scope must be 'metric' or 'section'.",
+        )
+
+    if weight_scope == "metric":
+        cleaned = _clean_weight_numbers(weights_json)
+        unknown = [k for k in cleaned.keys() if k not in metric_names]
+        if unknown:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Unknown metrics in weights: {', '.join(unknown)}",
+            )
+        merged = {name: cleaned.get(name, 0.0) for name in metric_names}
+        return _normalize_weight_map(merged)
+
+    # section mode
+    normalized_sections: Dict[str, float] = {}
+    for raw_key, value in weights_json.items():
+        normalized_sections[_normalize_section_key(raw_key)] = value
+    return _metric_weights_from_section(normalized_sections, mapping_entries, default_weight_raw, normalized_default_weights)
+
+
+def _metric_inputs_from_weight_map(
+    mapping_entries: List[MetricMappingEntry], weight_map: Dict[str, float]
+) -> List[MetricWeightInput]:
+    metric_inputs: List[MetricWeightInput] = []
+    for entry in mapping_entries:
+        metric_inputs.append(
+            MetricWeightInput(
+                metric_name=entry.metric_name,
+                type=entry.type or "benefit",  # type: ignore[arg-type]
+                weight=weight_map.get(entry.metric_name, 0.0),
+            )
+        )
+    return metric_inputs
+
+
+def _resolve_metrics_from_source(
+    db: Session,
+    metrics: List[MetricWeightInput] | None,
+    weight_template_id: int | None,
+    weight_scope: str | None,
+    weights_json: Dict[str, float] | None,
+    user_id: int | None,
+) -> List[MetricWeightInput]:
+    if weight_template_id is not None:
+        template = _load_weight_template_owned(db, weight_template_id, user_id)
+        weight_scope = template.scope
+        weights_json = template.weights_json
+        metrics = None  # always derive from template
+
+    if metrics:
+        return metrics
+
+    if weights_json is not None:
+        mapping_entries, default_weight_raw, normalized_default_weights = _prepare_mapping_defaults()
+        weight_map = _resolve_metric_weight_map(weight_scope, weights_json, mapping_entries, default_weight_raw, normalized_default_weights)
+        return _metric_inputs_from_weight_map(mapping_entries, weight_map)
+
+    # If nothing provided, fall back to default mapping-driven metrics
+    mapping_entries, default_weight_raw, normalized_default_weights = _prepare_mapping_defaults()
+    weight_map = _resolve_metric_weight_map("metric", normalized_default_weights, mapping_entries, default_weight_raw, normalized_default_weights)
+    return _metric_inputs_from_weight_map(mapping_entries, weight_map)
+
+
+def _clamp01(value: float) -> float:
+    return max(0.0, min(1.0, value))
 
 
 def _normalize_weights(metrics: Iterable[MetricWeightInput]) -> Dict[str, float]:
@@ -97,6 +313,14 @@ def _fetch_financial_data(
     return rows
 
 
+def _compute_confidence_label(pct: float) -> str:
+    if pct >= 0.90:
+        return "High"
+    if pct >= 0.75:
+        return "Medium"
+    return "Low"
+
+
 def _safe_commit(db: Session) -> None:
     try:
         db.commit()
@@ -105,14 +329,23 @@ def _safe_commit(db: Session) -> None:
 
 
 def calculate_wsm_score(db: Session, payload: WSMScoreRequest, user_id: int | None = None) -> WSMScoreResponse:
-    if not payload.metrics:
+    effective_metrics = _resolve_metrics_from_source(
+        db,
+        payload.metrics,
+        payload.weight_template_id,
+        payload.weight_scope,
+        payload.weights_json,
+        user_id,
+    )
+
+    if not effective_metrics:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="At least one metric is required.",
         )
 
     disabled_in_request = [
-        m.metric_name for m in payload.metrics if m.metric_name in DISABLED_METRICS
+        m.metric_name for m in effective_metrics if m.metric_name in DISABLED_METRICS
     ]
     if disabled_in_request:
         raise HTTPException(
@@ -120,16 +353,17 @@ def calculate_wsm_score(db: Session, payload: WSMScoreRequest, user_id: int | No
             detail=f"Metric tidak diizinkan: {', '.join(disabled_in_request)}. Gunakan 'Arus Kas Dari Aktivitas Operasi' sebagai gantinya.",
         )
 
-    normalized_weights = _normalize_weights(payload.metrics)
-    definitions_by_name = _pick_metric_definitions(db, [metric.metric_name for metric in payload.metrics])
+    normalized_weights = _normalize_weights(effective_metrics)
+    definitions_by_name = _pick_metric_definitions(db, [metric.metric_name for metric in effective_metrics])
 
     metric_id_by_name = {name: definition.id for name, definition in definitions_by_name.items()}
+    name_by_metric_id = {v: k for k, v in metric_id_by_name.items()}
     metric_type_by_id = {
-        metric_id_by_name[metric.metric_name]: metric.type for metric in payload.metrics
+        metric_id_by_name[metric.metric_name]: metric.type for metric in effective_metrics
     }
     weight_by_metric_id = {
         metric_id_by_name[metric.metric_name]: normalized_weights[metric.metric_name]
-        for metric in payload.metrics
+        for metric in effective_metrics
     }
 
     rows = _fetch_financial_data(
@@ -168,6 +402,7 @@ def calculate_wsm_score(db: Session, payload: WSMScoreRequest, user_id: int | No
         min_by_metric[metric_id] = min(metrics_values)
 
     ranking: List[WSMRankingItem] = []
+    dropped: List[DroppedTicker] = []
     requested_metric_ids = set(metric_id_by_name.values())
 
     for ticker, metrics_values in ticker_metric_values.items():
@@ -178,6 +413,14 @@ def calculate_wsm_score(db: Session, payload: WSMScoreRequest, user_id: int | No
         if payload.missing_policy == "drop":
             # Skip ticker if any metric is missing
             if missing_metric_ids:
+                missing_names = [name_by_metric_id[mid] for mid in missing_metric_ids if mid in name_by_metric_id]
+                dropped.append(
+                    DroppedTicker(
+                        ticker=ticker,
+                        reason="Dropped due to missing metrics",
+                        missing_metrics=missing_names or None,
+                    )
+                )
                 continue
             weight_divisor = 1.0  # all metrics present, no redistribution needed
         elif payload.missing_policy == "redistribute":
@@ -218,13 +461,13 @@ def calculate_wsm_score(db: Session, payload: WSMScoreRequest, user_id: int | No
     if payload.limit:
         ranking = ranking[:payload.limit]
 
-    if not ranking:
+    if not ranking and payload.missing_policy != "drop":
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No ranking could be computed for the provided parameters.",
         )
 
-    response = WSMScoreResponse(year=payload.year, ranking=ranking)
+    response = WSMScoreResponse(year=payload.year, ranking=ranking, dropped_tickers=dropped)
 
     if user_id is not None:
         try:
@@ -242,6 +485,395 @@ def calculate_wsm_score(db: Session, payload: WSMScoreRequest, user_id: int | No
             db.rollback()
 
     return response
+
+
+def _coverage_by_ticker(db: Session, year: int) -> Dict[str, CoverageSummary]:
+    mapping_entries = load_metric_mapping_list()
+    if not mapping_entries:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Metric mapping is empty.",
+        )
+
+    metric_names = [entry.metric_name for entry in mapping_entries]
+    definitions = (
+        db.query(MetricDefinition)
+        .filter(MetricDefinition.metric_name.in_(metric_names))
+        .filter(~MetricDefinition.metric_name.in_(DISABLED_METRICS))
+        .all()
+    )
+    name_to_def = {d.metric_name: d for d in definitions}
+    missing_defs = [name for name in metric_names if name not in name_to_def]
+    if missing_defs:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Metric definitions not found for: {', '.join(missing_defs)}",
+        )
+
+    metric_ids = [name_to_def[name].id for name in metric_names]
+    rows = (
+        db.query(Emiten.ticker_code, FinancialData.metric_id, FinancialData.value)
+        .join(Emiten, FinancialData.emiten_id == Emiten.id)
+        .filter(FinancialData.year == year)
+        .filter(FinancialData.metric_id.in_(metric_ids))
+        .all()
+    )
+
+    if not rows:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No financial data found for the requested year/metrics.",
+        )
+
+    coverage_used: Dict[str, int] = {}
+    tickers: set[str] = set()
+    for ticker, _metric_id, value in rows:
+        tickers.add(ticker)
+        if value is None:
+            continue
+        coverage_used[ticker] = coverage_used.get(ticker, 0) + 1
+
+    total_metrics = len(metric_ids)
+    coverage_by_ticker: Dict[str, CoverageSummary] = {}
+    for ticker in tickers:
+        used = coverage_used.get(ticker, 0)
+        pct = used / total_metrics if total_metrics else 0.0
+        coverage_by_ticker[ticker] = CoverageSummary(used=used, total=total_metrics, pct=round(pct, 6))
+
+    return coverage_by_ticker
+
+
+def calculate_wsm_score_preview(db: Session, payload: WSMScoreRequest, user_id: int | None = None) -> WSMScorePreviewResponse:
+    base_result = calculate_wsm_score(db, payload, user_id=user_id)
+    coverage_by = _coverage_by_ticker(db, payload.year)
+
+    items: List[WSMRankingPreviewItem] = []
+    total_metrics = next(iter(coverage_by.values())).total if coverage_by else 0
+
+    for item in base_result.ranking:
+        coverage = coverage_by.get(item.ticker) or CoverageSummary(used=0, total=total_metrics, pct=0.0)
+        confidence = _compute_confidence_label(coverage.pct)
+        items.append(
+            WSMRankingPreviewItem(
+                rank=0,
+                ticker=item.ticker,
+                score=item.score,
+                coverage=coverage,
+                confidence=confidence,  # type: ignore[arg-type]
+            )
+        )
+
+    items.sort(key=lambda it: (-it.score, -it.coverage.pct, it.ticker))
+    for idx, it in enumerate(items, start=1):
+        it.rank = idx
+
+    return WSMScorePreviewResponse(
+        year=payload.year,
+        missing_policy=payload.missing_policy,
+        ranking=items,
+        tie_breaker=[
+            "total_score desc",
+            "coverage pct desc",
+            "ticker asc",
+        ],
+        dropped_tickers=base_result.dropped_tickers,
+    )
+
+
+# =============================================================================
+# Scorecard
+# =============================================================================
+
+
+def compute_scorecard(db: Session, payload: ScorecardRequest, user_id: int | None = None) -> ScorecardResponse:
+    mapping_entries, default_weight_raw, normalized_default_weights = _prepare_mapping_defaults()
+    mapping_by_name = load_metric_mapping_dict()
+    metric_names = [entry.metric_name for entry in mapping_entries]
+
+    # Fetch metric definitions to resolve IDs
+    definitions = (
+        db.query(MetricDefinition)
+        .filter(MetricDefinition.metric_name.in_(metric_names))
+        .filter(~MetricDefinition.metric_name.in_(DISABLED_METRICS))
+        .all()
+    )
+    name_to_def = {d.metric_name: d for d in definitions}
+    missing_defs = [name for name in metric_names if name not in name_to_def]
+    if missing_defs:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Metric definitions not found for: {', '.join(missing_defs)}",
+        )
+
+    metric_id_by_name = {name: name_to_def[name].id for name in metric_names}
+    name_by_id = {v: k for k, v in metric_id_by_name.items()}
+    metric_type_by_name = {name: mapping_by_name[name].type for name in metric_names}
+
+    weight_scope = payload.weight_scope
+    weights_json = payload.weights_json
+    if payload.weight_template_id is not None:
+        template = _load_weight_template_owned(db, payload.weight_template_id, user_id)
+        weight_scope = template.scope
+        weights_json = template.weights_json
+
+    effective_weights = _resolve_metric_weight_map(
+        weight_scope,
+        weights_json,
+        mapping_entries,
+        default_weight_raw,
+        normalized_default_weights,
+    )
+
+    # Fetch all financial data for the given year across the requested metrics
+    metric_ids = list(metric_id_by_name.values())
+    rows = (
+        db.query(Emiten.ticker_code, FinancialData.metric_id, FinancialData.value)
+        .join(Emiten, FinancialData.emiten_id == Emiten.id)
+        .filter(FinancialData.year == payload.year)
+        .filter(FinancialData.metric_id.in_(metric_ids))
+        .all()
+    )
+
+    if not rows:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No financial data found for the requested year/metrics.",
+        )
+
+    ticker_values: Dict[str, Dict[int, float]] = {}
+    values_by_metric: Dict[int, List[float]] = {mid: [] for mid in metric_ids}
+
+    for ticker, metric_id, value in rows:
+        if value is None:
+            continue
+        metric_name = name_by_id.get(metric_id)
+        if not metric_name:
+            continue
+        metric_type = metric_type_by_name.get(metric_name, "benefit")
+        adjusted_value = float(abs(value)) if metric_type == "cost" and value < 0 else float(value)
+        ticker_values.setdefault(ticker, {})[metric_id] = adjusted_value
+        values_by_metric[metric_id].append(adjusted_value)
+
+    if payload.ticker not in ticker_values:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Ticker {payload.ticker} has no data for year {payload.year}.",
+        )
+
+    max_by_metric: Dict[int, float] = {}
+    min_by_metric: Dict[int, float] = {}
+    for mid, vals in values_by_metric.items():
+        if vals:
+            max_by_metric[mid] = max(vals)
+            min_by_metric[mid] = min(vals)
+
+    requested_metric_ids = set(metric_ids)
+    total_metrics = len(metric_ids)
+
+    def compute_for_ticker(ticker: str, include_metrics: bool = False):
+        metric_map = ticker_values.get(ticker, {})
+        available_metric_ids = set(metric_map.keys())
+        missing_metric_ids = requested_metric_ids - available_metric_ids
+
+        if payload.missing_policy == "drop" and missing_metric_ids:
+            missing_names = [name_by_id[mid] for mid in missing_metric_ids if mid in name_by_id]
+            return None, missing_names
+
+        if payload.missing_policy == "redistribute":
+            available_weight_sum = sum(
+                effective_weights.get(name_by_id[mid], 0) for mid in available_metric_ids
+            )
+            if available_weight_sum <= 0:
+                return None, None
+            weight_divisor = available_weight_sum
+        else:
+            weight_divisor = 1.0
+
+        section_totals = {
+            "balance": 0.0,
+            "income": 0.0,
+            "cash_flow": 0.0,
+        }
+        section_weight_shares = {
+            "balance": 0.0,
+            "income": 0.0,
+            "cash_flow": 0.0,
+        }
+
+        used_count = 0
+        total_score = 0.0
+        metric_rows: List[ScorecardMetric] = []
+
+        for entry in mapping_entries:
+            metric_name = entry.metric_name
+            metric_id = metric_id_by_name.get(metric_name)
+            if metric_id is None:
+                continue
+
+            raw_value = metric_map.get(metric_id)
+            normalized_value = 0.0
+            contribution = 0.0
+            is_missing = raw_value is None
+
+            if raw_value is not None:
+                used_count += 1
+                if entry.type == "benefit":
+                    denom = max_by_metric.get(metric_id, 0)
+                    raw_norm = (raw_value / denom) if denom else 0.0
+                    normalized_value = _clamp01(raw_norm)
+                else:
+                    num = min_by_metric.get(metric_id, 0)
+                    if raw_value == 0 or num == 0:
+                        normalized_value = 0.0
+                    else:
+                        raw_norm = num / raw_value
+                        normalized_value = _clamp01(raw_norm)
+
+                weight_share = effective_weights.get(metric_name, 0) / weight_divisor
+                contribution = weight_share * normalized_value
+            else:
+                weight_share = 0.0 if payload.missing_policy == "redistribute" else effective_weights.get(metric_name, 0) / weight_divisor
+
+            total_score += contribution
+            section_key = _normalize_section_key(entry.section)
+            if section_key in section_totals:
+                section_totals[section_key] += contribution
+                section_weight_shares[section_key] += weight_share
+
+            if include_metrics:
+                metric_rows.append(
+                    ScorecardMetric(
+                        metric_name=metric_name,
+                        section=section_key if section_key in {"balance", "income", "cash_flow"} else "cash_flow",
+                        type=entry.type,  # type: ignore[arg-type]
+                        display_unit=entry.display_unit,
+                        allow_negative=entry.allow_negative,
+                        raw_value=raw_value,
+                        normalized_value=normalized_value,
+                        default_weight=normalized_default_weights.get(metric_name, 0.0),
+                        effective_weight=weight_share,
+                        contribution=contribution,
+                        is_missing=is_missing,
+                    )
+                )
+
+        coverage_pct = used_count / total_metrics if total_metrics else 0.0
+        missing_names = [entry.metric_name for entry in mapping_entries if metric_map.get(metric_id_by_name[entry.metric_name]) is None]
+
+        return {
+            "total_score": round(total_score, 6),
+            "coverage_used": used_count,
+            "coverage_pct": coverage_pct,
+            "missing": missing_names,
+            "section_totals": section_totals,
+            "section_weight_shares": section_weight_shares,
+            "metrics": metric_rows,
+        }, None
+
+    # Compute rankings across all available tickers for the year
+    ranking_data = []
+    for ticker in ticker_values.keys():
+        computed, _ = compute_for_ticker(ticker, include_metrics=False)
+        if computed is None:
+            continue
+        ranking_data.append((ticker, computed))
+
+    if not ranking_data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No tickers satisfied the missing_policy for the requested metrics.",
+        )
+
+    # Sort per tie-breaker rules
+    def _sort_key(item):
+        ticker, data = item
+        section = data["section_totals"]
+        return (
+            -data["total_score"],
+            -data["coverage_pct"],
+            -section.get("balance", 0.0),
+            -section.get("income", 0.0),
+            -section.get("cash_flow", 0.0),
+            ticker,
+        )
+
+    ranking_data.sort(key=_sort_key)
+
+    # Compute rank for requested ticker
+    scorecard_data, dropped_missing = compute_for_ticker(payload.ticker, include_metrics=True)
+    if dropped_missing:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "message": f"Ticker {payload.ticker} is not eligible for missing_policy=drop",
+                "missing_metrics": dropped_missing,
+            },
+        )
+    if scorecard_data is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Ticker {payload.ticker} does not satisfy missing_policy={payload.missing_policy}.",
+        )
+
+    rank = next((idx + 1 for idx, (t, _) in enumerate(ranking_data) if t == payload.ticker), None)
+    if rank is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Ticker {payload.ticker} not found in ranking after applying policy.",
+        )
+
+    coverage_pct = scorecard_data["coverage_pct"]
+    if coverage_pct >= 0.90:
+        confidence = "High"
+    elif coverage_pct >= 0.75:
+        confidence = "Medium"
+    else:
+        confidence = "Low"
+
+    coverage = ScorecardCoverage(
+        used=scorecard_data["coverage_used"],
+        total=total_metrics,
+        pct=round(coverage_pct, 6),
+        missing=scorecard_data["missing"],
+    )
+
+    section_totals = scorecard_data["section_totals"]
+    section_weight_shares = scorecard_data.get("section_weight_shares", {})
+    section_subtotals = ScorecardSectionSubtotals(
+        balance=round(section_totals.get("balance", 0.0), 6),
+        income=round(section_totals.get("income", 0.0), 6),
+        cash_flow=round(section_totals.get("cash_flow", 0.0), 6),
+    )
+
+    section_breakdown = []
+    for sec in ["balance", "income", "cash_flow"]:
+        section_breakdown.append(
+            {
+                "section": sec,
+                "score": round(section_totals.get(sec, 0.0), 6),
+                "effective_weight_pct": round(section_weight_shares.get(sec, 0.0), 6),
+            }
+        )
+
+    return ScorecardResponse(
+        year=payload.year,
+        ticker=payload.ticker,
+        total_score=scorecard_data["total_score"],
+        rank=rank,
+        coverage=coverage,
+        confidence=confidence,  # type: ignore[arg-type]
+        section_breakdown=section_breakdown,  # type: ignore[arg-type]
+        section_subtotals=section_subtotals,
+        tie_breaker=[
+            "total_score desc",
+            "coverage pct desc",
+            "balance subtotal desc",
+            "income subtotal desc",
+            "cash_flow subtotal desc",
+            "ticker asc",
+        ],
+        metrics=scorecard_data["metrics"],
+    )
 
 
 # =============================================================================
@@ -303,14 +935,15 @@ def _compute_single_ticker_score(
     missing_policy: str,
     overrides: Dict[str, float] | None = None,
     debug: Dict[str, float | int | bool] | None = None,
-) -> float | None:
+    with_reason: bool = False,
+) -> float | tuple[float | None, str | None] | None:
     """
     Compute WSM score for a single ticker.
     If overrides is provided, apply them to metric values before scoring.
     Returns None if ticker has no data or is dropped by policy.
     """
     if not metrics:
-        return None
+        return (None, "No metrics provided") if with_reason else None
 
     # Get metric definitions
     metric_names = [m.metric_name for m in metrics]
@@ -320,7 +953,7 @@ def _compute_single_ticker_score(
         .all()
     )
     if not definitions:
-        return None
+        return (None, "Metric definitions not found") if with_reason else None
 
     # Build maps
     picked: Dict[str, MetricDefinition] = {}
@@ -330,7 +963,7 @@ def _compute_single_ticker_score(
             picked[name] = candidates[0]
 
     if not picked:
-        return None
+        return (None, "Metric definitions not found") if with_reason else None
 
     metric_id_by_name = {name: d.id for name, d in picked.items()}
     metric_type_by_name = {m.metric_name: m.type for m in metrics}
@@ -338,7 +971,7 @@ def _compute_single_ticker_score(
     # Normalize weights
     total_weight = sum(m.weight for m in metrics)
     if total_weight <= 0:
-        return None
+        return (None, "Total weight must be > 0") if with_reason else None
     normalized_weights = {m.metric_name: m.weight / total_weight for m in metrics}
     if debug is not None:
         debug["requested_metric_count"] = len(metric_names)
@@ -354,7 +987,7 @@ def _compute_single_ticker_score(
         .all()
     )
     if not all_rows:
-        return None
+        return (None, "No financial data for ticker/year") if with_reason else None
 
     # Build min/max by metric
     values_by_metric: Dict[int, List[float]] = {mid: [] for mid in metric_ids}
@@ -382,7 +1015,7 @@ def _compute_single_ticker_score(
                 # NOTE: Do NOT add to values_by_metric - keep original min/max
 
     if not ticker_values:
-        return None
+        return (None, "No data for ticker") if with_reason else None
 
     # Compute min/max
     max_by_metric: Dict[int, float] = {}
@@ -398,7 +1031,8 @@ def _compute_single_ticker_score(
     missing_metric_ids = requested_metric_ids - available_metric_ids
 
     if missing_policy == "drop" and missing_metric_ids:
-        return None
+        missing_names = [name_by_id[mid] for mid in missing_metric_ids if mid in name_by_id]
+        return (None, f"Missing metrics: {', '.join(missing_names)}") if with_reason else None
     elif missing_policy == "redistribute":
         available_weight_sum = sum(
             normalized_weights[name_by_id[mid]]
@@ -406,7 +1040,7 @@ def _compute_single_ticker_score(
             if mid in name_by_id
         )
         if available_weight_sum <= 0:
-            return None
+            return (None, "No available weights after redistribution") if with_reason else None
         weight_divisor = available_weight_sum
         if debug is not None:
             debug["weights_renormalized"] = True
@@ -450,7 +1084,8 @@ def _compute_single_ticker_score(
         )
         debug["total_weight_used"] = total_weight_used
 
-    return round(score, 6)
+    result = round(score, 6)
+    return (result, None) if with_reason else result
 
 
 def _get_metric_raw_value(
@@ -736,11 +1371,38 @@ def run_compare(db: Session, payload: CompareRequest, user_id: int | None = None
             detail=f"Unknown ticker(s): {', '.join(unknown)}",
         )
 
-    # Get metrics based on mode
+    # Resolve metrics/weights (template or custom overrides supported)
+    mapping_entries, default_weight_raw, normalized_default_weights = _prepare_mapping_defaults()
+
+    weight_scope = payload.weight_scope
+    weights_json = payload.weights_json
+    if payload.weight_template_id is not None:
+        template = _load_weight_template_owned(db, payload.weight_template_id, user_id)
+        weight_scope = template.scope
+        weights_json = template.weights_json
+
+    weight_map = _resolve_metric_weight_map(
+        weight_scope,
+        weights_json,
+        mapping_entries,
+        default_weight_raw,
+        normalized_default_weights,
+    )
+
     if payload.mode == "section":
-        metrics = _get_section_metrics(db, payload.section)
+        section_key = _normalize_section_key(payload.section)
+        section_entries = [e for e in mapping_entries if _normalize_section_key(e.section) == section_key]
+        if not section_entries:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No metrics available for the selected mode/section.",
+            )
+        section_weight_map = _normalize_weight_map(
+            {e.metric_name: weight_map.get(e.metric_name, 0.0) for e in section_entries}
+        )
+        metrics = _metric_inputs_from_weight_map(section_entries, section_weight_map)
     else:
-        metrics = _get_overall_scope_metrics(db)
+        metrics = _metric_inputs_from_weight_map(mapping_entries, weight_map)
 
     if not metrics:
         raise HTTPException(
@@ -753,19 +1415,39 @@ def run_compare(db: Session, payload: CompareRequest, user_id: int | None = None
 
     # Compute scores for each ticker across all years
     series = []
+    dropped: List[DroppedTicker] = []
     for ticker in payload.tickers:
-        scores = []
+        scores: List[float | None] = []
         missing_years = []
+        drop_reason: str | None = None
+
         for year in years:
-            score = _compute_single_ticker_score(
-                db, ticker, year, metrics, payload.missing_policy, overrides=None
-            )
+            if payload.missing_policy == "drop":
+                score, drop_reason_raw = _compute_single_ticker_score(
+                    db, ticker, year, metrics, payload.missing_policy, overrides=None, with_reason=True
+                )
+                if score is None:
+                    drop_reason = drop_reason_raw or f"Ticker {ticker} missing required metrics for year {year}"
+                    break
+            else:
+                score = _compute_single_ticker_score(
+                    db, ticker, year, metrics, payload.missing_policy, overrides=None
+                )
+
             scores.append(score)
             if score is None:
                 missing_years.append(year)
+
+        if drop_reason:
+            scores = [None for _ in years]
+            missing_years = list(years)
+            dropped.append(DroppedTicker(ticker=ticker, reason=drop_reason, missing_metrics=None))
+        elif len(scores) < len(years):
+            scores.extend([None for _ in range(len(years) - len(scores))])
+
         series.append(TickerSeries(ticker=ticker, scores=scores, missing_years=missing_years))
 
-    response = CompareResponse(years=years, series=series)
+    response = CompareResponse(years=years, series=series, dropped_tickers=dropped)
 
     if user_id is not None:
         try:

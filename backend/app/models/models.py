@@ -3,7 +3,7 @@
 import enum
 from sqlalchemy import (
     Column, Integer, String, Text, DateTime, ForeignKey,
-    Numeric, UniqueConstraint, Enum, func
+    Numeric, UniqueConstraint, Enum, func, Index
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
@@ -201,7 +201,12 @@ class ScoringRun(Base):
     request = Column(JSONB, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
-    items = relationship("ScoringRunItem", back_populates="run", cascade="all, delete-orphan")
+    # Keep relationship names consistent with ForeignKey column run_id
+    items = relationship(
+        "ScoringRunItem",
+        back_populates="scoring_run",
+        cascade="all, delete-orphan",
+    )
 
 
 class ScoringRunItem(Base):
@@ -219,4 +224,24 @@ class ScoringRunItem(Base):
         UniqueConstraint("run_id", "rank", name="uq_scoring_run_rank"),
     )
 
-    run = relationship("ScoringRun", back_populates="items")
+    scoring_run = relationship("ScoringRun", back_populates="items")
+
+
+class WeightTemplate(Base):
+    __tablename__ = "weight_templates"
+
+    __table_args__ = (
+        UniqueConstraint("owner_user_id", "name", name="uq_weight_template_owner_name"),
+        Index("ix_weight_templates_owner", "owner_user_id"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    owner_user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String(100), nullable=False)
+    description = Column(Text, nullable=True)
+    scope = Column(String(20), nullable=False)
+    weights_json = Column(JSONB, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    owner = relationship("User", backref="weight_templates")

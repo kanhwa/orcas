@@ -11,7 +11,7 @@ from app.db.database import ping_db
 from app.db.session import SessionLocal
 from app.models import MetricDefinition
 from app.scripts.seed_metric_definitions import read_mapping, upsert_metrics
-from app.api.routes import activity, admin, auth, emitens, export, financial_data, historical, metric_ranking, ranking, scoring_runs, screening, stocks, sync_data, templates, wsm, years, metrics
+from app.api.routes import activity, admin, auth, emitens, export, financial_data, historical, metric_ranking, ranking, scoring_runs, screening, stocks, sync_data, templates, weight_templates, wsm, years, metrics
 
 app = FastAPI(title="ORCAS API")
 
@@ -21,7 +21,7 @@ uploads_dir.mkdir(parents=True, exist_ok=True)
 # CORS middleware for frontend dev
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -43,6 +43,7 @@ app.include_router(emitens.router)
 app.include_router(activity.router)
 app.include_router(scoring_runs.router)
 app.include_router(templates.router)
+app.include_router(weight_templates.router)
 app.include_router(years.router)
 app.include_router(financial_data.router)
 app.include_router(export.router)

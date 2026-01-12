@@ -166,7 +166,7 @@ def metric_ranking_panel(
     to_year: int = Query(..., ge=2015, le=2030),
     top_n: int = Query(3, ge=1, le=32),
     rank_year: int | None = None,
-    rank_type: str = Query("best", regex="^(best|worst)$"),
+    rank_type: str = Query("best", pattern="^(best|worst)$"),
     db: Session = Depends(get_db),
     _current_user: User = Depends(get_current_user),
 ) -> MetricPanelResponse:
@@ -259,7 +259,7 @@ def metric_ranking_by_year(
     metric_id: int = Query(..., ge=1),
     year: int = Query(..., ge=2015, le=2030),
     top_n: int = Query(3, ge=1, le=32),
-    rank_type: str = Query("best", regex="^(best|worst)$"),
+    rank_type: str = Query("best", pattern="^(best|worst)$"),
     db: Session = Depends(get_db),
     _current_user: User = Depends(get_current_user),
 ) -> MetricYearTopResponse:
