@@ -8,6 +8,7 @@ import Reports from "./pages/Reports";
 import SyncData from "./pages/SyncData";
 import Analysis from "./pages/Analysis";
 import Admin from "./pages/Admin";
+import Scoring from "./pages/Scoring";
 import {
   AppShell,
   NavItem,
@@ -19,6 +20,7 @@ import { Card } from "./components/ui/Card";
 
 type Page =
   | "analysis"
+  | "scoring"
   | "compare"
   | "simulation"
   | "reports"
@@ -78,6 +80,10 @@ function AppContent() {
       title: "Compare",
       subtitle: "Compare stocks & historical trends",
     },
+    scoring: {
+      title: "Scoring",
+      subtitle: "Official WSM ranking for a selected year",
+    },
     simulation: {
       title: "Simulation",
       subtitle: "What-if scenario analysis",
@@ -120,6 +126,14 @@ function AppContent() {
       active: currentPage === "analysis",
       description:
         "Screen stocks using rule-based filters and explore metric rankings.",
+    },
+    {
+      key: "scoring",
+      label: "Scoring",
+      icon: "🏆",
+      onSelect: () => setCurrentPage("scoring"),
+      active: currentPage === "scoring",
+      description: "Official WSM ranking for a selected year.",
     },
     {
       key: "compare",
@@ -186,6 +200,9 @@ function AppContent() {
   const renderPage = () => {
     if (currentPage === "analysis") {
       return <Analysis />;
+    }
+    if (currentPage === "scoring" && user) {
+      return <Scoring />;
     }
     if (currentPage === "compare") {
       return <ComparePage />;

@@ -119,7 +119,8 @@ function CompareTab() {
       } catch (err) {
         const e = err as { detail?: string };
         setWeightTemplatesError(
-          e.detail || "Failed to load weight templates. Default weights will be used."
+          e.detail ||
+            "Failed to load weight templates. Default weights will be used."
         );
       } finally {
         setWeightTemplatesLoading(false);
@@ -174,14 +175,7 @@ function CompareTab() {
     }
     if (templateSelectionRequired) errors.push("Select a weight template");
     return errors;
-  }, [
-    tickers,
-    yearFrom,
-    yearTo,
-    mode,
-    metricKeys,
-    templateSelectionRequired,
-  ]);
+  }, [tickers, yearFrom, yearTo, mode, metricKeys, templateSelectionRequired]);
 
   const isValid = validationErrors.length === 0;
 
@@ -404,7 +398,9 @@ function CompareTab() {
               placeholder="Pick tickers"
             />
             {tickers.length > 0 && tickers.length < 2 && (
-              <p className="text-xs text-red-600">At least 2 tickers required</p>
+              <p className="text-xs text-red-600">
+                At least 2 tickers required
+              </p>
             )}
           </div>
 
@@ -481,7 +477,9 @@ function CompareTab() {
                 </label>
                 <Select
                   value={section}
-                  onChange={(e) => handleSectionChange(e.target.value as Section)}
+                  onChange={(e) =>
+                    handleSectionChange(e.target.value as Section)
+                  }
                 >
                   {["income", "balance", "cashflow"].map((s) => {
                     const meta = getSectionMeta(s);

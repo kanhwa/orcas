@@ -14,14 +14,14 @@ interface InfoTipProps {
 export default function InfoTip({ content, ariaLabel = "Info" }: InfoTipProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLSpanElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useRef<HTMLSpanElement>(null);
 
   // Handle escape key to close tooltip
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && isOpen) {
         setIsOpen(false);
-        buttonRef.current?.focus();
+        triggerRef.current?.focus();
       }
     };
 
@@ -56,27 +56,29 @@ export default function InfoTip({ content, ariaLabel = "Info" }: InfoTipProps) {
 
   return (
     <span style={styles.container} ref={containerRef}>
-      <button
-        ref={buttonRef}
-        type="button"
-        // Hover opens/keeps open
+      <span
+        ref={triggerRef}
+        role="button"
+        tabIndex={0}
         onMouseEnter={() => setIsOpen(true)}
-        // Leave closes
         onMouseLeave={() => setIsOpen(false)}
-        // Focus opens
         onFocus={() => setIsOpen(true)}
-        // Blur closes
         onBlur={() => setIsOpen(false)}
-        // Click toggles as fallback (optional "pin" behavior)
         onClick={(e) => {
           e.stopPropagation();
           setIsOpen(!isOpen);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setIsOpen((prev) => !prev);
+          }
         }}
         style={styles.iconButton}
         aria-label={ariaLabel}
       >
         ⓘ
-      </button>
+      </span>
       {isOpen && (
         <div style={styles.popover} role="tooltip">
           <p style={styles.content}>{content}</p>
