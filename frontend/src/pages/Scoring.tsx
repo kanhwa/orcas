@@ -3,15 +3,28 @@ import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import { Select } from "../components/ui/Select";
 import { Table } from "../components/ui/Table";
-import { Toggle } from "../components/ui/Toggle";
 import InfoTip from "../components/InfoTip";
 
 type MissingPolicy = "redistribute" | "zero" | "drop";
 type Tab = "ranking" | "scorecard";
+type WeightProfile = "default" | "template" | "custom";
 
 type WeightEntry = {
   metric_name: string;
   weight: number;
+};
+
+type WeightTemplate = {
+  id: number;
+  name: string;
+  description?: string | null;
+  mode: "metric" | "section";
+  weights: Record<string, number>;
+};
+
+type WeightTemplateListResponse = {
+  total: number;
+  templates: WeightTemplate[];
 };
 
 const BASE_URL = (
@@ -76,11 +89,7 @@ async function wsmScore(payload: WSMScoreRequest): Promise<void> {
   });
 }
 
-async function wsmScorecard(payload: {
-  year: number;
-  ticker: string;
-  missing_policy: MissingPolicy;
-}): Promise<ScorecardResponse> {
+async function wsmScorecard(payload: ScorecardRequest): Promise<ScorecardResponse> {
   return request<ScorecardResponse>("/api/wsm/scorecard", {
     method: "POST",
     body: JSON.stringify(payload),
@@ -148,10 +157,14 @@ type WSMScorePreviewResponse = {
 
 type WSMScoreRequest = {
   year: number;
-  metrics: MetricWeightInput[];
+  metrics?: MetricWeightInput[] | null;
   tickers?: string[] | null;
   limit?: number | null;
   missing_policy?: MissingPolicy;
+  template_id?: number | null;
+  weight_template_id?: number | null;
+  weight_scope?: "metric" | "section" | null;
+  weights_json?: Record<string, number> | null;
 };
 
 type ScorecardCoverage = {
@@ -159,6 +172,15 @@ type ScorecardCoverage = {
   total: number;
   pct: number;
   missing: string[];
+};
+
+type ScorecardRequest = {
+  year: number;
+  ticker: string;
+  missing_policy: MissingPolicy;
+  weight_template_id?: number | null;
+  weight_scope?: "metric" | "section" | null;
+  weights_json?: Record<string, number> | null;
 };
 
 type ScorecardSectionSubtotals = {
@@ -175,7 +197,9 @@ type ScorecardMetric = {
   allow_negative?: boolean;
   raw_value: number | null;
   normalized_value: number;
-  weight: number;
+  default_weight?: number;
+  effective_weight?: number;
+  weight?: number;
   contribution: number;
   is_missing?: boolean;
 };
@@ -271,6 +295,14 @@ const Scoring = () => {
   const [saving, setSaving] = useState(false);
   const [loadingMeta, setLoadingMeta] = useState(false);
 
+  const [weightProfile, setWeightProfile] = useState<WeightProfile>("default");
+  const [weightTemplates, setWeightTemplates] = useState<WeightTemplate[]>([]);
+  const [weightTemplatesError, setWeightTemplatesError] = useState("");
+  const [weightTemplatesLoading, setWeightTemplatesLoading] = useState(false);
+  const [selectedWeightTemplateId, setSelectedWeightTemplateId] = useState<
+    number | ""
+  >("");
+
   const [missingPolicy, setMissingPolicy] = useState<MissingPolicy>("zero");
   const [rankingPolicyUsed, setRankingPolicyUsed] =
     useState<MissingPolicy>("zero");
@@ -283,8 +315,6 @@ const Scoring = () => {
   const [scorecard, setScorecard] = useState<ScorecardResponse | null>(null);
   const [scorecardLoading, setScorecardLoading] = useState(false);
   const [scorecardError, setScorecardError] = useState("");
-
-  const [useCustomWeights, setUseCustomWeights] = useState(false);
   const [customWeights, setCustomWeights] = useState<WeightEntry[]>([]);
   const [normalizationNote, setNormalizationNote] = useState("");
 
@@ -336,14 +366,84 @@ const Scoring = () => {
   }, []);
 
   useEffect(() => {
+    const loadWeightTemplates = async () => {
+      setWeightTemplatesLoading(true);
+      setWeightTemplatesError("");
+      try {
+        const res = await request<WeightTemplateListResponse>(
+          "/api/weight-templates?skip=0&limit=50",
+          { method: "GET" }
+        );
+        setWeightTemplates(res.templates || []);
+      } catch (err) {
+        const e = err as { detail?: string };
+        setWeightTemplatesError(
+          e.detail || "Failed to load weight templates. Default weights available."
+        );
+      } finally {
+        setWeightTemplatesLoading(false);
+      }
+    };
+    loadWeightTemplates();
+  }, []);
+
+  const selectedWeightTemplate = useMemo(() => {
+    if (!selectedWeightTemplateId) return undefined;
+    return weightTemplates.find(
+      (t) => t.id === Number(selectedWeightTemplateId)
+    );
+  }, [selectedWeightTemplateId, weightTemplates]);
+
+  const customWeightsInvalid = useMemo(() => {
+    if (weightProfile !== "custom") return false;
+    if (!customWeights.length) return true;
+    let sum = 0;
+    for (const entry of customWeights) {
+      if (!Number.isFinite(entry.weight)) return true;
+      sum += entry.weight;
+    }
+    return sum <= 0;
+  }, [customWeights, weightProfile]);
+
+  const templateSelectionRequired =
+    weightProfile === "template" && !selectedWeightTemplate;
+
+  const weightProfileBlocked = templateSelectionRequired || customWeightsInvalid;
+
+  const buildWeightPayload = useCallback(() => {
+    if (weightProfile === "template" && selectedWeightTemplate) {
+      return {
+        weight_template_id: selectedWeightTemplate.id,
+        weight_scope: selectedWeightTemplate.mode,
+      } as Pick<WSMScoreRequest, "weight_template_id" | "weight_scope">;
+    }
+    if (weightProfile === "custom") {
+      const weights_json: Record<string, number> = {};
+      let total = 0;
+      customWeights.forEach((w) => {
+        if (Number.isFinite(w.weight)) total += w.weight;
+      });
+      customWeights.forEach((w) => {
+        if (!Number.isFinite(w.weight)) return;
+        const normalizedWeight = total > 0 ? w.weight / total : 0;
+        weights_json[w.metric_name] = normalizedWeight;
+      });
+      return {
+        weight_scope: "metric" as const,
+        weights_json,
+      } as Pick<WSMScoreRequest, "weight_scope" | "weights_json">;
+    }
+    return {} as Pick<WSMScoreRequest, "weight_template_id" | "weight_scope" | "weights_json">;
+  }, [customWeights, selectedWeightTemplate, weightProfile]);
+
+  useEffect(() => {
     if (!scorecard) return;
     const defaults: WeightEntry[] = scorecard.metrics.map((m) => ({
       metric_name: m.metric_name,
-      weight: m.weight,
+      weight: m.effective_weight ?? m.default_weight ?? m.weight ?? 0,
     }));
     const normalized = normalizeWeights(defaults, defaults);
     setCustomWeights(normalized.normalized);
-    setUseCustomWeights(false);
     setNormalizationNote("");
   }, [scorecard]);
 
@@ -351,12 +451,15 @@ const Scoring = () => {
     async (year: number): Promise<string[]> => {
       if (dropEligibleByYear[year]) return dropEligibleByYear[year];
       if (!metrics.length) return [];
+      if (weightProfileBlocked) return [];
       setDropEligibilityLoadingYear(year);
       try {
+        const weightPayload = buildWeightPayload();
         const result = await wsmScorePreview({
           year,
           metrics,
           missing_policy: "drop",
+          ...weightPayload,
         });
         const tickers = result.ranking?.map((r) => r.ticker) ?? [];
         setDropEligibleByYear((prev) => ({ ...prev, [year]: tickers }));
@@ -368,7 +471,7 @@ const Scoring = () => {
         setDropEligibilityLoadingYear((prev) => (prev === year ? null : prev));
       }
     },
-    [dropEligibleByYear, metrics]
+    [buildWeightPayload, dropEligibleByYear, metrics, weightProfileBlocked]
   );
 
   useEffect(() => {
@@ -392,8 +495,9 @@ const Scoring = () => {
   }, [ensureDropEligibleTickers, missingPolicy, selectedTicker, selectedYear]);
 
   const canRun = useMemo(
-    () => !!selectedYear && metrics.length > 0 && !loadingMeta,
-    [selectedYear, metrics.length, loadingMeta]
+    () =>
+      !!selectedYear && metrics.length > 0 && !loadingMeta && !weightProfileBlocked,
+    [loadingMeta, metrics.length, selectedYear, weightProfileBlocked]
   );
 
   const dropEligibleTickers = useMemo(
@@ -422,16 +526,26 @@ const Scoring = () => {
       setRankingError("Metrics are not available yet.");
       return;
     }
+    if (templateSelectionRequired) {
+      setRankingError("Select a weight template first.");
+      return;
+    }
+    if (customWeightsInvalid) {
+      setRankingError("Custom weights must be valid numbers and sum > 0.");
+      return;
+    }
     setSaveMessage("");
     setRankingError("");
     setLoading(true);
     setRanking([]);
     setRankingPolicyUsed(missingPolicy);
     try {
+      const weightPayload = buildWeightPayload();
       const result = await wsmScorePreview({
         year: Number(selectedYear),
         metrics,
         missing_policy: missingPolicy,
+        ...weightPayload,
       });
       if (missingPolicy === "drop") {
         setDropEligibleByYear((prev) => ({
@@ -454,13 +568,23 @@ const Scoring = () => {
       setRankingError("Metrics are not available yet.");
       return;
     }
+    if (templateSelectionRequired) {
+      setRankingError("Select a weight template first.");
+      return;
+    }
+    if (customWeightsInvalid) {
+      setRankingError("Custom weights must be valid numbers and sum > 0.");
+      return;
+    }
     setSaveMessage("");
     setSaving(true);
     try {
+      const weightPayload = buildWeightPayload();
       await wsmScore({
         year: Number(selectedYear),
         metrics,
         missing_policy: rankingPolicyUsed,
+        ...weightPayload,
       });
       setSaveMessage("Saved to reports.");
     } catch (err) {
@@ -476,11 +600,28 @@ const Scoring = () => {
       scorecard
         ? scorecard.metrics.map((m) => ({
             metric_name: m.metric_name,
-            weight: m.weight,
+            weight:
+              m.effective_weight ?? m.default_weight ?? m.weight ?? 0,
           }))
         : [],
     [scorecard]
   );
+
+  useEffect(() => {
+    if (weightProfile !== "custom") return;
+    if (customWeights.length) return;
+    const seedWeights = scorecardFallbackWeights.length
+      ? scorecardFallbackWeights
+      : metrics.map((m) => ({
+          metric_name: m.metric_name,
+          weight: m.weight,
+        }));
+    if (seedWeights.length) {
+      const normalized = normalizeWeights(seedWeights, seedWeights);
+      setCustomWeights(normalized.normalized);
+      setNormalizationNote("");
+    }
+  }, [weightProfile, customWeights.length, scorecardFallbackWeights, metrics]);
 
   const handleLoadScorecard = async (opts?: {
     year?: number;
@@ -491,6 +632,14 @@ const Scoring = () => {
     const ticker = opts?.ticker ?? selectedTicker;
     if (!year || !ticker) {
       setScorecardError("Select a year and ticker first.");
+      return;
+    }
+    if (templateSelectionRequired) {
+      setScorecardError("Select a weight template first.");
+      return;
+    }
+    if (customWeightsInvalid) {
+      setScorecardError("Custom weights must be valid numbers and sum > 0.");
       return;
     }
     const policy = opts?.missingPolicy ?? missingPolicy;
@@ -517,10 +666,12 @@ const Scoring = () => {
     }
     setScorecardLoading(true);
     try {
+      const weightPayload = buildWeightPayload();
       const result = await wsmScorecard({
         year: resolvedYear,
         ticker,
         missing_policy: policy,
+        ...weightPayload,
       });
       setScorecard(result);
     } catch (err) {
@@ -572,7 +723,7 @@ const Scoring = () => {
   };
 
   const whatIf = useMemo(() => {
-    if (!scorecard || !useCustomWeights) return null;
+    if (!scorecard || weightProfile !== "custom") return null;
     const weightMap = new Map(
       customWeights.map((w) => [w.metric_name, w.weight])
     );
@@ -588,7 +739,7 @@ const Scoring = () => {
       perMetric.map((p) => [p.metric_name, p.contribution])
     );
     return { total, delta, contributionMap };
-  }, [customWeights, scorecard, useCustomWeights]);
+  }, [customWeights, scorecard, weightProfile]);
 
   const confidenceLabel = useMemo(() => {
     if (!scorecard) return "";
@@ -601,6 +752,80 @@ const Scoring = () => {
       : confidenceLabel === "Medium"
       ? "bg-amber-100 text-amber-800"
       : "bg-red-100 text-red-800";
+
+  const renderWeightProfileSelector = () => (
+    <div className="flex flex-col gap-1">
+      <span className="text-xs text-[rgb(var(--color-text-subtle))]">
+        Weight Profile
+      </span>
+      <Select
+        value={weightProfile}
+        onChange={(e) => {
+          const next = e.target.value as WeightProfile;
+          setWeightProfile(next);
+          if (next !== "template") {
+            setSelectedWeightTemplateId("");
+          }
+        }}
+        className="w-44"
+      >
+        <option value="default">Default</option>
+        <option value="template">Template</option>
+        <option value="custom">Custom</option>
+      </Select>
+      {weightProfile === "template" && (
+        <div className="space-y-1">
+          <Select
+            value={selectedWeightTemplateId || ""}
+            onChange={(e) =>
+              setSelectedWeightTemplateId(
+                e.target.value ? Number(e.target.value) : ""
+              )
+            }
+            className="w-60"
+            disabled={weightTemplatesLoading}
+          >
+            <option value="">Select template</option>
+            {weightTemplates.map((tpl) => (
+              <option key={tpl.id} value={tpl.id}>
+                {tpl.name} ({tpl.mode})
+              </option>
+            ))}
+          </Select>
+          {weightTemplatesLoading && (
+            <p className="text-[11px] text-[rgb(var(--color-text-subtle))]">
+              Loading templates...
+            </p>
+          )}
+          {weightTemplatesError && (
+            <p className="text-[11px] text-red-600">{weightTemplatesError}</p>
+          )}
+          {!weightTemplatesLoading &&
+            !weightTemplatesError &&
+            !weightTemplates.length && (
+              <p className="text-[11px] text-[rgb(var(--color-text-subtle))]">
+                No templates available. Default weights will be used.
+              </p>
+            )}
+          {templateSelectionRequired && (
+            <p className="text-[11px] text-red-600">
+              Choose a template before running.
+            </p>
+          )}
+        </div>
+      )}
+      {weightProfile === "custom" && (
+        <p className="text-[11px] text-[rgb(var(--color-text-subtle))]">
+          Edit metric weights below. Total must be &gt; 0; you can Normalize to 1.
+        </p>
+      )}
+      {customWeightsInvalid && weightProfile === "custom" && (
+        <p className="text-[11px] text-red-600">
+          Enter valid weights (sum must be greater than zero).
+        </p>
+      )}
+    </div>
+  );
 
   const renderTabs = () => (
     <div className="flex border-b border-[rgb(var(--color-border))]">
@@ -683,12 +908,13 @@ const Scoring = () => {
               ))}
             </Select>
           </div>
+          {renderWeightProfileSelector()}
           <Button onClick={handleRun} disabled={!canRun || loading}>
             {loading ? "Running..." : "Run Scoring"}
           </Button>
         </div>
         <p className="text-xs text-[rgb(var(--color-text-subtle))]">
-          Official scoring uses default weights; missing metrics follow the
+          Scoring uses the selected weight profile; missing metrics follow the
           selected policy.
         </p>
       </div>
@@ -708,7 +934,7 @@ const Scoring = () => {
             <div className="flex items-center gap-2">
               <Button
                 onClick={handleSaveRun}
-                disabled={saving}
+                disabled={saving || weightProfileBlocked}
                 variant="secondary"
               >
                 {saving ? "Saving..." : "Save to report"}
@@ -718,7 +944,8 @@ const Scoring = () => {
               )}
             </div>
             <p className="text-xs text-[rgb(var(--color-text-subtle))]">
-              Preview uses default weights; save to persist in Reports.
+              Preview uses the selected weight profile; save to persist in
+              Reports.
             </p>
           </div>
           <Table>
@@ -917,19 +1144,12 @@ const Scoring = () => {
 
   const renderWeightsPanel = () => {
     if (!scorecard || !scorecard.metrics.length) return null;
+    const isCustomProfile = weightProfile === "custom";
+    const isTemplateProfile = weightProfile === "template";
     return (
       <div className="space-y-2 rounded border border-[rgb(var(--color-border))] bg-[rgb(var(--color-surface))] p-3">
         <div className="flex flex-wrap items-center gap-3">
-          <Toggle
-            pressed={useCustomWeights}
-            onChange={(next) => {
-              setUseCustomWeights(next);
-              setNormalizationNote("");
-              if (next) handleNormalizeClick();
-            }}
-            label="Use custom weights (what-if)"
-          />
-          {useCustomWeights && (
+          {isCustomProfile ? (
             <div className="flex flex-wrap gap-2">
               <Button
                 size="sm"
@@ -942,9 +1162,18 @@ const Scoring = () => {
                 Reset to default
               </Button>
             </div>
+          ) : isTemplateProfile ? (
+            <p className="text-xs text-[rgb(var(--color-text-subtle))]">
+              Template weights are applied. Switch profile to Custom to edit
+              weights.
+            </p>
+          ) : (
+            <p className="text-xs text-[rgb(var(--color-text-subtle))]">
+              Default weights are applied. Switch profile to Custom to edit.
+            </p>
           )}
         </div>
-        {useCustomWeights && (
+        {isCustomProfile && (
           <>
             <Table>
               <thead>
@@ -1037,9 +1266,9 @@ const Scoring = () => {
             <th>Type</th>
             <th>Raw Value</th>
             <th>Normalized</th>
-            <th>Default Weight</th>
+            <th>Weight</th>
             <th>Contribution</th>
-            {useCustomWeights && <th>What-if Contribution</th>}
+            {weightProfile === "custom" && <th>What-if Contribution</th>}
             <th>Unit</th>
             <th>Flags</th>
           </tr>
@@ -1058,9 +1287,13 @@ const Scoring = () => {
                   {m.raw_value === null ? "—" : formatDecimal(m.raw_value, 4)}
                 </td>
                 <td>{formatDecimal(m.normalized_value)}</td>
-                <td>{formatDecimal(m.weight)}</td>
+                <td>
+                  {formatDecimal(
+                    m.effective_weight ?? m.weight ?? m.default_weight ?? 0
+                  )}
+                </td>
                 <td>{formatDecimal(m.contribution)}</td>
-                {useCustomWeights && (
+                {weightProfile === "custom" && (
                   <td>{formatDecimal(whatIfContribution)}</td>
                 )}
                 <td>{m.display_unit || "—"}</td>
@@ -1154,11 +1387,12 @@ const Scoring = () => {
             ))}
           </Select>
         </div>
+        <div className="flex flex-col gap-1">{renderWeightProfileSelector()}</div>
         <div className="flex flex-col gap-1">
           <span className="text-xs text-transparent">Load</span>
           <Button
             onClick={() => handleLoadScorecard()}
-            disabled={scorecardLoading}
+            disabled={scorecardLoading || weightProfileBlocked}
           >
             {scorecardLoading ? "Loading..." : "Load Scorecard"}
           </Button>
