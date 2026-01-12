@@ -67,10 +67,10 @@ def _clean_weight_numbers(weights: Dict[str, float]) -> Dict[str, float]:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Weights must be numbers.",
             )
-        if raw < 0:
+        if raw < 0 or raw > 100:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Weights must be non-negative.",
+                detail="Weights must be between 0 and 100.",
             )
         cleaned[key] = float(raw)
     return cleaned

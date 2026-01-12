@@ -22,9 +22,9 @@ export function Toggle({
       aria-checked={pressed}
       onClick={() => onChange(!pressed)}
       className={cn(
-        "inline-flex items-center gap-2 rounded-full border border-[rgb(var(--color-border))] px-3 py-1 text-sm",
+        "inline-flex items-center gap-2 rounded-full border border-[rgb(var(--color-border))] px-3 py-1 text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgb(var(--color-primary))]",
         pressed
-          ? "bg-[rgb(var(--color-primary))]/10 text-[rgb(var(--color-primary))]"
+          ? "bg-[rgb(var(--color-primary))]/15 text-[rgb(var(--color-primary))]"
           : "bg-white text-[rgb(var(--color-text))]",
         className
       )}
@@ -32,10 +32,10 @@ export function Toggle({
     >
       <span
         className={cn(
-          "relative h-4 w-8 rounded-full",
+          "relative h-4 w-9 rounded-full border transition-colors",
           pressed
-            ? "bg-[rgb(var(--color-primary))]"
-            : "bg-[rgb(var(--color-border))]"
+            ? "bg-[rgb(var(--color-primary))] border-[rgb(var(--color-primary))]"
+            : "bg-white border-[rgb(var(--color-border))]"
         )}
         aria-hidden
       >

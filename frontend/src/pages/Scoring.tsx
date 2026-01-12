@@ -3,15 +3,24 @@ import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import { Select } from "../components/ui/Select";
 import { Table } from "../components/ui/Table";
-import { Toggle } from "../components/ui/Toggle";
 import InfoTip from "../components/InfoTip";
+import { Modal } from "../components/ui/Modal";
 
 type MissingPolicy = "redistribute" | "zero" | "drop";
 type Tab = "ranking" | "scorecard";
+type WeightProfile = "default" | "template" | "custom";
 
-type WeightEntry = {
-  metric_name: string;
-  weight: number;
+type WeightTemplate = {
+  id: number;
+  name: string;
+  description?: string | null;
+  mode: "metric" | "section";
+  weights: Record<string, number>;
+};
+
+type WeightTemplateListResponse = {
+  total: number;
+  templates: WeightTemplate[];
 };
 
 const BASE_URL = (
@@ -76,11 +85,9 @@ async function wsmScore(payload: WSMScoreRequest): Promise<void> {
   });
 }
 
-async function wsmScorecard(payload: {
-  year: number;
-  ticker: string;
-  missing_policy: MissingPolicy;
-}): Promise<ScorecardResponse> {
+async function wsmScorecard(
+  payload: ScorecardRequest
+): Promise<ScorecardResponse> {
   return request<ScorecardResponse>("/api/wsm/scorecard", {
     method: "POST",
     body: JSON.stringify(payload),
@@ -106,6 +113,8 @@ type SectionInfo = {
   description: string;
   metrics: MetricInfo[];
 };
+
+type SectionKey = ScorecardMetric["section"];
 
 type MissingPolicyOption = {
   key: MissingPolicy;
@@ -148,10 +157,14 @@ type WSMScorePreviewResponse = {
 
 type WSMScoreRequest = {
   year: number;
-  metrics: MetricWeightInput[];
+  metrics?: MetricWeightInput[] | null;
   tickers?: string[] | null;
   limit?: number | null;
   missing_policy?: MissingPolicy;
+  template_id?: number | null;
+  weight_template_id?: number | null;
+  weight_scope?: "metric" | "section" | null;
+  weights_json?: Record<string, number> | null;
 };
 
 type ScorecardCoverage = {
@@ -159,6 +172,15 @@ type ScorecardCoverage = {
   total: number;
   pct: number;
   missing: string[];
+};
+
+type ScorecardRequest = {
+  year: number;
+  ticker: string;
+  missing_policy: MissingPolicy;
+  weight_template_id?: number | null;
+  weight_scope?: "metric" | "section" | null;
+  weights_json?: Record<string, number> | null;
 };
 
 type ScorecardSectionSubtotals = {
@@ -175,7 +197,9 @@ type ScorecardMetric = {
   allow_negative?: boolean;
   raw_value: number | null;
   normalized_value: number;
-  weight: number;
+  default_weight?: number;
+  effective_weight?: number;
+  weight?: number;
   contribution: number;
   is_missing?: boolean;
 };
@@ -216,6 +240,22 @@ const SECTION_LABELS: Record<ScorecardMetric["section"], string> = {
   cash_flow: "Cash Flow",
 };
 
+function parseWeightInput(value: string): number {
+  const normalized = value.replace(",", ".").trim();
+  if (!normalized) return Number.NaN;
+  const parsed = Number.parseFloat(normalized);
+  return Number.isFinite(parsed) ? parsed : Number.NaN;
+}
+
+function isWeightOutOfRange(weight: number): boolean {
+  return !Number.isFinite(weight) || weight < 0 || weight > 100;
+}
+
+function displayWeightValue(weight: number | undefined): string | number {
+  if (typeof weight === "number" && Number.isFinite(weight)) return weight;
+  return "";
+}
+
 function formatDecimal(value: number | null | undefined, digits = 6): string {
   if (value === null || value === undefined || Number.isNaN(value)) return "—";
   return value.toFixed(digits);
@@ -225,18 +265,6 @@ function asPercent(value: number | null | undefined): number | null {
   if (value === null || value === undefined || Number.isNaN(value)) return null;
   if (value <= 1) return value * 100;
   return value;
-}
-
-function normalizeWeights(entries: WeightEntry[], fallback: WeightEntry[]) {
-  const total = entries.reduce((acc, cur) => acc + (cur.weight || 0), 0);
-  if (total <= 0) {
-    return {
-      normalized: fallback,
-      note: "Weights reset to defaults because sum was zero.",
-    };
-  }
-  const normalized = entries.map((e) => ({ ...e, weight: e.weight / total }));
-  return { normalized, note: "Weights normalized to sum to 1." };
 }
 
 function buildOfficialMetrics(
@@ -264,12 +292,21 @@ const Scoring = () => {
   const [emitens, setEmitens] = useState<EmitenItem[]>([]);
   const [selectedTicker, setSelectedTicker] = useState<string>("");
   const [metrics, setMetrics] = useState<MetricWeightInput[]>([]);
+  const [sections, setSections] = useState<SectionInfo[]>([]);
   const [ranking, setRanking] = useState<WSMRankingPreviewItem[]>([]);
   const [rankingError, setRankingError] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [loadingMeta, setLoadingMeta] = useState(false);
+
+  const [weightProfile, setWeightProfile] = useState<WeightProfile>("default");
+  const [weightTemplates, setWeightTemplates] = useState<WeightTemplate[]>([]);
+  const [weightTemplatesError, setWeightTemplatesError] = useState("");
+  const [weightTemplatesLoading, setWeightTemplatesLoading] = useState(false);
+  const [selectedWeightTemplateId, setSelectedWeightTemplateId] = useState<
+    number | ""
+  >("");
 
   const [missingPolicy, setMissingPolicy] = useState<MissingPolicy>("zero");
   const [rankingPolicyUsed, setRankingPolicyUsed] =
@@ -283,10 +320,36 @@ const Scoring = () => {
   const [scorecard, setScorecard] = useState<ScorecardResponse | null>(null);
   const [scorecardLoading, setScorecardLoading] = useState(false);
   const [scorecardError, setScorecardError] = useState("");
-
-  const [useCustomWeights, setUseCustomWeights] = useState(false);
-  const [customWeights, setCustomWeights] = useState<WeightEntry[]>([]);
-  const [normalizationNote, setNormalizationNote] = useState("");
+  const [customScope, setCustomScope] = useState<"metric" | "section">(
+    "section"
+  );
+  const [customSectionWeights, setCustomSectionWeights] = useState<
+    Record<SectionKey, number>
+  >({
+    balance: Number.NaN,
+    income: Number.NaN,
+    cash_flow: Number.NaN,
+  });
+  const [customMetricWeights, setCustomMetricWeights] = useState<
+    Record<string, number>
+  >({});
+  const [customMetricSearch, setCustomMetricSearch] = useState<string>("");
+  const [customSectionFilter, setCustomSectionFilter] = useState<
+    "all" | SectionKey
+  >("all");
+  const [lastScorecardProfile, setLastScorecardProfile] =
+    useState<WeightProfile | null>(null);
+  const [lastCustomWeightsPayload, setLastCustomWeightsPayload] = useState<{
+    mode: "metric" | "section";
+    weights: Record<string, number>;
+  } | null>(null);
+  const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
+  const [templateName, setTemplateName] = useState("");
+  const [templateDescription, setTemplateDescription] = useState("");
+  const [templateSaveError, setTemplateSaveError] = useState("");
+  const [templateSaving, setTemplateSaving] = useState(false);
+  const [templateSaveSuccess, setTemplateSaveSuccess] = useState("");
+  const [startFromOfficial, setStartFromOfficial] = useState(false);
 
   useEffect(() => {
     const loadEmitens = async () => {
@@ -325,6 +388,7 @@ const Scoring = () => {
         const catalog = await getMetricsCatalog();
         const officialMetrics = buildOfficialMetrics(catalog.sections);
         setMetrics(officialMetrics);
+        setSections(catalog.sections || []);
       } catch (err) {
         const e = err as { detail?: string };
         setRankingError(e.detail || "Failed to load metrics catalog");
@@ -335,28 +399,265 @@ const Scoring = () => {
     loadMetrics();
   }, []);
 
+  const fetchWeightTemplates = useCallback(async () => {
+    setWeightTemplatesLoading(true);
+    setWeightTemplatesError("");
+    try {
+      const res = await request<WeightTemplateListResponse>(
+        "/api/weight-templates?skip=0&limit=50",
+        { method: "GET" }
+      );
+      setWeightTemplates(res.templates || []);
+    } catch (err) {
+      const e = err as { detail?: string };
+      setWeightTemplatesError(
+        e.detail ||
+          "Failed to load weight templates. Default weights available."
+      );
+    } finally {
+      setWeightTemplatesLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    if (!scorecard) return;
-    const defaults: WeightEntry[] = scorecard.metrics.map((m) => ({
-      metric_name: m.metric_name,
-      weight: m.weight,
-    }));
-    const normalized = normalizeWeights(defaults, defaults);
-    setCustomWeights(normalized.normalized);
-    setUseCustomWeights(false);
-    setNormalizationNote("");
-  }, [scorecard]);
+    fetchWeightTemplates();
+  }, [fetchWeightTemplates]);
+
+  const selectedWeightTemplate = useMemo(() => {
+    if (!selectedWeightTemplateId) return undefined;
+    return weightTemplates.find(
+      (t) => t.id === Number(selectedWeightTemplateId)
+    );
+  }, [selectedWeightTemplateId, weightTemplates]);
+
+  const templateSelectionRequired =
+    weightProfile === "template" && !selectedWeightTemplate;
+
+  const customWeightsInvalid = useMemo(() => {
+    if (weightProfile !== "custom") return false;
+    const weights =
+      customScope === "section"
+        ? Object.values(customSectionWeights)
+        : Object.values(customMetricWeights);
+    if (!weights.length) return true;
+    let total = 0;
+    for (const w of weights) {
+      if (isWeightOutOfRange(w)) return true;
+      total += Number.isFinite(w) ? w : 0;
+    }
+    return total <= 0;
+  }, [customMetricWeights, customScope, customSectionWeights, weightProfile]);
+
+  const weightProfileBlocked =
+    templateSelectionRequired || customWeightsInvalid;
+
+  const canSaveTemplate = useMemo(
+    () =>
+      !!(
+        scorecard &&
+        lastScorecardProfile === "custom" &&
+        lastCustomWeightsPayload &&
+        !customWeightsInvalid
+      ),
+    [
+      customWeightsInvalid,
+      lastCustomWeightsPayload,
+      lastScorecardProfile,
+      scorecard,
+    ]
+  );
+
+  const metricSectionMap = useMemo(() => {
+    const map = new Map<string, SectionKey>();
+    sections.forEach((section) => {
+      const key = section.key as SectionKey;
+      section.metrics.forEach((m) => map.set(m.key, key));
+    });
+    scorecard?.metrics.forEach((m) => {
+      map.set(m.metric_name, m.section);
+    });
+    return map;
+  }, [scorecard, sections]);
+
+  const deriveMetricWeights = useCallback((): Record<string, number> => {
+    if (scorecard) {
+      const weights: Record<string, number> = {};
+      scorecard.metrics.forEach((m) => {
+        weights[m.metric_name] =
+          m.effective_weight ?? m.weight ?? m.default_weight ?? 0;
+      });
+      return weights;
+    }
+    const weights: Record<string, number> = {};
+    metrics.forEach((m) => {
+      weights[m.metric_name] = m.weight;
+    });
+    return weights;
+  }, [metrics, scorecard]);
+
+  const deriveSectionWeights = useCallback(
+    (metricWeights: Record<string, number>): Record<SectionKey, number> => {
+      const totals: Record<SectionKey, number> = {
+        balance: 0,
+        income: 0,
+        cash_flow: 0,
+      };
+      Object.entries(metricWeights).forEach(([metricName, weight]) => {
+        const section = metricSectionMap.get(metricName);
+        if (!section) return;
+        const safeWeight = Number.isFinite(weight) ? weight : 0;
+        totals[section] = (totals[section] || 0) + safeWeight;
+      });
+      return totals;
+    },
+    [metricSectionMap]
+  );
+
+  const clearCustomWeights = useCallback(() => {
+    setCustomSectionWeights({
+      balance: Number.NaN,
+      income: Number.NaN,
+      cash_flow: Number.NaN,
+    });
+    setCustomMetricWeights({});
+  }, []);
+
+  const applyOfficialWeights = useCallback(() => {
+    const metricWeights = deriveMetricWeights();
+    const sectionWeights = deriveSectionWeights(metricWeights);
+    setCustomMetricWeights(metricWeights);
+    setCustomSectionWeights(sectionWeights);
+  }, [deriveMetricWeights, deriveSectionWeights]);
+
+  const customWeightsTotal = useMemo(() => {
+    if (weightProfile !== "custom") return 0;
+    const weights =
+      customScope === "section"
+        ? Object.values(customSectionWeights)
+        : Object.values(customMetricWeights);
+    return weights.reduce(
+      (acc, cur) => acc + (Number.isFinite(cur) ? Number(cur) : 0),
+      0
+    );
+  }, [customMetricWeights, customScope, customSectionWeights, weightProfile]);
+
+  const invalidSectionWeights = useMemo(
+    () => ({
+      balance: isWeightOutOfRange(customSectionWeights.balance),
+      income: isWeightOutOfRange(customSectionWeights.income),
+      cash_flow: isWeightOutOfRange(customSectionWeights.cash_flow),
+    }),
+    [customSectionWeights]
+  );
+
+  const effectiveSectionPercents = useMemo(() => {
+    if (weightProfile !== "custom") return null;
+    const total = customWeightsTotal;
+    const baseSections =
+      customScope === "section"
+        ? customSectionWeights
+        : deriveSectionWeights(customMetricWeights);
+    const entries: Record<SectionKey, number> = {
+      balance: baseSections.balance || 0,
+      income: baseSections.income || 0,
+      cash_flow: baseSections.cash_flow || 0,
+    };
+    const percents: Record<SectionKey, number> = {
+      balance: 0,
+      income: 0,
+      cash_flow: 0,
+    };
+    if (total <= 0) return percents;
+    (Object.keys(entries) as SectionKey[]).forEach((key) => {
+      percents[key] = (entries[key] / total) * 100;
+    });
+    return percents;
+  }, [
+    customScope,
+    customSectionWeights,
+    customWeightsTotal,
+    deriveSectionWeights,
+    customMetricWeights,
+    weightProfile,
+  ]);
+
+  const customMetricRows = useMemo(() => {
+    if (scorecard?.metrics?.length) {
+      return scorecard.metrics.map((m) => ({
+        metric_name: m.metric_name,
+        label: m.metric_name,
+        section: m.section,
+      }));
+    }
+    const rows: { metric_name: string; label: string; section: SectionKey }[] =
+      [];
+    sections.forEach((section) => {
+      const sectionKey = section.key as SectionKey;
+      section.metrics.forEach((m) => {
+        rows.push({
+          metric_name: m.key,
+          label: m.label || m.key,
+          section: sectionKey,
+        });
+      });
+    });
+    return rows;
+  }, [scorecard, sections]);
+
+  const invalidMetricWeights = useMemo(() => {
+    const map = new Map<string, boolean>();
+    customMetricRows.forEach((row) => {
+      const val = customMetricWeights[row.metric_name];
+      const resolved = Number.isFinite(val)
+        ? Number(val)
+        : val === undefined
+        ? 0
+        : val;
+      map.set(row.metric_name, isWeightOutOfRange(resolved as number));
+    });
+    return map;
+  }, [customMetricRows, customMetricWeights]);
+
+  const buildWeightPayload = useCallback(() => {
+    if (weightProfile === "template" && selectedWeightTemplate) {
+      return {
+        weight_template_id: selectedWeightTemplate.id,
+        weight_scope: selectedWeightTemplate.mode,
+      } as Pick<WSMScoreRequest, "weight_template_id" | "weight_scope">;
+    }
+    if (weightProfile === "custom") {
+      const weights_json =
+        customScope === "section" ? customSectionWeights : customMetricWeights;
+      return {
+        weight_scope: customScope,
+        weights_json,
+      } as Pick<WSMScoreRequest, "weight_scope" | "weights_json">;
+    }
+    return {} as Pick<
+      WSMScoreRequest,
+      "weight_template_id" | "weight_scope" | "weights_json"
+    >;
+  }, [
+    customMetricWeights,
+    customScope,
+    customSectionWeights,
+    selectedWeightTemplate,
+    weightProfile,
+  ]);
 
   const ensureDropEligibleTickers = useCallback(
     async (year: number): Promise<string[]> => {
       if (dropEligibleByYear[year]) return dropEligibleByYear[year];
       if (!metrics.length) return [];
+      if (weightProfileBlocked) return [];
       setDropEligibilityLoadingYear(year);
       try {
+        const weightPayload = buildWeightPayload();
         const result = await wsmScorePreview({
           year,
           metrics,
           missing_policy: "drop",
+          ...weightPayload,
         });
         const tickers = result.ranking?.map((r) => r.ticker) ?? [];
         setDropEligibleByYear((prev) => ({ ...prev, [year]: tickers }));
@@ -368,7 +669,7 @@ const Scoring = () => {
         setDropEligibilityLoadingYear((prev) => (prev === year ? null : prev));
       }
     },
-    [dropEligibleByYear, metrics]
+    [buildWeightPayload, dropEligibleByYear, metrics, weightProfileBlocked]
   );
 
   useEffect(() => {
@@ -389,11 +690,21 @@ const Scoring = () => {
     return () => {
       cancelled = true;
     };
-  }, [ensureDropEligibleTickers, missingPolicy, selectedTicker, selectedYear]);
+  }, [
+    ensureDropEligibleTickers,
+    missingPolicy,
+    selectedTicker,
+    selectedYear,
+    metrics.length,
+  ]);
 
   const canRun = useMemo(
-    () => !!selectedYear && metrics.length > 0 && !loadingMeta,
-    [selectedYear, metrics.length, loadingMeta]
+    () =>
+      !!selectedYear &&
+      metrics.length > 0 &&
+      !loadingMeta &&
+      !weightProfileBlocked,
+    [loadingMeta, metrics.length, selectedYear, weightProfileBlocked]
   );
 
   const dropEligibleTickers = useMemo(
@@ -422,16 +733,28 @@ const Scoring = () => {
       setRankingError("Metrics are not available yet.");
       return;
     }
+    if (templateSelectionRequired) {
+      setRankingError("Select a weight template first.");
+      return;
+    }
+    if (customWeightsInvalid) {
+      setRankingError(
+        "Enter custom weights between 0 and 100 with total greater than 0."
+      );
+      return;
+    }
     setSaveMessage("");
     setRankingError("");
     setLoading(true);
     setRanking([]);
     setRankingPolicyUsed(missingPolicy);
     try {
+      const weightPayload = buildWeightPayload();
       const result = await wsmScorePreview({
         year: Number(selectedYear),
         metrics,
         missing_policy: missingPolicy,
+        ...weightPayload,
       });
       if (missingPolicy === "drop") {
         setDropEligibleByYear((prev) => ({
@@ -454,13 +777,25 @@ const Scoring = () => {
       setRankingError("Metrics are not available yet.");
       return;
     }
+    if (templateSelectionRequired) {
+      setRankingError("Select a weight template first.");
+      return;
+    }
+    if (customWeightsInvalid) {
+      setRankingError(
+        "Enter custom weights between 0 and 100 with total greater than 0."
+      );
+      return;
+    }
     setSaveMessage("");
     setSaving(true);
     try {
+      const weightPayload = buildWeightPayload();
       await wsmScore({
         year: Number(selectedYear),
         metrics,
         missing_policy: rankingPolicyUsed,
+        ...weightPayload,
       });
       setSaveMessage("Saved to reports.");
     } catch (err) {
@@ -471,17 +806,6 @@ const Scoring = () => {
     }
   };
 
-  const scorecardFallbackWeights = useMemo<WeightEntry[]>(
-    () =>
-      scorecard
-        ? scorecard.metrics.map((m) => ({
-            metric_name: m.metric_name,
-            weight: m.weight,
-          }))
-        : [],
-    [scorecard]
-  );
-
   const handleLoadScorecard = async (opts?: {
     year?: number;
     ticker?: string;
@@ -491,6 +815,16 @@ const Scoring = () => {
     const ticker = opts?.ticker ?? selectedTicker;
     if (!year || !ticker) {
       setScorecardError("Select a year and ticker first.");
+      return;
+    }
+    if (templateSelectionRequired) {
+      setScorecardError("Select a weight template first.");
+      return;
+    }
+    if (customWeightsInvalid) {
+      setScorecardError(
+        "Enter custom weights between 0 and 100 with total greater than zero."
+      );
       return;
     }
     const policy = opts?.missingPolicy ?? missingPolicy;
@@ -517,11 +851,27 @@ const Scoring = () => {
     }
     setScorecardLoading(true);
     try {
+      const weightPayload = buildWeightPayload();
       const result = await wsmScorecard({
         year: resolvedYear,
         ticker,
         missing_policy: policy,
+        ...weightPayload,
       });
+      setLastScorecardProfile(weightProfile);
+      if (weightProfile === "custom") {
+        const weights_json =
+          customScope === "section"
+            ? customSectionWeights
+            : customMetricWeights;
+        setLastCustomWeightsPayload({
+          mode: customScope,
+          weights: { ...weights_json },
+        });
+      } else {
+        setLastCustomWeightsPayload(null);
+      }
+      setTemplateSaveSuccess("");
       setScorecard(result);
     } catch (err) {
       const e = err as { detail?: string };
@@ -541,54 +891,53 @@ const Scoring = () => {
     }
   };
 
-  const handleCustomWeightChange = (metricName: string, rawValue: string) => {
-    const parsed = parseFloat(rawValue);
-    setCustomWeights((prev) => {
-      const updated = prev.map((w) =>
-        w.metric_name === metricName ? { ...w, weight: parsed } : w
-      );
-      const normalized = normalizeWeights(updated, scorecardFallbackWeights);
-      setNormalizationNote(normalized.note);
-      return normalized.normalized;
-    });
+  const openSaveTemplateModal = () => {
+    setTemplateName("");
+    setTemplateDescription("");
+    setTemplateSaveError("");
+    setTemplateSaveSuccess("");
+    setShowSaveTemplateModal(true);
   };
 
-  const handleNormalizeClick = () => {
-    const normalized = normalizeWeights(
-      customWeights,
-      scorecardFallbackWeights
-    );
-    setCustomWeights(normalized.normalized);
-    setNormalizationNote(normalized.note || "Weights normalized to sum to 1.");
+  const handleSaveTemplate = async () => {
+    if (!lastCustomWeightsPayload) {
+      setTemplateSaveError("No custom weights to save.");
+      return;
+    }
+    if (!templateName.trim()) {
+      setTemplateSaveError("Template name is required.");
+      return;
+    }
+    setTemplateSaving(true);
+    setTemplateSaveError("");
+    try {
+      const created = await request<WeightTemplate>("/api/weight-templates", {
+        method: "POST",
+        body: JSON.stringify({
+          name: templateName.trim(),
+          description: templateDescription.trim() || null,
+          mode: lastCustomWeightsPayload.mode,
+          weights: lastCustomWeightsPayload.weights,
+        }),
+      });
+      setTemplateSaving(false);
+      setShowSaveTemplateModal(false);
+      setTemplateSaveSuccess("Template saved.");
+      setWeightProfile("template");
+      setSelectedWeightTemplateId(created.id);
+      fetchWeightTemplates();
+    } catch (err) {
+      const e = err as { detail?: string };
+      setTemplateSaving(false);
+      if (e.detail && `${e.detail}`.toLowerCase().includes("exists")) {
+        setTemplateSaveError("Name already exists.");
+      } else if (e.detail) {
+        setTemplateSaveError(e.detail);
+      } else {
+        setTemplateSaveError("Failed to save template.");
+      }
+    }
   };
-
-  const handleResetWeights = () => {
-    const normalized = normalizeWeights(
-      scorecardFallbackWeights,
-      scorecardFallbackWeights
-    );
-    setCustomWeights(normalized.normalized);
-    setNormalizationNote("Reset to default weights.");
-  };
-
-  const whatIf = useMemo(() => {
-    if (!scorecard || !useCustomWeights) return null;
-    const weightMap = new Map(
-      customWeights.map((w) => [w.metric_name, w.weight])
-    );
-    const perMetric = scorecard.metrics.map((m) => {
-      const weight = weightMap.get(m.metric_name) ?? 0;
-      const normalizedValue = m.normalized_value ?? 0;
-      const contribution = weight * normalizedValue;
-      return { metric_name: m.metric_name, contribution };
-    });
-    const total = perMetric.reduce((acc, cur) => acc + cur.contribution, 0);
-    const delta = total - (scorecard?.total_score ?? 0);
-    const contributionMap = new Map(
-      perMetric.map((p) => [p.metric_name, p.contribution])
-    );
-    return { total, delta, contributionMap };
-  }, [customWeights, scorecard, useCustomWeights]);
 
   const confidenceLabel = useMemo(() => {
     if (!scorecard) return "";
@@ -601,6 +950,74 @@ const Scoring = () => {
       : confidenceLabel === "Medium"
       ? "bg-amber-100 text-amber-800"
       : "bg-red-100 text-red-800";
+
+  const renderWeightProfileSelector = () => (
+    <div className="flex flex-col gap-1">
+      <span className="text-xs text-[rgb(var(--color-text-subtle))]">
+        Weight Profile
+      </span>
+      <Select
+        value={weightProfile}
+        onChange={(e) => {
+          const next = e.target.value as WeightProfile;
+          setWeightProfile(next);
+          if (next !== "template") {
+            setSelectedWeightTemplateId("");
+          }
+          if (next === "custom") {
+            setStartFromOfficial(false);
+            clearCustomWeights();
+          }
+        }}
+        className="w-44"
+      >
+        <option value="default">Default</option>
+        <option value="template">Template</option>
+        <option value="custom">Custom</option>
+      </Select>
+      {weightProfile === "template" && (
+        <div className="space-y-1">
+          <Select
+            value={selectedWeightTemplateId || ""}
+            onChange={(e) =>
+              setSelectedWeightTemplateId(
+                e.target.value ? Number(e.target.value) : ""
+              )
+            }
+            className="w-60"
+            disabled={weightTemplatesLoading}
+          >
+            <option value="">Select template</option>
+            {weightTemplates.map((tpl) => (
+              <option key={tpl.id} value={tpl.id}>
+                {tpl.name} ({tpl.mode})
+              </option>
+            ))}
+          </Select>
+          {weightTemplatesLoading && (
+            <p className="text-[11px] text-[rgb(var(--color-text-subtle))]">
+              Loading templates...
+            </p>
+          )}
+          {weightTemplatesError && (
+            <p className="text-[11px] text-red-600">{weightTemplatesError}</p>
+          )}
+          {!weightTemplatesLoading &&
+            !weightTemplatesError &&
+            !weightTemplates.length && (
+              <p className="text-[11px] text-[rgb(var(--color-text-subtle))]">
+                No templates available. Default weights will be used.
+              </p>
+            )}
+          {templateSelectionRequired && (
+            <p className="text-[11px] text-red-600">
+              Choose a template before running.
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
 
   const renderTabs = () => (
     <div className="flex border-b border-[rgb(var(--color-border))]">
@@ -683,12 +1100,13 @@ const Scoring = () => {
               ))}
             </Select>
           </div>
+          {renderWeightProfileSelector()}
           <Button onClick={handleRun} disabled={!canRun || loading}>
             {loading ? "Running..." : "Run Scoring"}
           </Button>
         </div>
         <p className="text-xs text-[rgb(var(--color-text-subtle))]">
-          Official scoring uses default weights; missing metrics follow the
+          Scoring uses the selected weight profile; missing metrics follow the
           selected policy.
         </p>
       </div>
@@ -708,7 +1126,7 @@ const Scoring = () => {
             <div className="flex items-center gap-2">
               <Button
                 onClick={handleSaveRun}
-                disabled={saving}
+                disabled={saving || weightProfileBlocked}
                 variant="secondary"
               >
                 {saving ? "Saving..." : "Save to report"}
@@ -718,7 +1136,8 @@ const Scoring = () => {
               )}
             </div>
             <p className="text-xs text-[rgb(var(--color-text-subtle))]">
-              Preview uses default weights; save to persist in Reports.
+              Preview uses the selected weight profile; save to persist in
+              Reports.
             </p>
           </div>
           <Table>
@@ -915,87 +1334,252 @@ const Scoring = () => {
     );
   };
 
+  const renderCustomWeightsPanel = () => {
+    const totalLabel = formatDecimal(customWeightsTotal, 6);
+    const showError = weightProfile === "custom" && customWeightsInvalid;
+    const totalIsZero = weightProfile === "custom" && customWeightsTotal <= 0;
+    const showSectionErrors =
+      customScope === "section" &&
+      (invalidSectionWeights.balance ||
+        invalidSectionWeights.income ||
+        invalidSectionWeights.cash_flow);
+    const showMetricErrors =
+      customScope === "metric" &&
+      Array.from(invalidMetricWeights.values()).some(Boolean);
+    const canShowEffectivePercents =
+      weightProfile === "custom" && customWeightsTotal > 0 && !showError;
+
+    const renderSectionInputs = () => (
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        {(
+          [
+            { key: "balance", label: "Balance" },
+            { key: "income", label: "Income" },
+            { key: "cash_flow", label: "Cash Flow" },
+          ] as { key: SectionKey; label: string }[]
+        ).map((entry) => (
+          <label
+            key={entry.key}
+            className="flex flex-col gap-1 rounded border border-[rgb(var(--color-border))] bg-[rgb(var(--color-surface))] p-3"
+          >
+            <span className="text-sm font-medium text-[rgb(var(--color-text))]">
+              {entry.label}
+            </span>
+            <input
+              type="number"
+              min={0}
+              max={100}
+              step="0.01"
+              value={displayWeightValue(customSectionWeights[entry.key])}
+              onChange={(e) =>
+                setCustomSectionWeights((prev) => ({
+                  ...prev,
+                  [entry.key]: parseWeightInput(e.target.value),
+                }))
+              }
+              className={`w-full rounded border px-2 py-1 text-sm ${
+                invalidSectionWeights[entry.key]
+                  ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                  : "border-[rgb(var(--color-border))]"
+              }`}
+            />
+            {invalidSectionWeights[entry.key] && (
+              <span className="text-[11px] text-red-600">Enter 0–100</span>
+            )}
+          </label>
+        ))}
+      </div>
+    );
+
+    const filteredMetricRows = customMetricRows.filter((row) => {
+      const matchesSection =
+        customSectionFilter === "all" || row.section === customSectionFilter;
+      const term = customMetricSearch.trim().toLowerCase();
+      const matchesSearch = term
+        ? row.metric_name.toLowerCase().includes(term) ||
+          row.label.toLowerCase().includes(term)
+        : true;
+      return matchesSection && matchesSearch;
+    });
+
+    const renderMetricInputs = () => (
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            type="text"
+            placeholder="Search metric"
+            value={customMetricSearch}
+            onChange={(e) => setCustomMetricSearch(e.target.value)}
+            className="w-52 rounded border border-[rgb(var(--color-border))] px-2 py-1 text-sm"
+          />
+          <Select
+            value={customSectionFilter}
+            onChange={(e) =>
+              setCustomSectionFilter(e.target.value as "all" | SectionKey)
+            }
+            className="w-44"
+          >
+            <option value="all">All sections</option>
+            <option value="balance">Balance</option>
+            <option value="income">Income</option>
+            <option value="cash_flow">Cash Flow</option>
+          </Select>
+        </div>
+        <div className="max-h-96 overflow-auto rounded border border-[rgb(var(--color-border))]">
+          <Table>
+            <thead>
+              <tr>
+                <th>Metric</th>
+                <th>Section</th>
+                <th className="w-40">Weight</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredMetricRows.map((row) => (
+                <tr key={`custom-weight-${row.metric_name}`}>
+                  <td>{row.label}</td>
+                  <td>{SECTION_LABELS[row.section]}</td>
+                  <td>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step="0.01"
+                      value={displayWeightValue(
+                        customMetricWeights[row.metric_name]
+                      )}
+                      onChange={(e) =>
+                        setCustomMetricWeights((prev) => ({
+                          ...prev,
+                          [row.metric_name]: parseWeightInput(e.target.value),
+                        }))
+                      }
+                      className={`w-full rounded border px-2 py-1 text-sm ${
+                        invalidMetricWeights.get(row.metric_name)
+                          ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                          : "border-[rgb(var(--color-border))]"
+                      }`}
+                    />
+                    {invalidMetricWeights.get(row.metric_name) && (
+                      <span className="text-[11px] text-red-600">
+                        Enter 0–100
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </div>
+      </div>
+    );
+
+    return (
+      <div className="space-y-3 rounded border border-[rgb(var(--color-border))] bg-[rgb(var(--color-surface))] p-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-[rgb(var(--color-text))]">
+              Custom weights
+            </span>
+            <InfoTip content="Section: edit Balance/Income/Cash Flow. Metric: edit individual metrics." />
+          </div>
+          <Select
+            value={customScope}
+            onChange={(e) =>
+              setCustomScope(e.target.value as "metric" | "section")
+            }
+            className="w-36"
+          >
+            <option value="section">Section</option>
+            <option value="metric">Metric</option>
+          </Select>
+          <div className="flex items-center gap-1 text-xs text-[rgb(var(--color-text-subtle))]">
+            <span className="font-medium text-[rgb(var(--color-text))]">
+              Total weight: {totalLabel}
+            </span>
+            <InfoTip content="Total is the sum of raw inputs (0–100). Must be > 0 to run." />
+          </div>
+          <label className="ml-auto flex items-center gap-2 text-xs text-[rgb(var(--color-text))]">
+            <input
+              type="checkbox"
+              className="h-4 w-4"
+              checked={startFromOfficial}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                setStartFromOfficial(checked);
+                if (checked) {
+                  applyOfficialWeights();
+                } else {
+                  clearCustomWeights();
+                }
+              }}
+            />
+            <span>Start from official weights</span>
+            <InfoTip content="Prefill using default weights. Turn off to clear back to empty." />
+          </label>
+        </div>
+        <p className="text-xs text-[rgb(var(--color-text-subtle))]">
+          Enter weights 0–100. Use 0 to exclude. Weights normalize
+          automatically; see effective preview below when valid.
+        </p>
+        {canShowEffectivePercents && effectiveSectionPercents && (
+          <div className="flex flex-wrap items-center gap-3 text-xs">
+            <span className="text-[rgb(var(--color-text-subtle))]">
+              Effective weight preview:
+            </span>
+            {(["balance", "income", "cash_flow"] as SectionKey[]).map((key) => (
+              <span key={key} className="text-[rgb(var(--color-text))]">
+                {SECTION_LABELS[key]}{" "}
+                {formatDecimal(effectiveSectionPercents[key], 1)}%
+              </span>
+            ))}
+          </div>
+        )}
+        {(showError || totalIsZero) && (
+          <span className="text-xs text-red-600">
+            Total must be greater than 0 and all weights must be between 0 and
+            100.
+          </span>
+        )}
+        {showSectionErrors && (
+          <span className="text-xs text-red-600">
+            Fix highlighted section weights.
+          </span>
+        )}
+        {showMetricErrors && (
+          <span className="text-xs text-red-600">
+            Fix highlighted metric weights.
+          </span>
+        )}
+        {customScope === "section"
+          ? renderSectionInputs()
+          : renderMetricInputs()}
+      </div>
+    );
+  };
+
   const renderWeightsPanel = () => {
     if (!scorecard || !scorecard.metrics.length) return null;
+    const isTemplateProfile = weightProfile === "template";
+    const isCustomProfile = weightProfile === "custom";
     return (
       <div className="space-y-2 rounded border border-[rgb(var(--color-border))] bg-[rgb(var(--color-surface))] p-3">
         <div className="flex flex-wrap items-center gap-3">
-          <Toggle
-            pressed={useCustomWeights}
-            onChange={(next) => {
-              setUseCustomWeights(next);
-              setNormalizationNote("");
-              if (next) handleNormalizeClick();
-            }}
-            label="Use custom weights (what-if)"
-          />
-          {useCustomWeights && (
-            <div className="flex flex-wrap gap-2">
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={handleNormalizeClick}
-              >
-                Normalize to 1
-              </Button>
-              <Button size="sm" variant="ghost" onClick={handleResetWeights}>
-                Reset to default
-              </Button>
-            </div>
+          {isCustomProfile ? (
+            <p className="text-xs text-[rgb(var(--color-text-subtle))]">
+              Custom weights accept values 0–100 and will be normalized
+              automatically for this scorecard run.
+            </p>
+          ) : isTemplateProfile ? (
+            <p className="text-xs text-[rgb(var(--color-text-subtle))]">
+              Template weights are applied.
+            </p>
+          ) : (
+            <p className="text-xs text-[rgb(var(--color-text-subtle))]">
+              Default weights are applied.
+            </p>
           )}
         </div>
-        {useCustomWeights && (
-          <>
-            <Table>
-              <thead>
-                <tr>
-                  <th>Metric</th>
-                  <th className="w-40">Weight</th>
-                </tr>
-              </thead>
-              <tbody>
-                {scorecard.metrics.map((m) => {
-                  const weightEntry = customWeights.find(
-                    (w) => w.metric_name === m.metric_name
-                  );
-                  return (
-                    <tr key={`weight-${m.metric_name}`}>
-                      <td>{m.metric_name}</td>
-                      <td>
-                        <input
-                          type="number"
-                          step="0.000001"
-                          min={0}
-                          value={weightEntry?.weight ?? 0}
-                          onChange={(e) =>
-                            handleCustomWeightChange(
-                              m.metric_name,
-                              e.target.value
-                            )
-                          }
-                          className="w-full rounded border border-[rgb(var(--color-border))] px-2 py-1 text-sm"
-                        />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </Table>
-            {normalizationNote && (
-              <p className="text-xs text-[rgb(var(--color-text-subtle))]">
-                {normalizationNote}
-              </p>
-            )}
-            {whatIf && (
-              <p className="text-sm text-[rgb(var(--color-text))]">
-                What-if score: {formatDecimal(whatIf.total)} (Δ vs default:{" "}
-                {whatIf.delta >= 0 ? "+" : ""}
-                {formatDecimal(whatIf.delta)}) — rank is not recomputed for
-                what-if weights.
-              </p>
-            )}
-          </>
-        )}
       </div>
     );
   };
@@ -1037,18 +1621,14 @@ const Scoring = () => {
             <th>Type</th>
             <th>Raw Value</th>
             <th>Normalized</th>
-            <th>Default Weight</th>
+            <th>Weight</th>
             <th>Contribution</th>
-            {useCustomWeights && <th>What-if Contribution</th>}
             <th>Unit</th>
             <th>Flags</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((m) => {
-            const whatIfContribution = whatIf?.contributionMap.get(
-              m.metric_name
-            );
             return (
               <tr key={`${m.metric_name}-${m.section}`}>
                 <td>{m.metric_name}</td>
@@ -1058,11 +1638,12 @@ const Scoring = () => {
                   {m.raw_value === null ? "—" : formatDecimal(m.raw_value, 4)}
                 </td>
                 <td>{formatDecimal(m.normalized_value)}</td>
-                <td>{formatDecimal(m.weight)}</td>
+                <td>
+                  {formatDecimal(
+                    m.effective_weight ?? m.weight ?? m.default_weight ?? 0
+                  )}
+                </td>
                 <td>{formatDecimal(m.contribution)}</td>
-                {useCustomWeights && (
-                  <td>{formatDecimal(whatIfContribution)}</td>
-                )}
                 <td>{m.display_unit || "—"}</td>
                 <td>{renderFlags(m)}</td>
               </tr>
@@ -1155,14 +1736,29 @@ const Scoring = () => {
           </Select>
         </div>
         <div className="flex flex-col gap-1">
-          <span className="text-xs text-transparent">Load</span>
-          <Button
-            onClick={() => handleLoadScorecard()}
-            disabled={scorecardLoading}
-          >
-            {scorecardLoading ? "Loading..." : "Load Scorecard"}
-          </Button>
+          {renderWeightProfileSelector()}
         </div>
+      </div>
+
+      {weightProfile === "custom" && renderCustomWeightsPanel()}
+
+      <div className="flex flex-wrap items-center gap-3">
+        <Button
+          onClick={() => handleLoadScorecard()}
+          disabled={scorecardLoading || weightProfileBlocked}
+        >
+          {scorecardLoading ? "Loading..." : "Load Scorecard"}
+        </Button>
+        {templateSelectionRequired && weightProfile === "template" && (
+          <span className="text-xs text-red-600">
+            Select a template before loading.
+          </span>
+        )}
+        {weightProfile === "custom" && customWeightsInvalid && (
+          <span className="text-xs text-red-600">
+            Enter custom weights 0–100; total must be greater than 0 to load.
+          </span>
+        )}
       </div>
 
       {!scorecard && !scorecardLoading && !scorecardError && (
@@ -1188,6 +1784,18 @@ const Scoring = () => {
       {scorecard && (
         <div className="space-y-4">
           {renderScorecardSummary()}
+          {canSaveTemplate && (
+            <div className="flex flex-wrap items-center gap-3">
+              <Button variant="secondary" onClick={openSaveTemplateModal}>
+                Save as Template
+              </Button>
+              {templateSaveSuccess && (
+                <span className="text-xs text-green-700">
+                  {templateSaveSuccess}
+                </span>
+              )}
+            </div>
+          )}
           {renderSectionSubtotals()}
           {renderWeightsPanel()}
           {renderScorecardTable()}
@@ -1207,27 +1815,86 @@ const Scoring = () => {
   );
 
   return (
-    <div className="space-y-6">
-      <Card
-        header={
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-3 rounded border border-[rgb(var(--color-border))] bg-[rgb(var(--color-surface))] px-3 py-2 text-xs text-[rgb(var(--color-text-subtle))]">
-              <span>Normalization: within-year across all tickers</span>
-              <span
-                className="h-3 w-px bg-[rgb(var(--color-border))]"
-                aria-hidden
-              />
-              <span>Tie-breaker: Total Score → Coverage → Ticker</span>
+    <>
+      <div className="space-y-6">
+        <Card
+          header={
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-3 rounded border border-[rgb(var(--color-border))] bg-[rgb(var(--color-surface))] px-3 py-2 text-xs text-[rgb(var(--color-text-subtle))]">
+                <span>Normalization: within-year across all tickers</span>
+                <span
+                  className="h-3 w-px bg-[rgb(var(--color-border))]"
+                  aria-hidden
+                />
+                <span>Tie-breaker: Total Score → Coverage → Ticker</span>
+              </div>
             </div>
+          }
+        >
+          {renderTabs()}
+          <div className="pt-4">
+            {tab === "ranking" ? renderRankingTab() : renderScorecardTab()}
           </div>
-        }
-      >
-        {renderTabs()}
-        <div className="pt-4">
-          {tab === "ranking" ? renderRankingTab() : renderScorecardTab()}
-        </div>
-      </Card>
-    </div>
+        </Card>
+      </div>
+
+      {showSaveTemplateModal && (
+        <Modal
+          title="Save weight template"
+          open={showSaveTemplateModal}
+          onClose={() => setShowSaveTemplateModal(false)}
+          footer={
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => setShowSaveTemplateModal(false)}
+                disabled={templateSaving}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleSaveTemplate} disabled={templateSaving}>
+                {templateSaving ? "Saving..." : "Save Template"}
+              </Button>
+            </div>
+          }
+        >
+          <div className="space-y-3">
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-[rgb(var(--color-text))]">
+                Name<span className="text-red-600">*</span>
+              </label>
+              <input
+                type="text"
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+                className="w-full rounded border border-[rgb(var(--color-border))] px-2 py-1 text-sm"
+                placeholder="Template name"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-[rgb(var(--color-text))]">
+                Description (optional)
+              </label>
+              <textarea
+                value={templateDescription}
+                onChange={(e) => setTemplateDescription(e.target.value)}
+                className="min-h-[80px] w-full rounded border border-[rgb(var(--color-border))] px-2 py-1 text-sm"
+                placeholder="Add notes for yourself"
+              />
+            </div>
+            <p className="text-xs text-[rgb(var(--color-text-subtle))]">
+              Templates are private to your account.
+            </p>
+            {templateSaveError && (
+              <p className="text-sm text-red-600">{templateSaveError}</p>
+            )}
+            {templateSaveSuccess && (
+              <p className="text-xs text-green-700">{templateSaveSuccess}</p>
+            )}
+          </div>
+        </Modal>
+      )}
+    </>
   );
 };
 

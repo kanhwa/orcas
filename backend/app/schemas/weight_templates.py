@@ -62,8 +62,8 @@ class WeightTemplateBase(BaseModel):
         for key, raw in value.items():
             if not isinstance(raw, (int, float)):
                 raise ValueError("weights must contain only numbers")
-            if raw < 0:
-                raise ValueError("weights must be non-negative numbers")
+            if raw < 0 or raw > 100:
+                raise ValueError("weights must be between 0 and 100")
             cleaned[key] = float(raw)
         if sum(cleaned.values()) <= 0:
             raise ValueError("weights must contain at least one positive number")
@@ -134,8 +134,8 @@ class WeightTemplateUpdate(BaseModel):
         for key, raw in value.items():
             if not isinstance(raw, (int, float)):
                 raise ValueError("weights must contain only numbers")
-            if raw < 0:
-                raise ValueError("weights must be non-negative numbers")
+            if raw < 0 or raw > 100:
+                raise ValueError("weights must be between 0 and 100")
             cleaned[key] = float(raw)
         if sum(cleaned.values()) <= 0:
             raise ValueError("weights must contain at least one positive number")

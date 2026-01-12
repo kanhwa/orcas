@@ -54,10 +54,14 @@ export interface MetricWeightInput {
 
 export interface WSMScoreRequest {
   year: number;
-  metrics: MetricWeightInput[];
+  metrics?: MetricWeightInput[] | null;
   tickers?: string[] | null;
   limit?: number | null;
   missing_policy?: "redistribute" | "zero" | "drop";
+  template_id?: number | null;
+  weight_template_id?: number | null;
+  weight_scope?: "metric" | "section" | null;
+  weights_json?: Record<string, number> | null;
 }
 
 export interface WSMRankingItem {
@@ -68,6 +72,27 @@ export interface WSMRankingItem {
 export interface WSMScoreResponse {
   year: number;
   ranking: WSMRankingItem[];
+}
+
+export interface CoverageSummary {
+  used: number;
+  total: number;
+  pct: number;
+}
+
+export interface WSMRankingPreviewItem {
+  rank: number;
+  ticker: string;
+  score: number;
+  coverage: CoverageSummary;
+  confidence: "High" | "Medium" | "Low";
+}
+
+export interface WSMScorePreviewResponse {
+  year: number;
+  missing_policy: "redistribute" | "zero" | "drop";
+  ranking: WSMRankingPreviewItem[];
+  tie_breaker: string[];
 }
 
 export interface SectionRankingRequest {
@@ -250,6 +275,73 @@ export async function wsmScore(
   });
 }
 
+export async function wsmScorePreview(
+  payload: WSMScoreRequest
+): Promise<WSMScorePreviewResponse> {
+  return request<WSMScorePreviewResponse>("/api/wsm/score-preview", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export interface ScorecardRequest {
+  year: number;
+  ticker: string;
+  missing_policy?: "redistribute" | "zero" | "drop";
+  weight_template_id?: number | null;
+  weight_scope?: "metric" | "section" | null;
+  weights_json?: Record<string, number> | null;
+}
+
+export interface ScorecardCoverage {
+  used: number;
+  total: number;
+  pct: number;
+  missing: string[];
+}
+
+export interface ScorecardSectionSubtotals {
+  balance: number;
+  income: number;
+  cash_flow: number;
+}
+
+export interface ScorecardMetric {
+  metric_name: string;
+  section: "balance" | "income" | "cash_flow";
+  type: "benefit" | "cost";
+  display_unit: string;
+  allow_negative: boolean;
+  raw_value: number | null;
+  normalized_value: number;
+  default_weight?: number;
+  effective_weight?: number;
+  weight?: number;
+  contribution: number;
+  is_missing: boolean;
+}
+
+export interface ScorecardResponse {
+  year: number;
+  ticker: string;
+  total_score: number;
+  rank: number;
+  coverage: ScorecardCoverage;
+  confidence: "High" | "Medium" | "Low";
+  section_subtotals: ScorecardSectionSubtotals;
+  tie_breaker: string[];
+  metrics: ScorecardMetric[];
+}
+
+export async function wsmScorecard(
+  payload: ScorecardRequest
+): Promise<ScorecardResponse> {
+  return request<ScorecardResponse>("/api/wsm/scorecard", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function sectionRanking(
   payload: SectionRankingRequest
 ): Promise<SectionRankingResponse> {
@@ -341,6 +433,9 @@ export interface CompareRequest {
   mode: "overall" | "section";
   section?: "income" | "balance" | "cashflow" | null;
   missing_policy?: "redistribute" | "zero" | "drop";
+  weight_template_id?: number | null;
+  weight_scope?: "metric" | "section" | null;
+  weights_json?: Record<string, number> | null;
 }
 
 export interface TickerSeries {
@@ -361,6 +456,79 @@ export async function compare(
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+// =============================================================================
+// Weight Templates (Private per user)
+// =============================================================================
+
+export interface WeightTemplate {
+  id: number;
+  owner_user_id: number;
+  name: string;
+  description?: string | null;
+  mode: "metric" | "section";
+  weights: Record<string, number>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WeightTemplateListResponse {
+  total: number;
+  templates: WeightTemplate[];
+}
+
+export interface WeightTemplateCreate {
+  name: string;
+  description?: string | null;
+  mode: "metric" | "section";
+  weights: Record<string, number>;
+}
+
+export interface WeightTemplateUpdate {
+  name?: string;
+  description?: string | null;
+  mode?: "metric" | "section";
+  weights?: Record<string, number>;
+}
+
+export async function listWeightTemplates(
+  skip = 0,
+  limit = 50
+): Promise<WeightTemplateListResponse> {
+  const params = new URLSearchParams({
+    skip: String(skip),
+    limit: String(limit),
+  });
+  return request<WeightTemplateListResponse>(
+    `/api/weight-templates?${params.toString()}`,
+    {
+      method: "GET",
+    }
+  );
+}
+
+export async function createWeightTemplate(
+  payload: WeightTemplateCreate
+): Promise<WeightTemplate> {
+  return request<WeightTemplate>("/api/weight-templates", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateWeightTemplate(
+  id: number,
+  payload: WeightTemplateUpdate
+): Promise<WeightTemplate> {
+  return request<WeightTemplate>(`/api/weight-templates/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteWeightTemplate(id: number): Promise<void> {
+  return request<void>(`/api/weight-templates/${id}`, { method: "DELETE" });
 }
 
 // =============================================================================
