@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -12,7 +12,13 @@ import {
   Bar,
   type TooltipProps,
 } from "recharts";
-import { CompareRequest, CompareResponse, compare } from "../services/api";
+import {
+  CompareRequest,
+  CompareResponse,
+  WeightTemplate,
+  compare,
+  listWeightTemplates,
+} from "../services/api";
 import InfoTip from "../components/InfoTip";
 import { Card } from "../components/ui/Card";
 import { Select } from "../components/ui/Select";
@@ -27,6 +33,7 @@ type Tab = "compare" | "historical";
 type Mode = "overall" | "section";
 type Section = "income" | "balance" | "cashflow";
 type MissingPolicy = "zero" | "redistribute" | "drop";
+type WeightProfile = "default" | "template" | "custom";
 
 interface MetricOption extends MultiSelectOption {
   description?: string;
@@ -84,6 +91,13 @@ function CompareTab() {
   const [metricKeys, setMetricKeys] = useState<string[]>([]);
   const [includeBenchmark, setIncludeBenchmark] = useState(false);
   const [missingPolicy, setMissingPolicy] = useState<MissingPolicy>("zero");
+  const [weightProfile, setWeightProfile] = useState<WeightProfile>("default");
+  const [weightTemplates, setWeightTemplates] = useState<WeightTemplate[]>([]);
+  const [selectedWeightTemplateId, setSelectedWeightTemplateId] = useState<
+    number | ""
+  >("");
+  const [weightTemplatesError, setWeightTemplatesError] = useState("");
+  const [weightTemplatesLoading, setWeightTemplatesLoading] = useState(false);
   const [result, setResult] = useState<CompareResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -94,6 +108,25 @@ function CompareTab() {
     () => getMissingPolicyOptions(),
     [getMissingPolicyOptions]
   );
+
+  useEffect(() => {
+    const loadTemplates = async () => {
+      setWeightTemplatesLoading(true);
+      setWeightTemplatesError("");
+      try {
+        const res = await listWeightTemplates(0, 50);
+        setWeightTemplates(res.templates || []);
+      } catch (err) {
+        const e = err as { detail?: string };
+        setWeightTemplatesError(
+          e.detail || "Failed to load weight templates. Default weights will be used."
+        );
+      } finally {
+        setWeightTemplatesLoading(false);
+      }
+    };
+    loadTemplates();
+  }, []);
 
   // Handle mode change - clear section/metrics when switching to overall
   const handleModeChange = (newMode: Mode) => {
@@ -120,6 +153,16 @@ function CompareTab() {
     }));
   }, [getMetricsBySection, section, mode]);
 
+  const selectedWeightTemplate = useMemo(() => {
+    if (!selectedWeightTemplateId) return undefined;
+    return weightTemplates.find(
+      (tpl) => tpl.id === Number(selectedWeightTemplateId)
+    );
+  }, [selectedWeightTemplateId, weightTemplates]);
+
+  const templateSelectionRequired =
+    weightProfile === "template" && !selectedWeightTemplate;
+
   // Validation helpers
   const validationErrors = useMemo(() => {
     const errors: string[] = [];
@@ -129,8 +172,16 @@ function CompareTab() {
     if (mode === "section" && metricKeys.length === 0) {
       errors.push("Select at least one metric for Section Ranking mode");
     }
+    if (templateSelectionRequired) errors.push("Select a weight template");
     return errors;
-  }, [tickers, yearFrom, yearTo, mode, metricKeys]);
+  }, [
+    tickers,
+    yearFrom,
+    yearTo,
+    mode,
+    metricKeys,
+    templateSelectionRequired,
+  ]);
 
   const isValid = validationErrors.length === 0;
 
@@ -145,6 +196,14 @@ function CompareTab() {
       return;
     }
 
+    const weightPayload =
+      weightProfile === "template" && selectedWeightTemplate
+        ? {
+            weight_template_id: selectedWeightTemplate.id,
+            weight_scope: selectedWeightTemplate.mode,
+          }
+        : {};
+
     const payload: CompareRequest = {
       tickers,
       year_from: yearFrom,
@@ -152,6 +211,7 @@ function CompareTab() {
       mode,
       section: mode === "section" ? section : null,
       missing_policy: missingPolicy,
+      ...weightPayload,
     };
 
     setLoading(true);
@@ -460,6 +520,72 @@ function CompareTab() {
                 ))}
               </Select>
             </div>
+
+            <div className="space-y-1">
+              <label className="text-sm font-semibold text-[rgb(var(--color-text-muted))]">
+                Weight Profile
+              </label>
+              <Select
+                value={weightProfile}
+                onChange={(e) => {
+                  const next = e.target.value as WeightProfile;
+                  setWeightProfile(next);
+                  if (next !== "template") {
+                    setSelectedWeightTemplateId("");
+                  }
+                }}
+              >
+                <option value="default">Default</option>
+                <option value="template">Template</option>
+                <option value="custom" disabled>
+                  Custom (not available yet)
+                </option>
+              </Select>
+            </div>
+
+            {weightProfile === "template" && (
+              <div className="space-y-1">
+                <label className="text-sm font-semibold text-[rgb(var(--color-text-muted))]">
+                  Weight Template
+                </label>
+                <Select
+                  value={selectedWeightTemplateId || ""}
+                  onChange={(e) =>
+                    setSelectedWeightTemplateId(
+                      e.target.value ? Number(e.target.value) : ""
+                    )
+                  }
+                  disabled={weightTemplatesLoading}
+                >
+                  <option value="">Select template</option>
+                  {weightTemplates.map((tpl) => (
+                    <option key={tpl.id} value={tpl.id}>
+                      {tpl.name} ({tpl.mode})
+                    </option>
+                  ))}
+                </Select>
+                {weightTemplatesLoading && (
+                  <p className="text-xs text-[rgb(var(--color-text-subtle))]">
+                    Loading templates...
+                  </p>
+                )}
+                {weightTemplatesError && (
+                  <p className="text-xs text-red-600">{weightTemplatesError}</p>
+                )}
+                {!weightTemplatesLoading &&
+                  !weightTemplatesError &&
+                  !weightTemplates.length && (
+                    <p className="text-xs text-[rgb(var(--color-text-subtle))]">
+                      No templates available.
+                    </p>
+                  )}
+                {templateSelectionRequired && (
+                  <p className="text-xs text-red-600">
+                    Select a template to run with template weights.
+                  </p>
+                )}
+              </div>
+            )}
 
             {mode === "section" && (
               <div className="space-y-1">
