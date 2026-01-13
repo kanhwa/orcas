@@ -113,7 +113,7 @@ def simulate(
     Simulate WSM score with metric overrides.
     Compare baseline vs simulated scores.
     """
-    result = run_simulation(db, payload, debug=debug_sim)
+    result = run_simulation(db, payload, user_id=current_user.id, debug=debug_sim)
     try:
         db.add(
             SimulationLog(

@@ -3,7 +3,7 @@
 import enum
 from sqlalchemy import (
     Column, Integer, String, Text, DateTime, ForeignKey,
-    Numeric, UniqueConstraint, Enum, func, Index
+    Numeric, UniqueConstraint, Enum, func, Index, LargeBinary
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
@@ -36,6 +36,15 @@ class ImportStatus(str, enum.Enum):
     success = "success"
     failed = "failed"
     rolled_back = "rolled_back"
+
+
+class ReportType(str, enum.Enum):
+    scoring_scorecard = "scoring_scorecard"
+    compare_stocks = "compare_stocks"
+    compare_historical = "compare_historical"
+    simulation_scenario = "simulation_scenario"
+    analysis_screening = "analysis_screening"
+    analysis_metric_ranking = "analysis_metric_ranking"
 
 
 class AuditLog(Base):
@@ -245,3 +254,23 @@ class WeightTemplate(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
     owner = relationship("User", backref="weight_templates")
+
+
+class Report(Base):
+    __tablename__ = "reports"
+
+    __table_args__ = (
+        UniqueConstraint("owner_user_id", "name", name="uq_reports_owner_name"),
+        Index("ix_reports_owner", "owner_user_id"),
+        Index("ix_reports_type", "type"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    owner_user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String(200), nullable=False)
+    type = Column(Enum(ReportType, name="report_type"), nullable=False)
+    pdf_data = Column(LargeBinary, nullable=False)
+    metadata_json = Column(JSONB, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    owner = relationship("User", backref="reports")
