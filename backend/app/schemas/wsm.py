@@ -92,6 +92,10 @@ class SimulationRequest(BaseModel):
     section: Optional[Literal["income", "balance", "cashflow"]] = None
     overrides: List[MetricOverride] = Field(default_factory=list)
     missing_policy: Literal["redistribute", "zero", "drop"] = "zero"
+    weight_template_id: Optional[int] = Field(default=None, description="Optional weight template to apply")
+    weight_scope: Optional[Literal["metric", "section"]] = None
+    weights_json: Optional[Dict[str, float]] = None
+    weight_profile: Optional[Literal["default", "template"]] = Field(default="default")
 
 
 class SimulationAdjustmentDetail(BaseModel):

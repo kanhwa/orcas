@@ -10,6 +10,8 @@ import {
   getYears,
   getMetricsCatalog,
   SimulationAdjustmentDetail,
+  listWeightTemplates,
+  WeightTemplate,
 } from "../services/api";
 import InfoTip from "../components/InfoTip";
 
@@ -69,6 +71,8 @@ interface SimulationResult {
   warnings: string[];
 }
 
+type WeightProfile = "default" | "template";
+
 type AppliedAdjustmentRow = SimulationAdjustmentDetail & {
   display_label?: string | null;
   unitResolution?: UnitResolution;
@@ -111,6 +115,21 @@ const Simulation: React.FC = () => {
   );
   const [loadingMetrics, setLoadingMetrics] = useState(true);
 
+  // Weight profile / templates
+  const [weightProfile, setWeightProfile] = useState<WeightProfile>("default");
+  const [weightTemplates, setWeightTemplates] = useState<WeightTemplate[]>([]);
+  const [weightTemplatesLoading, setWeightTemplatesLoading] = useState(false);
+  const [weightTemplatesError, setWeightTemplatesError] = useState("");
+  const [selectedWeightTemplateId, setSelectedWeightTemplateId] = useState<
+    number | ""
+  >("");
+  const selectedWeightTemplate = useMemo(() => {
+    if (!selectedWeightTemplateId) return undefined;
+    return weightTemplates.find(
+      (t) => t.id === Number(selectedWeightTemplateId)
+    );
+  }, [selectedWeightTemplateId, weightTemplates]);
+
   // Form state
   const [selectedTicker, setSelectedTicker] = useState("");
   const [adjustments, setAdjustments] = useState<MetricAdjustment[]>([]);
@@ -120,6 +139,7 @@ const Simulation: React.FC = () => {
   const [result, setResult] = useState<SimulationResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resultWeightLabel, setResultWeightLabel] = useState<string>("");
 
   // Lookup detail rows by metric key/name for applied adjustments
   const detailLookup = useMemo(() => {
@@ -317,6 +337,26 @@ const Simulation: React.FC = () => {
     loadMetricUnitMapping();
   }, []);
 
+  const fetchWeightTemplates = useCallback(async () => {
+    setWeightTemplatesLoading(true);
+    setWeightTemplatesError("");
+    try {
+      const res = await listWeightTemplates(0, 50);
+      setWeightTemplates(res.templates || []);
+    } catch (err) {
+      const e = err as { detail?: string };
+      setWeightTemplatesError(
+        e.detail || "Failed to load templates. Default weights will be used."
+      );
+    } finally {
+      setWeightTemplatesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchWeightTemplates();
+  }, [fetchWeightTemplates]);
+
   const sectionLabelByKey = useMemo(() => {
     const map: Record<string, string> = {
       income: "Income",
@@ -368,6 +408,14 @@ const Simulation: React.FC = () => {
     }
     return groups;
   }, [metricsBySection, selectedMetricKeys]);
+
+  const templateSelectionRequired =
+    weightProfile === "template" && !selectedWeightTemplateId;
+
+  const canRunSimulation =
+    !!selectedTicker &&
+    (weightProfile === "default" ||
+      (weightProfile === "template" && !!selectedWeightTemplateId));
 
   // Check if any metrics are available
   const hasAvailableMetrics = useMemo(() => {
@@ -433,6 +481,11 @@ const Simulation: React.FC = () => {
       return;
     }
 
+    if (templateSelectionRequired) {
+      setError("Select a weight template to run simulation.");
+      return;
+    }
+
     if (baselineYear === null) {
       setError("Baseline year not available");
       return;
@@ -455,6 +508,11 @@ const Simulation: React.FC = () => {
         value: a.adjustment_percent, // Percentage adjustment
       }));
 
+      const weightPayload =
+        weightProfile === "template" && selectedWeightTemplateId
+          ? { weight_template_id: selectedWeightTemplateId }
+          : {};
+
       const response = await simulate({
         ticker: selectedTicker,
         year: baselineYear,
@@ -462,6 +520,8 @@ const Simulation: React.FC = () => {
         section: null,
         overrides,
         missing_policy: "zero",
+        weight_profile: weightProfile,
+        ...weightPayload,
       });
 
       // Find emiten name and format (remove "Unknown" suffix)
@@ -483,6 +543,13 @@ const Simulation: React.FC = () => {
       const simulatedScore = response.simulated_score || 0;
       const delta = response.delta || 0;
 
+      const weightLabel =
+        weightProfile === "template" && selectedWeightTemplate
+          ? `Template: ${selectedWeightTemplate.name} (${selectedWeightTemplate.mode})`
+          : weightProfile === "template"
+          ? "Template weights"
+          : "Default weights";
+
       setResult({
         ticker: selectedTicker,
         ticker_name: tickerName,
@@ -495,6 +562,7 @@ const Simulation: React.FC = () => {
         adjustments_detail: response.adjustments_detail || [],
         warnings: response.message ? [response.message] : [],
       });
+      setResultWeightLabel(weightLabel);
     } catch (err) {
       const e = err as { detail?: string };
       setError(e.detail || "Simulation failed. Please try again.");
@@ -510,6 +578,7 @@ const Simulation: React.FC = () => {
     setNextId(1);
     setResult(null);
     setError(null);
+    setResultWeightLabel("");
     if (availableYears.length > 0) {
       const latest = Math.max(...availableYears);
       setBaselineYear(latest);
@@ -798,6 +867,73 @@ const Simulation: React.FC = () => {
             </Select>
           </div>
 
+          {/* Weight Profile */}
+          <div className="mb-6">
+            <label className="block text-sm font-semibold text-[rgb(var(--color-text))] mb-2">
+              Weight Profile
+            </label>
+            <div className="flex flex-wrap items-center gap-3">
+              <Select
+                value={weightProfile}
+                onChange={(e) => {
+                  const next = e.target.value as WeightProfile;
+                  setWeightProfile(next);
+                  if (next === "default") {
+                    setSelectedWeightTemplateId("");
+                  }
+                }}
+                className="w-44"
+              >
+                <option value="default">Default</option>
+                <option value="template">Template</option>
+              </Select>
+
+              {weightProfile === "template" && (
+                <div className="flex flex-col gap-1">
+                  <Select
+                    value={selectedWeightTemplateId || ""}
+                    onChange={(e) =>
+                      setSelectedWeightTemplateId(
+                        e.target.value ? Number(e.target.value) : ""
+                      )
+                    }
+                    className="w-64"
+                    disabled={weightTemplatesLoading}
+                  >
+                    <option value="">Select template</option>
+                    {weightTemplates.map((tpl) => (
+                      <option key={tpl.id} value={tpl.id}>
+                        {tpl.name} ({tpl.mode})
+                      </option>
+                    ))}
+                  </Select>
+                  {weightTemplatesLoading && (
+                    <span className="text-[11px] text-[rgb(var(--color-text-subtle))]">
+                      Loading templates...
+                    </span>
+                  )}
+                  {weightTemplatesError && (
+                    <span className="text-[11px] text-red-600">
+                      {weightTemplatesError}
+                    </span>
+                  )}
+                  {!weightTemplatesLoading &&
+                    !weightTemplatesError &&
+                    weightTemplates.length === 0 && (
+                      <span className="text-[11px] text-[rgb(var(--color-text-subtle))]">
+                        No templates yet.
+                      </span>
+                    )}
+                  {templateSelectionRequired && (
+                    <span className="text-[11px] text-red-600">
+                      Choose a template to run simulation.
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Metric Adjustments */}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-3">
@@ -967,7 +1103,7 @@ const Simulation: React.FC = () => {
           <div className="flex gap-3">
             <Button
               onClick={handleSimulate}
-              disabled={loading || !selectedTicker}
+              disabled={loading || !canRunSimulation}
             >
               {loading ? "Calculating..." : "▶ Run Simulation"}
             </Button>
@@ -1009,6 +1145,14 @@ const Simulation: React.FC = () => {
             </div>
 
             {/* Score Comparison */}
+            {resultWeightLabel && (
+              <div className="mb-2 text-xs text-[rgb(var(--color-text-subtle))]">
+                Weights applied:
+                <span className="ml-2 inline-flex items-center rounded bg-[rgb(var(--color-border))] px-2 py-1 text-[rgb(var(--color-text))]">
+                  {resultWeightLabel}
+                </span>
+              </div>
+            )}
             <div className="grid grid-cols-3 gap-4 mb-6">
               <div className="text-center p-4 bg-white rounded-lg border border-[rgb(var(--color-border))]">
                 <div className="text-sm text-[rgb(var(--color-text-subtle))] mb-1">

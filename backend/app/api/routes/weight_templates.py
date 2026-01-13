@@ -90,12 +90,16 @@ def update_weight_template(
     if template is None:
         raise HTTPException(status_code=404, detail="Template not found")
 
+    if payload.mode is not None and payload.mode != template.scope:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Template mode cannot be changed; create a new template",
+        )
+
     if payload.name is not None:
         template.name = payload.name
     if payload.description is not None:
         template.description = payload.description
-    if payload.mode is not None:
-        template.scope = payload.mode
     if payload.weights is not None:
         template.weights_json = payload.weights
 
