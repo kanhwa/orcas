@@ -1154,11 +1154,41 @@ def run_simulation(
         )
         metric_defs_for_overrides = {d.metric_name: d for d in existing_defs}
 
-    # Get metrics based on mode
+    # Resolve weights (default or template/custom) then derive metrics for mode
+    mapping_entries, default_weight_raw, normalized_default_weights = _prepare_mapping_defaults()
+
+    weight_scope = payload.weight_scope
+    weights_json = payload.weights_json
+    if payload.weight_template_id is not None:
+        template = _load_weight_template_owned(db, payload.weight_template_id, user_id)
+        weight_scope = template.scope
+        weights_json = template.weights_json
+
+    weight_map = _resolve_metric_weight_map(
+        weight_scope,
+        weights_json,
+        mapping_entries,
+        default_weight_raw,
+        normalized_default_weights,
+    )
+
     if payload.mode == "section":
-        metrics = _get_section_metrics(db, payload.section)
+        section_key = _normalize_section_key(payload.section)
+        section_entries = [e for e in mapping_entries if _normalize_section_key(e.section) == section_key]
+        if not section_entries:
+            return SimulationResponse(
+                ticker=payload.ticker,
+                year=payload.year,
+                mode=payload.mode,
+                section=payload.section,
+                message="No metrics available for the selected mode/section.",
+            )
+        section_weight_map = _normalize_weight_map(
+            {e.metric_name: weight_map.get(e.metric_name, 0.0) for e in section_entries}
+        )
+        metrics = _metric_inputs_from_weight_map(section_entries, section_weight_map)
     else:
-        metrics = _get_overall_scope_metrics(db)
+        metrics = _metric_inputs_from_weight_map(mapping_entries, weight_map)
 
     if not metrics:
         return SimulationResponse(

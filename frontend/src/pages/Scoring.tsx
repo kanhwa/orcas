@@ -350,6 +350,31 @@ const Scoring = () => {
   const [templateSaving, setTemplateSaving] = useState(false);
   const [templateSaveSuccess, setTemplateSaveSuccess] = useState("");
   const [startFromOfficial, setStartFromOfficial] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<WeightTemplate | null>(
+    null
+  );
+  const [templateEditName, setTemplateEditName] = useState("");
+  const [templateEditDescription, setTemplateEditDescription] = useState("");
+  const [templateEditError, setTemplateEditError] = useState("");
+  const [templateEditSaving, setTemplateEditSaving] = useState(false);
+  const [templateToDelete, setTemplateToDelete] =
+    useState<WeightTemplate | null>(null);
+  const [templateDeleteError, setTemplateDeleteError] = useState("");
+  const [templateDeleteLoading, setTemplateDeleteLoading] = useState(false);
+  const [editSectionWeights, setEditSectionWeights] = useState<
+    Record<SectionKey, number>
+  >({ balance: Number.NaN, income: Number.NaN, cash_flow: Number.NaN });
+  const [editMetricWeights, setEditMetricWeights] = useState<
+    Record<string, number>
+  >({});
+  const [editMetricSearch, setEditMetricSearch] = useState("");
+  const [editSectionFilter, setEditSectionFilter] = useState<
+    "all" | SectionKey
+  >("all");
+  const [editStartFromOfficial, setEditStartFromOfficial] = useState(false);
+  const [editOriginalWeights, setEditOriginalWeights] = useState<
+    Record<string, number>
+  >({});
 
   useEffect(() => {
     const loadEmitens = async () => {
@@ -513,6 +538,32 @@ const Scoring = () => {
     [metricSectionMap]
   );
 
+  const normalizeTemplateSectionWeights = useCallback(
+    (weights: Record<string, number>): Record<SectionKey, number> => {
+      const base: Record<SectionKey, number> = {
+        balance: Number.NaN,
+        income: Number.NaN,
+        cash_flow: Number.NaN,
+      };
+      Object.entries(weights || {}).forEach(([key, val]) => {
+        if (key === "balance" || key === "income" || key === "cash_flow") {
+          base[key as SectionKey] = Number(val);
+        }
+      });
+      return base;
+    },
+    []
+  );
+
+  const computeOfficialWeightsForMode = useCallback(
+    (mode: "metric" | "section"): Record<string, number> => {
+      const officialMetricWeights = deriveMetricWeights();
+      if (mode === "metric") return officialMetricWeights;
+      return deriveSectionWeights(officialMetricWeights);
+    },
+    [deriveMetricWeights, deriveSectionWeights]
+  );
+
   const clearCustomWeights = useCallback(() => {
     setCustomSectionWeights({
       balance: Number.NaN,
@@ -617,6 +668,74 @@ const Scoring = () => {
     });
     return map;
   }, [customMetricRows, customMetricWeights]);
+
+  const editMetricRows = customMetricRows;
+
+  const filteredEditMetricRows = useMemo(() => {
+    const rows = editMetricRows;
+    const term = editMetricSearch.trim().toLowerCase();
+    return rows.filter((row) => {
+      const matchesSection =
+        editSectionFilter === "all" || row.section === editSectionFilter;
+      const matchesSearch = term
+        ? row.metric_name.toLowerCase().includes(term) ||
+          row.label.toLowerCase().includes(term)
+        : true;
+      return matchesSection && matchesSearch;
+    });
+  }, [editMetricRows, editMetricSearch, editSectionFilter]);
+
+  const editWeightsTotal = useMemo(() => {
+    if (!editingTemplate) return 0;
+    const sourceWeights =
+      editingTemplate.mode === "section"
+        ? Object.values(editSectionWeights)
+        : Object.values(editMetricWeights);
+    return sourceWeights.reduce(
+      (acc, cur) => acc + (Number.isFinite(cur) ? Number(cur) : 0),
+      0
+    );
+  }, [editMetricWeights, editSectionWeights, editingTemplate]);
+
+  const editWeightsInvalid = useMemo(() => {
+    if (!editingTemplate) return false;
+    const mode = editingTemplate.mode;
+    if (mode === "section") {
+      const values = Object.values(editSectionWeights);
+      if (!values.length) return true;
+      if (values.some((v) => isWeightOutOfRange(v))) return true;
+      return editWeightsTotal <= 0;
+    }
+    const values = Object.values(editMetricWeights);
+    if (!values.length) return true;
+    if (values.some((v) => isWeightOutOfRange(v))) return true;
+    return editWeightsTotal <= 0;
+  }, [
+    editMetricWeights,
+    editSectionWeights,
+    editWeightsTotal,
+    editingTemplate,
+  ]);
+
+  const editInvalidSectionWeights = useMemo(
+    () => ({
+      balance: isWeightOutOfRange(editSectionWeights.balance),
+      income: isWeightOutOfRange(editSectionWeights.income),
+      cash_flow: isWeightOutOfRange(editSectionWeights.cash_flow),
+    }),
+    [editSectionWeights]
+  );
+
+  const restoreEditOriginalWeights = useCallback(() => {
+    if (!editingTemplate) return;
+    if (editingTemplate.mode === "section") {
+      setEditSectionWeights(
+        normalizeTemplateSectionWeights(editOriginalWeights)
+      );
+    } else {
+      setEditMetricWeights({ ...(editOriginalWeights || {}) });
+    }
+  }, [editOriginalWeights, editingTemplate, normalizeTemplateSectionWeights]);
 
   const buildWeightPayload = useCallback(() => {
     if (weightProfile === "template" && selectedWeightTemplate) {
@@ -891,6 +1010,28 @@ const Scoring = () => {
     }
   };
 
+  const buildEditWeightsPayload = useCallback((): Record<
+    string,
+    number
+  > | null => {
+    if (!editingTemplate) return null;
+    const sourceWeights =
+      editingTemplate.mode === "section"
+        ? editSectionWeights
+        : editMetricWeights;
+    const cleaned: Record<string, number> = {};
+    let total = 0;
+    Object.entries(sourceWeights).forEach(([key, val]) => {
+      if (!Number.isFinite(val)) return;
+      const num = Number(val);
+      if (num < 0 || num > 100) return;
+      cleaned[key] = num;
+      total += num;
+    });
+    if (total <= 0) return null;
+    return cleaned;
+  }, [editMetricWeights, editSectionWeights, editingTemplate]);
+
   const openSaveTemplateModal = () => {
     setTemplateName("");
     setTemplateDescription("");
@@ -936,6 +1077,110 @@ const Scoring = () => {
       } else {
         setTemplateSaveError("Failed to save template.");
       }
+    }
+  };
+
+  const openEditTemplateModal = (tpl: WeightTemplate) => {
+    setEditingTemplate(tpl);
+    setTemplateEditName(tpl.name);
+    setTemplateEditDescription(tpl.description || "");
+    setTemplateEditError("");
+    setEditOriginalWeights(tpl.weights || {});
+    setEditStartFromOfficial(false);
+    setEditMetricSearch("");
+    setEditSectionFilter("all");
+    if (tpl.mode === "section") {
+      setEditSectionWeights(normalizeTemplateSectionWeights(tpl.weights));
+      setEditMetricWeights({});
+    } else {
+      setEditMetricWeights({ ...(tpl.weights || {}) });
+      setEditSectionWeights({
+        balance: Number.NaN,
+        income: Number.NaN,
+        cash_flow: Number.NaN,
+      });
+    }
+  };
+
+  const handleUpdateTemplate = async () => {
+    if (!editingTemplate) return;
+    if (!templateEditName.trim()) {
+      setTemplateEditError("Template name is required.");
+      return;
+    }
+    if (editWeightsInvalid) {
+      setTemplateEditError(
+        "Enter weights between 0 and 100 with total greater than 0."
+      );
+      return;
+    }
+
+    const weightsPayload = buildEditWeightsPayload();
+    if (!weightsPayload) {
+      setTemplateEditError(
+        "Enter weights between 0 and 100 with total greater than 0."
+      );
+      return;
+    }
+
+    const payload: Record<string, unknown> = {
+      name: templateEditName.trim(),
+      description: templateEditDescription.trim() || null,
+      mode: editingTemplate.mode, // keep mode immutable; backend enforces
+      weights: weightsPayload,
+    };
+
+    setTemplateEditSaving(true);
+    setTemplateEditError("");
+    try {
+      await request<WeightTemplate>(
+        `/api/weight-templates/${editingTemplate.id}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify(payload),
+        }
+      );
+      setEditingTemplate(null);
+      setTemplateEditSaving(false);
+      fetchWeightTemplates();
+    } catch (err) {
+      setTemplateEditSaving(false);
+      const e = err as { status?: number; detail?: string };
+      const detail = e.detail ? `${e.detail}` : "";
+      if (e.status === 409 || detail.toLowerCase().includes("exists")) {
+        setTemplateEditError("Name already exists.");
+      } else if (detail.toLowerCase().includes("mode")) {
+        setTemplateEditError(
+          "Template mode cannot be changed; create a new template instead."
+        );
+      } else if (e.detail) {
+        setTemplateEditError(e.detail);
+      } else {
+        setTemplateEditError("Failed to update template.");
+      }
+    }
+  };
+
+  const handleDeleteTemplate = async () => {
+    if (!templateToDelete) return;
+    setTemplateDeleteLoading(true);
+    setTemplateDeleteError("");
+    try {
+      await request<void>(`/api/weight-templates/${templateToDelete.id}`, {
+        method: "DELETE",
+      });
+      if (selectedWeightTemplateId === templateToDelete.id) {
+        setSelectedWeightTemplateId("");
+      }
+      setTemplateToDelete(null);
+      setTemplateDeleteLoading(false);
+      fetchWeightTemplates();
+    } catch (err) {
+      setTemplateDeleteLoading(false);
+      const e = err as { detail?: string };
+      setTemplateDeleteError(
+        e.detail || "Failed to delete template. Please try again."
+      );
     }
   };
 
@@ -1013,6 +1258,54 @@ const Scoring = () => {
             <p className="text-[11px] text-red-600">
               Choose a template before running.
             </p>
+          )}
+          {weightTemplates.length > 0 && (
+            <div className="mt-2 space-y-2 rounded border border-[rgb(var(--color-border))] bg-[rgb(var(--color-surface))] p-2">
+              <div className="flex items-center justify-between text-[11px] font-semibold text-[rgb(var(--color-text))]">
+                <span>My templates</span>
+                <button
+                  type="button"
+                  className="text-[rgb(var(--color-primary))] underline"
+                  onClick={() => fetchWeightTemplates()}
+                >
+                  Refresh
+                </button>
+              </div>
+              <div className="space-y-2">
+                {weightTemplates.map((tpl) => (
+                  <div
+                    key={tpl.id}
+                    className="flex items-start justify-between gap-2 rounded border border-[rgb(var(--color-border))] bg-white p-2"
+                  >
+                    <div className="space-y-0.5 text-[11px] text-[rgb(var(--color-text-subtle))]">
+                      <div className="text-[rgb(var(--color-text))] text-sm font-semibold">
+                        {tpl.name}
+                      </div>
+                      <div className="uppercase text-[10px] font-bold">
+                        {tpl.mode}
+                      </div>
+                      {tpl.description && <div>{tpl.description}</div>}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => openEditTemplateModal(tpl)}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setTemplateToDelete(tpl)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </div>
       )}
@@ -1890,6 +2183,271 @@ const Scoring = () => {
             )}
             {templateSaveSuccess && (
               <p className="text-xs text-green-700">{templateSaveSuccess}</p>
+            )}
+          </div>
+        </Modal>
+      )}
+
+      {/* Edit/Delete modals live at the root so inline buttons work even when the save modal is closed. */}
+      {editingTemplate && (
+        <Modal
+          title={`Edit template: ${editingTemplate.name}`}
+          open={!!editingTemplate}
+          onClose={() => setEditingTemplate(null)}
+          footer={
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => setEditingTemplate(null)}
+                disabled={templateEditSaving}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleUpdateTemplate}
+                disabled={templateEditSaving || editWeightsInvalid}
+              >
+                {templateEditSaving ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          }
+        >
+          <div className="space-y-3">
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-[rgb(var(--color-text))]">
+                Name<span className="text-red-600">*</span>
+              </label>
+              <input
+                type="text"
+                value={templateEditName}
+                onChange={(e) => setTemplateEditName(e.target.value)}
+                className="w-full rounded border border-[rgb(var(--color-border))] px-2 py-1 text-sm"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-[rgb(var(--color-text))]">
+                Description
+              </label>
+              <textarea
+                value={templateEditDescription}
+                onChange={(e) => setTemplateEditDescription(e.target.value)}
+                className="min-h-[80px] w-full rounded border border-[rgb(var(--color-border))] px-2 py-1 text-sm"
+              />
+            </div>
+            <div className="space-y-2 rounded border border-[rgb(var(--color-border))] bg-[rgb(var(--color-surface))] p-2 text-xs text-[rgb(var(--color-text-subtle))]">
+              <div className="font-semibold text-[rgb(var(--color-text))]">
+                Mode: {editingTemplate.mode} (immutable)
+              </div>
+              <label className="flex items-center gap-2 text-[rgb(var(--color-text))]">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4"
+                  checked={editStartFromOfficial}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setEditStartFromOfficial(checked);
+                    if (!editingTemplate) return;
+                    if (checked) {
+                      const official = computeOfficialWeightsForMode(
+                        editingTemplate.mode
+                      );
+                      if (editingTemplate.mode === "section") {
+                        setEditSectionWeights(
+                          normalizeTemplateSectionWeights(official)
+                        );
+                        setEditMetricWeights({});
+                      } else {
+                        setEditMetricWeights({ ...(official || {}) });
+                      }
+                    } else {
+                      // When turning the toggle off, restore the template's original weights to avoid stale drafts.
+                      restoreEditOriginalWeights();
+                    }
+                  }}
+                />
+                <span>Start from official weights</span>
+              </label>
+              <p>
+                Official fills defaults for this mode; turning it off restores
+                the template's saved weights.
+              </p>
+            </div>
+
+            {editingTemplate.mode === "section" ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs text-[rgb(var(--color-text-subtle))]">
+                  <span>Section weights (0-100)</span>
+                  <span className="text-[rgb(var(--color-text))] font-semibold">
+                    Total: {formatDecimal(editWeightsTotal, 6)}
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                  {(
+                    [
+                      { key: "balance", label: "Balance" },
+                      { key: "income", label: "Income" },
+                      { key: "cash_flow", label: "Cash Flow" },
+                    ] as { key: SectionKey; label: string }[]
+                  ).map((entry) => (
+                    <label
+                      key={entry.key}
+                      className="flex flex-col gap-1 rounded border border-[rgb(var(--color-border))] bg-[rgb(var(--color-surface))] p-3"
+                    >
+                      <span className="text-sm font-medium text-[rgb(var(--color-text))]">
+                        {entry.label}
+                      </span>
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        step="0.01"
+                        value={displayWeightValue(
+                          editSectionWeights[entry.key]
+                        )}
+                        onChange={(e) =>
+                          setEditSectionWeights((prev) => ({
+                            ...prev,
+                            [entry.key]: parseWeightInput(e.target.value),
+                          }))
+                        }
+                        className={`w-full rounded border px-2 py-1 text-sm ${
+                          editInvalidSectionWeights[entry.key]
+                            ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                            : "border-[rgb(var(--color-border))]"
+                        }`}
+                      />
+                      {editInvalidSectionWeights[entry.key] && (
+                        <span className="text-[11px] text-red-600">
+                          Enter 0-100
+                        </span>
+                      )}
+                    </label>
+                  ))}
+                </div>
+                {editWeightsInvalid && (
+                  <p className="text-xs text-red-600">
+                    Total must be greater than 0 and all weights must be between
+                    0 and 100.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center gap-3">
+                  <input
+                    type="text"
+                    placeholder="Search metric"
+                    value={editMetricSearch}
+                    onChange={(e) => setEditMetricSearch(e.target.value)}
+                    className="w-52 rounded border border-[rgb(var(--color-border))] px-2 py-1 text-sm"
+                  />
+                  <Select
+                    value={editSectionFilter}
+                    onChange={(e) =>
+                      setEditSectionFilter(e.target.value as "all" | SectionKey)
+                    }
+                    className="w-44"
+                  >
+                    <option value="all">All sections</option>
+                    <option value="balance">Balance</option>
+                    <option value="income">Income</option>
+                    <option value="cash_flow">Cash Flow</option>
+                  </Select>
+                  <span className="text-xs text-[rgb(var(--color-text))] font-semibold">
+                    Total: {formatDecimal(editWeightsTotal, 6)}
+                  </span>
+                </div>
+                <div className="max-h-96 overflow-auto rounded border border-[rgb(var(--color-border))]">
+                  <Table>
+                    <thead>
+                      <tr>
+                        <th>Metric</th>
+                        <th>Section</th>
+                        <th className="w-36">Weight</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredEditMetricRows.map((row) => (
+                        <tr key={`edit-weight-${row.metric_name}`}>
+                          <td>{row.label}</td>
+                          <td>{SECTION_LABELS[row.section]}</td>
+                          <td>
+                            <input
+                              type="number"
+                              min={0}
+                              max={100}
+                              step="0.01"
+                              value={displayWeightValue(
+                                editMetricWeights[row.metric_name]
+                              )}
+                              onChange={(e) =>
+                                setEditMetricWeights((prev) => ({
+                                  ...prev,
+                                  [row.metric_name]: parseWeightInput(
+                                    e.target.value
+                                  ),
+                                }))
+                              }
+                              className={`w-full rounded border px-2 py-1 text-sm ${
+                                isWeightOutOfRange(
+                                  editMetricWeights[row.metric_name]
+                                )
+                                  ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                                  : "border-[rgb(var(--color-border))]"
+                              }`}
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                </div>
+                {editWeightsInvalid && (
+                  <p className="text-xs text-red-600">
+                    Total must be greater than 0 and all weights must be between
+                    0 and 100.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {templateEditError && (
+              <p className="text-sm text-red-600">{templateEditError}</p>
+            )}
+          </div>
+        </Modal>
+      )}
+
+      {templateToDelete && (
+        <Modal
+          title="Delete template"
+          open={!!templateToDelete}
+          onClose={() => setTemplateToDelete(null)}
+          footer={
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => setTemplateToDelete(null)}
+                disabled={templateDeleteLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={handleDeleteTemplate}
+                disabled={templateDeleteLoading}
+              >
+                {templateDeleteLoading ? "Deleting..." : "Delete"}
+              </Button>
+            </div>
+          }
+        >
+          <div className="space-y-2 text-sm">
+            <p>
+              Delete template "{templateToDelete.name}"? This cannot be undone.
+            </p>
+            {templateDeleteError && (
+              <p className="text-sm text-red-600">{templateDeleteError}</p>
             )}
           </div>
         </Modal>

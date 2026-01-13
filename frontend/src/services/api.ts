@@ -367,6 +367,10 @@ export interface SimulationRequest {
   section?: "cashflow" | "balance" | "income" | null;
   overrides: MetricOverride[];
   missing_policy?: "redistribute" | "zero" | "drop";
+  weight_template_id?: number | null;
+  weight_scope?: "metric" | "section" | null;
+  weights_json?: Record<string, number> | null;
+  weight_profile?: "default" | "template";
 }
 
 export interface SimulationResponse {
