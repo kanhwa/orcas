@@ -1,7 +1,15 @@
-import { useState, useRef, useEffect } from "react";
+import {
+  useState,
+  useRef,
+  useEffect,
+  useLayoutEffect,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
+import { createPortal } from "react-dom";
 
 interface InfoTipProps {
-  content: string | React.ReactNode;
+  content: string | ReactNode;
   ariaLabel?: string;
 }
 
@@ -13,8 +21,42 @@ interface InfoTipProps {
  */
 export default function InfoTip({ content, ariaLabel = "Info" }: InfoTipProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [position, setPosition] = useState({ top: 0, left: 0 });
   const containerRef = useRef<HTMLSpanElement>(null);
   const triggerRef = useRef<HTMLSpanElement>(null);
+
+  const updatePosition = () => {
+    const trigger = triggerRef.current;
+    if (!trigger) return;
+
+    const rect = trigger.getBoundingClientRect();
+    const gap = 10;
+    const estimatedWidth = 260;
+    let left = rect.right + gap;
+    const viewportWidth = window.innerWidth;
+
+    if (left + estimatedWidth > viewportWidth - 12) {
+      left = Math.max(12, rect.left - gap - estimatedWidth);
+    }
+
+    const centerY = rect.top + rect.height / 2;
+    setPosition({ top: centerY, left });
+  };
+
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+
+    updatePosition();
+
+    const handleWindowChange = () => updatePosition();
+    window.addEventListener("resize", handleWindowChange);
+    window.addEventListener("scroll", handleWindowChange, true);
+
+    return () => {
+      window.removeEventListener("resize", handleWindowChange);
+      window.removeEventListener("scroll", handleWindowChange, true);
+    };
+  }, [isOpen]);
 
   // Handle escape key to close tooltip
   useEffect(() => {
@@ -79,16 +121,25 @@ export default function InfoTip({ content, ariaLabel = "Info" }: InfoTipProps) {
       >
         ⓘ
       </span>
-      {isOpen && (
-        <div style={styles.popover} role="tooltip">
-          <p style={styles.content}>{content}</p>
-        </div>
-      )}
+      {isOpen &&
+        createPortal(
+          <div
+            style={{
+              ...styles.popover,
+              top: position.top,
+              left: position.left,
+            }}
+            role="tooltip"
+          >
+            <p style={styles.content}>{content}</p>
+          </div>,
+          document.body
+        )}
     </span>
   );
 }
 
-const styles: Record<string, React.CSSProperties> = {
+const styles: Record<string, CSSProperties> = {
   container: {
     position: "relative",
     display: "inline-block",
@@ -112,18 +163,17 @@ const styles: Record<string, React.CSSProperties> = {
     transition: "background 0.2s, color 0.2s",
   },
   popover: {
-    position: "absolute",
-    left: "0",
-    top: "calc(100% + 0.35rem)",
+    position: "fixed",
     background: "#fff",
     border: "1px solid var(--border)",
     borderRadius: "6px",
     padding: "0.75rem 1rem",
     boxShadow: "0 8px 20px rgba(0,0,0,0.12)",
-    zIndex: 1000,
+    zIndex: 9999,
     minWidth: "220px",
     maxWidth: "320px",
     pointerEvents: "none",
+    transform: "translateY(-50%)",
   },
   content: {
     margin: "0",
