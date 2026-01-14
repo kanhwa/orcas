@@ -1,7 +1,8 @@
-import { ReactNode, useState, useRef, useEffect } from "react";
+import { ReactNode, useState, useRef, useEffect, CSSProperties } from "react";
 import { cn } from "../../utils/cn";
 import InfoTip from "../InfoTip";
 import { AvatarBadge } from "../AvatarBadge";
+import orcaIcon from "../../assets/orca.svg";
 
 export interface NavItem {
   key: string;
@@ -50,6 +51,11 @@ function RoleBadge({ role }: { role: string }) {
   );
 }
 
+const HEADER_HEIGHT = 80;
+const SIDEBAR_WIDTH_EXPANDED = 240;
+const SIDEBAR_WIDTH_COLLAPSED = 72;
+const SIDEBAR_STORAGE_KEY = "orcas:sidebar-collapsed";
+
 export function AppShell({
   pageTitle,
   pageSubtitle,
@@ -61,7 +67,20 @@ export function AppShell({
   children,
 }: AppShellProps) {
   const [profileOpen, setProfileOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true";
+  });
   const profileRef = useRef<HTMLDivElement>(null);
+
+  const shellStyle = {
+    ["--app-header-height" as string]: `${HEADER_HEIGHT}px`,
+  } as CSSProperties;
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(SIDEBAR_STORAGE_KEY, String(sidebarCollapsed));
+  }, [sidebarCollapsed]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -78,15 +97,41 @@ export function AppShell({
   }, []);
 
   return (
-    <div className="min-h-screen bg-[rgb(var(--color-surface))] text-[rgb(var(--color-text))]">
+    <div
+      className="min-h-screen bg-[rgb(var(--color-surface))] text-[rgb(var(--color-text))]"
+      style={shellStyle}
+    >
       {/* Header with gradient background */}
-      <header className="bg-gradient-to-r from-[rgb(var(--color-primary))] to-[rgb(var(--color-action))] px-6 py-3 shadow-lg">
+      <header
+        className="sticky top-0 z-30 bg-gradient-to-r from-[rgb(var(--color-primary))] to-[rgb(var(--color-action))] px-6 py-3 shadow-lg"
+        style={{ minHeight: "var(--app-header-height)" }}
+      >
         <div className="flex items-center justify-between">
           {/* Logo & Brand - Left */}
           <div className="flex items-center gap-3">
-            {/* Orca Icon */}
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm text-2xl">
-              🐋
+            <button
+              type="button"
+              aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              onClick={() => setSidebarCollapsed((prev) => !prev)}
+              className="hidden rounded-lg bg-white/20 p-2 text-white transition hover:bg-white/30 lg:inline-flex"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className={cn("h-5 w-5 transition", sidebarCollapsed && "scale-x-[-1]")}
+              >
+                <path d="M4 6h16" />
+                <path d="M4 12h16" />
+                <path d="M4 18h16" />
+              </svg>
+            </button>
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
+              <img src={orcaIcon} alt="ORCAS logo" className="h-7 w-7" />
             </div>
             <div>
               <div className="text-lg font-bold tracking-wide text-white">
@@ -183,42 +228,75 @@ export function AppShell({
 
       <div className="flex">
         {/* Sidebar */}
-        <aside className="hidden w-60 shrink-0 border-r border-[rgb(var(--color-border))] bg-white lg:block">
-          <nav className="flex flex-col gap-1 p-3">
-            {navItems.map((item) => (
-              <button
-                key={item.key}
-                type="button"
-                onClick={item.onSelect}
-                disabled={item.disabled}
-                className={cn(
-                  "flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm text-left transition",
-                  item.active
-                    ? "bg-gradient-to-r from-[rgb(var(--color-primary))] to-[rgb(var(--color-action))] text-white font-semibold shadow-md"
-                    : "text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-surface))]",
-                  item.disabled && "opacity-50 cursor-not-allowed"
-                )}
-              >
-                {item.icon && <span className="text-lg">{item.icon}</span>}
-                <span className="flex-1">{item.label}</span>
-                {item.description && (
-                  <span
-                    className="shrink-0"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }}
-                    onMouseDown={(e) => e.stopPropagation()}
-                  >
-                    <InfoTip
-                      content={item.description}
-                      ariaLabel={`Info: ${item.label}`}
-                    />
-                  </span>
-                )}
-              </button>
-            ))}
-          </nav>
+        <aside
+          className="hidden shrink-0 border-r border-[rgb(var(--color-border))] bg-white transition-[width] duration-200 ease-in-out lg:block"
+          style={{
+            width: `${sidebarCollapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH_EXPANDED}px`,
+            position: "sticky",
+            top: "var(--app-header-height)",
+            height: "calc(100vh - var(--app-header-height))",
+          }}
+        >
+          <div className="flex h-full flex-col">
+            <div
+              className={cn(
+                "flex items-center gap-3 px-3 py-4 border-b border-[rgb(var(--color-border))]",
+                sidebarCollapsed && "justify-center"
+              )}
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[rgb(var(--color-surface))]">
+                <img src={orcaIcon} alt="ORCAS logo" className="h-7 w-7" />
+              </div>
+              {!sidebarCollapsed && (
+                <div className="leading-tight">
+                  <div className="text-sm font-semibold text-[rgb(var(--color-text))]">
+                    ORCAS
+                  </div>
+                  <div className="text-xs text-[rgb(var(--color-text-subtle))]">
+                    Workspace
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-3 transition-[width] duration-200 ease-in-out">
+              {navItems.map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={item.onSelect}
+                  disabled={item.disabled}
+                  className={cn(
+                    "flex w-full items-center rounded-xl px-3 py-3 text-sm text-left transition",
+                    sidebarCollapsed ? "justify-center gap-0" : "gap-3",
+                    item.active
+                      ? "bg-gradient-to-r from-[rgb(var(--color-primary))] to-[rgb(var(--color-action))] text-white font-semibold shadow-md"
+                      : "text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-surface))]",
+                    item.disabled && "opacity-50 cursor-not-allowed"
+                  )}
+                  title={sidebarCollapsed ? item.label : undefined}
+                >
+                  {item.icon && <span className="text-lg">{item.icon}</span>}
+                  {!sidebarCollapsed && <span className="flex-1">{item.label}</span>}
+                  {!sidebarCollapsed && item.description && (
+                    <span
+                      className="shrink-0"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                      onMouseDown={(e) => e.stopPropagation()}
+                    >
+                      <InfoTip
+                        content={item.description}
+                        ariaLabel={`Info: ${item.label}`}
+                      />
+                    </span>
+                  )}
+                </button>
+              ))}
+            </nav>
+          </div>
         </aside>
 
         {/* Main content */}
