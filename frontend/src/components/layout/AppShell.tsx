@@ -2,6 +2,7 @@ import { ReactNode, useState, useRef, useEffect, CSSProperties } from "react";
 import { cn } from "../../utils/cn";
 import InfoTip from "../InfoTip";
 import { AvatarBadge } from "../AvatarBadge";
+import orcaIcon from "../../assets/orca.svg";
 
 export interface NavItem {
   key: string;
@@ -129,8 +130,8 @@ export function AppShell({
                 <path d="M4 18h16" />
               </svg>
             </button>
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm text-2xl text-white">
-              🐋
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
+              <img src={orcaIcon} alt="ORCAS logo" className="h-7 w-7" />
             </div>
             <div>
               <div className="text-lg font-bold tracking-wide text-white">
@@ -243,8 +244,8 @@ export function AppShell({
                 sidebarCollapsed && "justify-center"
               )}
             >
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[rgb(var(--color-surface))] text-lg">
-                🐋
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[rgb(var(--color-surface))]">
+                <img src={orcaIcon} alt="ORCAS logo" className="h-7 w-7" />
               </div>
               {!sidebarCollapsed && (
                 <div className="leading-tight">
