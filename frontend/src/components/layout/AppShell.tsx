@@ -2,7 +2,6 @@ import { ReactNode, useState, useRef, useEffect, CSSProperties } from "react";
 import { cn } from "../../utils/cn";
 import InfoTip from "../InfoTip";
 import { AvatarBadge } from "../AvatarBadge";
-import orcaIcon from "../../assets/orca.svg";
 
 export interface NavItem {
   key: string;
@@ -130,8 +129,8 @@ export function AppShell({
                 <path d="M4 18h16" />
               </svg>
             </button>
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
-              <img src={orcaIcon} alt="ORCAS logo" className="h-7 w-7" />
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm text-2xl text-white">
+              🐋
             </div>
             <div>
               <div className="text-lg font-bold tracking-wide text-white">
@@ -238,27 +237,6 @@ export function AppShell({
           }}
         >
           <div className="flex h-full flex-col">
-            <div
-              className={cn(
-                "flex items-center gap-3 px-3 py-4 border-b border-[rgb(var(--color-border))]",
-                sidebarCollapsed && "justify-center"
-              )}
-            >
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[rgb(var(--color-surface))]">
-                <img src={orcaIcon} alt="ORCAS logo" className="h-7 w-7" />
-              </div>
-              {!sidebarCollapsed && (
-                <div className="leading-tight">
-                  <div className="text-sm font-semibold text-[rgb(var(--color-text))]">
-                    ORCAS
-                  </div>
-                  <div className="text-xs text-[rgb(var(--color-text-subtle))]">
-                    Workspace
-                  </div>
-                </div>
-              )}
-            </div>
-
             <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-3 transition-[width] duration-200 ease-in-out">
               {navItems.map((item) => (
                 <button
