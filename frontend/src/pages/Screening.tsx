@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
+import { Modal } from "../components/ui/Modal";
 import InfoTooltip from "../components/InfoTip";
 import {
   isMetricVisible,
@@ -14,13 +15,18 @@ import {
   getYears,
   getEmitens,
   screenEmitens,
+  createReport,
   MetricItem,
   MetricSummaryResponse,
   FilterOperator,
+  ConditionSummary,
   ScreeningResponse,
   MetricFilter,
 } from "../services/api";
 import { toCatalogMetric, CatalogMetric } from "../shared/metricCatalog";
+import { isForbiddenMetricName } from "../shared/metricsGuard";
+import { buildReportPdfBase64Async } from "../utils/reportPdf";
+import { toErrorMessage } from "../utils/errors";
 
 const OPERATORS: { value: FilterOperator; label: string }[] = [
   { value: ">", label: "> (greater than)" },
@@ -54,6 +60,25 @@ function convertUserInputToBase(
   return toBaseValue(metricName, num);
 }
 
+function formatConditionDisplay(condition: ConditionSummary): string {
+  const formattedMin = formatMetricValue(
+    condition.metric_name,
+    condition.value
+  );
+  if (
+    condition.operator === "between" &&
+    condition.value_max !== null &&
+    condition.value_max !== undefined
+  ) {
+    const formattedMax = formatMetricValue(
+      condition.metric_name,
+      condition.value_max
+    );
+    return `between ${formattedMin} and ${formattedMax}`;
+  }
+  return `${condition.operator} ${formattedMin}`;
+}
+
 export default function Screening() {
   const [metrics, setMetrics] = useState<MetricItem[]>([]);
   const [catalogMetrics, setCatalogMetrics] = useState<CatalogMetric[]>([]);
@@ -75,6 +100,11 @@ export default function Screening() {
   const [result, setResult] = useState<ScreeningResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [saveOpen, setSaveOpen] = useState(false);
+  const [reportName, setReportName] = useState("");
+  const [saveError, setSaveError] = useState("");
+  const [saveMessage, setSaveMessage] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     getMetrics()
@@ -203,6 +233,7 @@ export default function Screening() {
     setLoading(true);
     setError("");
     setResult(null);
+    setSaveMessage("");
 
     try {
       const res = await screenEmitens({
@@ -211,7 +242,7 @@ export default function Screening() {
       });
       setResult(res);
     } catch (err: any) {
-      setError(err.detail || "Screening failed");
+      setError(toErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -223,6 +254,124 @@ export default function Screening() {
   const activeMetricName =
     filters.find((f) => f.metric_id === activeSummary?.metric_id)
       ?.metric_name || "";
+
+  const visibleConditions = useMemo(
+    () =>
+      (result?.conditions || []).filter(
+        (c) => !isForbiddenMetricName(c.metric_name)
+      ),
+    [result]
+  );
+
+  const openSaveModal = () => {
+    if (!result || !result.passed.length) return;
+    setReportName(`Screening ${result.year}`);
+    setSaveError("");
+    setSaveMessage("");
+    setSaveOpen(true);
+  };
+
+  const submitSave = async () => {
+    if (!result) return;
+    const name = reportName.trim();
+    if (!name) {
+      setSaveError("Name is required");
+      return;
+    }
+
+    const filterLines = visibleConditions.map((c) => ({
+      metric_name: c.metric_name,
+      condition: formatConditionDisplay(c),
+      unit: c.unit_config?.unit || "n/a",
+      has_data: c.has_data,
+    }));
+
+    const metadataForApi = {
+      report_type: "analysis_screening",
+      year: result.year,
+      dataset_size: datasetSize,
+      filters_applied: filterLines.map(
+        (c) => `${c.metric_name}: ${c.condition}`
+      ),
+      filters_count: filterLines.length,
+      passed: result.stats.passed,
+      total: result.stats.total,
+      missing_data_banks: result.stats.missing_data_banks,
+      has_data: result.has_data,
+    };
+
+    const summaryRows = [
+      ["Year", `${result.year}`],
+      ["Dataset Size", `${datasetSize} tickers`],
+      ["Passed / Total", `${result.stats.passed} / ${result.stats.total}`],
+      [
+        "Missing Data Banks",
+        `${result.stats.missing_data_banks} / ${datasetSize}`,
+      ],
+    ];
+
+    const appliedFilterRows = filterLines.map((c, idx) => [
+      `Filter ${idx + 1}: ${c.metric_name}`,
+      `${c.condition} (${c.unit})${c.has_data ? "" : " — no data"}`,
+    ]);
+
+    const appliedFiltersTable = {
+      title: "Applied Filters",
+      columns: ["Item", "Details"],
+      rows: [...summaryRows, ...appliedFilterRows],
+    };
+
+    const columns = [
+      "#",
+      "Ticker",
+      "Bank",
+      ...visibleConditions.map((c) => c.metric_name),
+    ];
+
+    const screeningRows = result.passed.map((row, idx) => {
+      const metricCells = visibleConditions.map((c) =>
+        formatMetricValue(
+          c.metric_name,
+          row.values[String(c.metric_id)] ?? (row.values as any)[c.metric_id]
+        )
+      );
+      return [idx + 1, row.ticker, row.name, ...metricCells];
+    });
+
+    const pdf_base64 = await buildReportPdfBase64Async({
+      name,
+      type: "analysis_screening",
+      metadata: [],
+      sections: [
+        appliedFiltersTable,
+        {
+          title: "Screening Results",
+          columns,
+          rows: screeningRows,
+          notes: result.has_data
+            ? []
+            : ["Data unavailable for selected criteria."],
+        },
+      ],
+    });
+
+    setSaving(true);
+    setSaveError("");
+    try {
+      await createReport({
+        name,
+        type: "analysis_screening",
+        pdf_base64,
+        metadata: metadataForApi,
+      });
+      setSaveMessage("Saved to Reports.");
+      setSaveOpen(false);
+    } catch (err) {
+      setSaveError(toErrorMessage(err));
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -439,9 +588,21 @@ export default function Screening() {
       {/* Results */}
       {result && (
         <Card>
-          <h3 className="text-lg font-bold mb-2">Screening Results</h3>
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <h3 className="text-lg font-bold">Screening Results</h3>
+            {result.passed.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Button variant="report" onClick={openSaveModal}>
+                  Save to Reports
+                </Button>
+                {saveMessage && (
+                  <span className="text-xs text-green-700">{saveMessage}</span>
+                )}
+              </div>
+            )}
+          </div>
           <p className="text-sm text-gray-500 mb-4">
-            Year {result.year} • {result.conditions.length} filters • Passed{" "}
+            Year {result.year} • {visibleConditions.length} filters • Passed{" "}
             {result.stats.passed}/{result.stats.total}
           </p>
 
@@ -459,7 +620,7 @@ export default function Screening() {
                     <th className="px-4 py-2 text-left font-medium">#</th>
                     <th className="px-4 py-2 text-left font-medium">Ticker</th>
                     <th className="px-4 py-2 text-left font-medium">Bank</th>
-                    {result.conditions.map((c) => (
+                    {visibleConditions.map((c) => (
                       <th
                         key={c.metric_id}
                         className="px-4 py-2 text-right font-medium"
@@ -477,7 +638,7 @@ export default function Screening() {
                         {e.ticker}
                       </td>
                       <td className="px-4 py-2">{e.name}</td>
-                      {result.conditions.map((c) => (
+                      {visibleConditions.map((c) => (
                         <td key={c.metric_id} className="px-4 py-2 text-right">
                           {formatMetricValue(
                             c.metric_name,
@@ -493,6 +654,28 @@ export default function Screening() {
             </div>
           )}
         </Card>
+      )}
+      {saveOpen && (
+        <Modal title="Save to Reports" onClose={() => setSaveOpen(false)}>
+          <div className="space-y-3">
+            <input
+              type="text"
+              value={reportName}
+              onChange={(e) => setReportName(e.target.value)}
+              className="w-full border rounded px-3 py-2"
+              placeholder="Report name"
+            />
+            {saveError && <p className="text-red-500 text-sm">{saveError}</p>}
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => setSaveOpen(false)}>
+                Cancel
+              </Button>
+              <Button variant="report" onClick={submitSave} disabled={saving}>
+                {saving ? "Saving..." : "Save"}
+              </Button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );

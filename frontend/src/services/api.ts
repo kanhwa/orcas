@@ -151,10 +151,35 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     const errorBody = await response.json().catch(() => ({
       detail: response.statusText,
     }));
-    throw {
-      status: response.status,
-      detail: errorBody.detail || "Unknown error",
+
+    const parseDetail = (detail: unknown): string => {
+      if (!detail) return response.statusText;
+      if (typeof detail === "string") return detail;
+      if (Array.isArray(detail)) {
+        return detail
+          .map((d) => (typeof d === "string" ? d : JSON.stringify(d)))
+          .join("; ");
+      }
+      if (typeof detail === "object") {
+        try {
+          return JSON.stringify(detail);
+        } catch (err) {
+          void err;
+        }
+      }
+      return String(detail);
     };
+
+    const message =
+      parseDetail((errorBody as { detail?: unknown }).detail) ||
+      "Unknown error";
+    const err = new Error(message) as Error & {
+      status?: number;
+      detail?: string;
+    };
+    err.status = response.status;
+    err.detail = message;
+    throw err;
   }
 
   // Handle empty response (e.g., 204 No Content)
@@ -260,6 +285,157 @@ export async function adminEditUsername(
     method: "PATCH",
     body: JSON.stringify({ username: newUsername }),
   });
+}
+
+// =============================================================================
+// Reports API (PDF-only)
+// =============================================================================
+
+export type ReportTypeId =
+  | "analysis_screening"
+  | "analysis_metric_ranking"
+  | "scoring_scorecard"
+  | "compare_stocks"
+  | "compare_historical"
+  | "simulation_scenario";
+
+export const REPORT_TYPES_ORDERED: { value: ReportTypeId; label: string }[] = [
+  { value: "analysis_screening", label: "Analysis — Screening" },
+  { value: "analysis_metric_ranking", label: "Analysis — Metric Ranking" },
+  { value: "scoring_scorecard", label: "Scoring — Scorecard" },
+  { value: "compare_stocks", label: "Compare — Stocks" },
+  { value: "compare_historical", label: "Compare — Historical" },
+  { value: "simulation_scenario", label: "Simulation — Scenario" },
+];
+
+export const REPORT_TYPE_LABELS: Record<ReportTypeId, string> =
+  REPORT_TYPES_ORDERED.reduce((acc, item) => {
+    acc[item.value] = item.label;
+    return acc;
+  }, {} as Record<ReportTypeId, string>);
+
+export interface ReportListItem {
+  id: number;
+  name: string;
+  type: ReportTypeId | string;
+  created_at: string;
+  metadata?: Record<string, unknown> | null;
+  owner_user_id?: number;
+}
+
+export interface ReportListResponse {
+  total: number;
+  items: ReportListItem[];
+}
+
+export interface ReportCreateRequest {
+  name: string;
+  type: ReportTypeId;
+  pdf_base64: string;
+  metadata?: Record<string, unknown> | null;
+}
+
+export async function listReports(params?: {
+  q?: string;
+  type?: ReportTypeId | string;
+  skip?: number;
+  limit?: number;
+}): Promise<ReportListResponse> {
+  const searchParams = new URLSearchParams();
+  if (params?.q) searchParams.set("q", params.q);
+  if (params?.type) searchParams.set("report_type", params.type);
+  if (params?.skip !== undefined) searchParams.set("skip", String(params.skip));
+  if (params?.limit !== undefined)
+    searchParams.set("limit", String(params.limit));
+
+  const query = searchParams.toString();
+  const path = query ? `/api/reports?${query}` : "/api/reports";
+  return request<ReportListResponse>(path, { method: "GET" });
+}
+
+export async function createReport(
+  payload: ReportCreateRequest
+): Promise<ReportListItem> {
+  return request<ReportListItem>("/api/reports", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function renameReport(
+  reportId: number,
+  name: string
+): Promise<ReportListItem> {
+  return request<ReportListItem>(`/api/reports/${reportId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ name }),
+  });
+}
+
+export async function deleteReport(reportId: number): Promise<void> {
+  await request(`/api/reports/${reportId}`, {
+    method: "DELETE",
+  });
+}
+
+export async function combineReports(
+  name: string,
+  orderedIds: number[]
+): Promise<ReportListItem> {
+  return request<ReportListItem>("/api/reports/combine", {
+    method: "POST",
+    body: JSON.stringify({ name, ordered_report_ids: orderedIds }),
+  });
+}
+
+export async function fetchReportPdf(reportId: number): Promise<Blob> {
+  const res = await fetch(`${BASE_URL}/api/reports/${reportId}/pdf`, {
+    method: "GET",
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const errorBody = await res
+      .json()
+      .catch(() => ({ detail: res.statusText || "Failed to download" }));
+    throw {
+      status: res.status,
+      detail: errorBody.detail || "Failed to download",
+    };
+  }
+
+  return res.blob();
+}
+
+export async function fetchReportPdfBuffer(
+  reportId: number,
+  inline = false
+): Promise<ArrayBuffer> {
+  const url = `${BASE_URL}/api/reports/${reportId}/pdf${
+    inline ? "?inline=1" : ""
+  }`;
+  const res = await fetch(url, {
+    method: "GET",
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const errorBody = await res
+      .json()
+      .catch(() => ({ detail: res.statusText || "Failed to load preview" }));
+    const err = new Error(errorBody.detail || "Failed to load preview");
+    (err as Error & { status?: number }).status = res.status;
+    throw err;
+  }
+
+  const contentType = res.headers.get("content-type") || "";
+  if (!contentType.toLowerCase().includes("application/pdf")) {
+    const err = new Error("Preview failed: received non-PDF response");
+    (err as Error & { status?: number }).status = res.status;
+    throw err;
+  }
+
+  return res.arrayBuffer();
 }
 
 // =============================================================================
@@ -1079,6 +1255,7 @@ export interface HistoricalCompareRequest {
 }
 
 export interface MetricComparison {
+  metric_key?: string | null;
   metric_name: string;
   section: string;
   metric_type: string;

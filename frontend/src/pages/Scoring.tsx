@@ -5,6 +5,10 @@ import { Select } from "../components/ui/Select";
 import { Table } from "../components/ui/Table";
 import InfoTip from "../components/InfoTip";
 import { Modal } from "../components/ui/Modal";
+import { createReport } from "../services/api";
+import { toErrorMessage } from "../utils/errors";
+import { isForbiddenMetricName } from "../shared/metricsGuard";
+import { buildReportPdfBase64Async } from "../utils/reportPdf";
 
 type MissingPolicy = "redistribute" | "zero" | "drop";
 type Tab = "ranking" | "scorecard";
@@ -73,13 +77,6 @@ async function wsmScorePreview(
   payload: WSMScoreRequest
 ): Promise<WSMScorePreviewResponse> {
   return request<WSMScorePreviewResponse>("/api/wsm/score-preview", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
-}
-
-async function wsmScore(payload: WSMScoreRequest): Promise<void> {
-  await request<void>("/api/wsm/score", {
     method: "POST",
     body: JSON.stringify(payload),
   });
@@ -297,7 +294,12 @@ const Scoring = () => {
   const [rankingError, setRankingError] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
-  const [saving, setSaving] = useState(false);
+  const [saveModalContext, setSaveModalContext] = useState<
+    "ranking" | "scorecard" | null
+  >(null);
+  const [reportName, setReportName] = useState("");
+  const [saveError, setSaveError] = useState("");
+  const [savingReport, setSavingReport] = useState(false);
   const [loadingMeta, setLoadingMeta] = useState(false);
 
   const [weightProfile, setWeightProfile] = useState<WeightProfile>("default");
@@ -415,8 +417,7 @@ const Scoring = () => {
         setMetrics(officialMetrics);
         setSections(catalog.sections || []);
       } catch (err) {
-        const e = err as { detail?: string };
-        setRankingError(e.detail || "Failed to load metrics catalog");
+        setRankingError(toErrorMessage(err));
       } finally {
         setLoadingMeta(false);
       }
@@ -434,9 +435,8 @@ const Scoring = () => {
       );
       setWeightTemplates(res.templates || []);
     } catch (err) {
-      const e = err as { detail?: string };
       setWeightTemplatesError(
-        e.detail ||
+        toErrorMessage(err) ||
           "Failed to load weight templates. Default weights available."
       );
     } finally {
@@ -883,17 +883,20 @@ const Scoring = () => {
       }
       setRanking(result.ranking || []);
     } catch (err) {
-      const e = err as { detail?: string };
-      setRankingError(e.detail || "Failed to fetch scoring results");
+      setRankingError(toErrorMessage(err));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSaveRun = async () => {
+  const handleSaveRun = () => {
     if (!selectedYear) return;
     if (!metrics.length) {
       setRankingError("Metrics are not available yet.");
+      return;
+    }
+    if (!ranking.length) {
+      setRankingError("Run scoring before saving.");
       return;
     }
     if (templateSelectionRequired) {
@@ -907,22 +910,9 @@ const Scoring = () => {
       return;
     }
     setSaveMessage("");
-    setSaving(true);
-    try {
-      const weightPayload = buildWeightPayload();
-      await wsmScore({
-        year: Number(selectedYear),
-        metrics,
-        missing_policy: rankingPolicyUsed,
-        ...weightPayload,
-      });
-      setSaveMessage("Saved to reports.");
-    } catch (err) {
-      const e = err as { detail?: string };
-      setRankingError(e.detail || "Failed to save scoring run");
-    } finally {
-      setSaving(false);
-    }
+    setSaveError("");
+    setReportName(`Scoring Ranking ${selectedYear}`);
+    setSaveModalContext("ranking");
   };
 
   const handleLoadScorecard = async (opts?: {
@@ -993,8 +983,7 @@ const Scoring = () => {
       setTemplateSaveSuccess("");
       setScorecard(result);
     } catch (err) {
-      const e = err as { detail?: string };
-      const detail = e.detail || "Failed to load scorecard";
+      const detail = toErrorMessage(err) || "Failed to load scorecard";
       const detailLower = detail.toLowerCase();
       if (
         policy === "drop" &&
@@ -1007,6 +996,285 @@ const Scoring = () => {
       }
     } finally {
       setScorecardLoading(false);
+    }
+  };
+
+  const openScorecardSave = () => {
+    if (!scorecard) return;
+    if (templateSelectionRequired) {
+      setScorecardError("Select a weight template first.");
+      return;
+    }
+    if (customWeightsInvalid) {
+      setScorecardError(
+        "Enter custom weights between 0 and 100 with total greater than zero."
+      );
+      return;
+    }
+    setSaveMessage("");
+    setSaveError("");
+    setReportName(`Scorecard ${scorecard.ticker} ${scorecard.year}`);
+    setSaveModalContext("scorecard");
+  };
+
+  const submitReportSave = async () => {
+    const name = reportName.trim();
+    if (!saveModalContext) return;
+    if (!name) {
+      setSaveError("Name is required");
+      return;
+    }
+
+    const weightPayload = buildWeightPayload();
+    const weightScope =
+      "weight_scope" in weightPayload ? weightPayload.weight_scope : null;
+    const weightTemplateId =
+      "weight_template_id" in weightPayload
+        ? weightPayload.weight_template_id
+        : null;
+    setSavingReport(true);
+    setSaveError("");
+
+    try {
+      if (saveModalContext === "ranking") {
+        const missingPolicyLabel =
+          missingPolicyOptions.find((o) => o.key === rankingPolicyUsed)
+            ?.label || rankingPolicyUsed;
+        const weightProfileLabel =
+          weightProfile === "template"
+            ? selectedWeightTemplate
+              ? `Template: ${selectedWeightTemplate.name}`
+              : "Template"
+            : "Default";
+
+        const rankingMetadataLines = [
+          { label: "View", value: "Ranking" },
+          { label: "Year", value: Number(selectedYear) || "—" },
+          { label: "Missing Data Policy", value: missingPolicyLabel },
+          { label: "Weight Profile", value: weightProfileLabel },
+          { label: "Top N", value: ranking.length },
+        ];
+
+        const rankingMetadataForApi = {
+          report_type: "scoring_scorecard",
+          view: "ranking",
+          year: Number(selectedYear),
+          missing_policy: rankingPolicyUsed,
+          weight_profile: weightProfileLabel,
+          weight_scope: weightScope,
+          weight_template_id: weightTemplateId,
+          ranking_count: ranking.length,
+        };
+
+        const rankingRows = ranking.map((item, idx) => {
+          const coveragePct = asPercent(item.coverage?.pct ?? null);
+          const coverageLabel =
+            coveragePct === null || coveragePct === undefined
+              ? "—"
+              : `${formatDecimal(coveragePct, 1)}%`;
+          return [
+            item.rank ?? idx + 1,
+            item.ticker,
+            formatDecimal(item.score, 6),
+            coverageLabel,
+            item.confidence || "—",
+          ];
+        });
+
+        const pdf_base64 = await buildReportPdfBase64Async({
+          name,
+          type: "scoring_scorecard",
+          typeLabelOverride: "Scoring — Ranking",
+          metadata: rankingMetadataLines,
+          sections: [
+            {
+              title: "WSM Ranking",
+              columns: [
+                "Rank",
+                "Ticker",
+                "Total Score",
+                "Coverage",
+                "Confidence",
+              ],
+              rows: rankingRows,
+            },
+          ],
+        });
+
+        await createReport({
+          name,
+          type: "scoring_scorecard",
+          pdf_base64,
+          metadata: rankingMetadataForApi,
+        });
+      } else if (saveModalContext === "scorecard" && scorecard) {
+        const coveragePct = asPercent(scorecard.coverage?.pct ?? null);
+        const coverageFormatted = `${formatDecimal(coveragePct ?? 0, 1)}% (${
+          scorecard.coverage?.used ?? 0
+        }/${scorecard.coverage?.total ?? 0})`;
+
+        const weightProfileLabel =
+          weightProfile === "template"
+            ? selectedWeightTemplate?.name
+              ? `Template (${selectedWeightTemplate.name})`
+              : "Template"
+            : weightProfile === "custom"
+            ? "Custom"
+            : "Default";
+
+        const scorecardMetadataLines = [
+          { label: "View", value: "Scorecard" },
+          { label: "Year", value: scorecard.year },
+          { label: "Ticker", value: scorecard.ticker },
+          { label: "Weight Profile", value: weightProfileLabel },
+          { label: "Missing Data Policy", value: missingPolicy },
+        ];
+
+        const scorecardMetadataForApi = {
+          report_type: "scoring_scorecard",
+          view: "scorecard",
+          year: scorecard.year,
+          ticker: scorecard.ticker,
+          rank: scorecard.rank,
+          total_score: scorecard.total_score,
+          missing_policy: missingPolicy,
+          weight_profile: weightProfileLabel,
+          weight_template: selectedWeightTemplate?.name || "—",
+          coverage: coverageFormatted,
+        };
+
+        const summaryRows = [
+          ["Rank", scorecard.rank ?? "—"],
+          ["Total Score", formatDecimal(scorecard.total_score, 6)],
+          ["Coverage", coverageFormatted],
+          ["Confidence", scorecard.confidence || "—"],
+        ];
+
+        const printableMetrics = scorecard.metrics.filter(
+          (m) => !isForbiddenMetricName(m.metric_name)
+        );
+
+        const contributionBySection: Record<
+          keyof ScorecardSectionSubtotals,
+          number
+        > = {
+          balance: 0,
+          income: 0,
+          cash_flow: 0,
+        };
+        const weightBySection: Record<keyof ScorecardSectionSubtotals, number> =
+          {
+            balance: 0,
+            income: 0,
+            cash_flow: 0,
+          };
+
+        printableMetrics.forEach((m) => {
+          contributionBySection[m.section] += m.contribution ?? 0;
+          weightBySection[m.section] +=
+            m.effective_weight ?? m.weight ?? m.default_weight ?? 0;
+        });
+
+        const totalPrintableWeight = printableMetrics.reduce(
+          (sum, m) =>
+            sum + (m.effective_weight ?? m.weight ?? m.default_weight ?? 0),
+          0
+        );
+
+        const sectionSummaryRows = [
+          [
+            "Balance",
+            formatDecimal(contributionBySection.balance, 6),
+            `${formatDecimal(
+              totalPrintableWeight
+                ? (weightBySection.balance / totalPrintableWeight) * 100
+                : 0,
+              6
+            )}%`,
+          ],
+          [
+            "Income",
+            formatDecimal(contributionBySection.income, 6),
+            `${formatDecimal(
+              totalPrintableWeight
+                ? (weightBySection.income / totalPrintableWeight) * 100
+                : 0,
+              6
+            )}%`,
+          ],
+          [
+            "Cash Flow",
+            formatDecimal(contributionBySection.cash_flow, 6),
+            `${formatDecimal(
+              totalPrintableWeight
+                ? (weightBySection.cash_flow / totalPrintableWeight) * 100
+                : 0,
+              6
+            )}%`,
+          ],
+        ];
+
+        const detailRows = printableMetrics.map((m) => [
+          m.metric_name,
+          SECTION_LABELS[m.section] || m.section,
+          m.type,
+          m.raw_value,
+          formatDecimal(m.normalized_value, 6),
+          formatDecimal(
+            m.effective_weight ?? m.weight ?? m.default_weight ?? 0,
+            6
+          ),
+          formatDecimal(m.contribution, 6),
+          m.display_unit,
+        ]);
+
+        const pdf_base64 = await buildReportPdfBase64Async({
+          name,
+          type: "scoring_scorecard",
+          metadata: scorecardMetadataLines,
+          sections: [
+            {
+              title: "Scorecard Summary",
+              columns: ["Field", "Value"],
+              rows: summaryRows,
+            },
+            {
+              title: "Section Contributions",
+              columns: ["Section", "Contribution", "Effective Weight (%)"],
+              rows: sectionSummaryRows,
+            },
+            {
+              title: "Scorecard Detail",
+              columns: [
+                "Metric",
+                "Section",
+                "Type",
+                "Raw Value",
+                "Normalized",
+                "Weight",
+                "Contribution",
+                "Unit",
+              ],
+              rows: detailRows,
+            },
+          ],
+        });
+
+        await createReport({
+          name,
+          type: "scoring_scorecard",
+          pdf_base64,
+          metadata: scorecardMetadataForApi,
+        });
+      }
+
+      setSaveMessage("Saved to Reports.");
+      setSaveModalContext(null);
+      setReportName("");
+    } catch (err) {
+      setSaveError(toErrorMessage(err));
+    } finally {
+      setSavingReport(false);
     }
   };
 
@@ -1218,7 +1486,7 @@ const Scoring = () => {
       >
         <option value="default">Default</option>
         <option value="template">Template</option>
-        <option value="custom">Custom</option>
+        {tab !== "ranking" && <option value="custom">Custom</option>}
       </Select>
       {weightProfile === "template" && (
         <div className="space-y-1">
@@ -1312,6 +1580,14 @@ const Scoring = () => {
     </div>
   );
 
+  const handleTabChange = (next: Tab) => {
+    setTab(next);
+    if (next === "ranking" && weightProfile === "custom") {
+      setWeightProfile("default");
+      setSelectedWeightTemplateId("");
+    }
+  };
+
   const renderTabs = () => (
     <div className="flex border-b border-[rgb(var(--color-border))]">
       {(
@@ -1333,7 +1609,7 @@ const Scoring = () => {
         <button
           key={t.key}
           type="button"
-          onClick={() => setTab(t.key)}
+          onClick={() => handleTabChange(t.key)}
           className={`relative px-5 py-3 text-sm font-medium transition-colors ${
             tab === t.key
               ? "text-[rgb(var(--color-primary))]"
@@ -1419,10 +1695,10 @@ const Scoring = () => {
             <div className="flex items-center gap-2">
               <Button
                 onClick={handleSaveRun}
-                disabled={saving || weightProfileBlocked}
-                variant="secondary"
+                disabled={weightProfileBlocked}
+                variant="report"
               >
-                {saving ? "Saving..." : "Save to report"}
+                Save to Reports
               </Button>
               {saveMessage && (
                 <span className="text-xs text-green-700">{saveMessage}</span>
@@ -2076,6 +2352,14 @@ const Scoring = () => {
 
       {scorecard && (
         <div className="space-y-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <Button variant="report" onClick={openScorecardSave}>
+              Save to Reports
+            </Button>
+            {saveMessage && (
+              <span className="text-xs text-green-700">{saveMessage}</span>
+            )}
+          </div>
           {renderScorecardSummary()}
           {canSaveTemplate && (
             <div className="flex flex-wrap items-center gap-3">
@@ -2130,6 +2414,39 @@ const Scoring = () => {
           </div>
         </Card>
       </div>
+
+      {saveModalContext && (
+        <Modal
+          title="Save to Reports"
+          onClose={() => setSaveModalContext(null)}
+        >
+          <div className="space-y-3">
+            <input
+              type="text"
+              value={reportName}
+              onChange={(e) => setReportName(e.target.value)}
+              className="w-full border rounded px-3 py-2"
+              placeholder="Report name"
+            />
+            {saveError && <p className="text-red-500 text-sm">{saveError}</p>}
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => setSaveModalContext(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="report"
+                onClick={submitReportSave}
+                disabled={savingReport}
+              >
+                {savingReport ? "Saving..." : "Save"}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {showSaveTemplateModal && (
         <Modal
