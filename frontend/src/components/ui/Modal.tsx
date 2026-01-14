@@ -8,6 +8,7 @@ export interface ModalProps {
   onClose: () => void;
   children: ReactNode;
   footer?: ReactNode;
+  hideCloseButton?: boolean;
 }
 
 export function Modal({
@@ -16,6 +17,7 @@ export function Modal({
   onClose,
   children,
   footer,
+  hideCloseButton = false,
 }: ModalProps) {
   if (!open) return null;
 
@@ -34,14 +36,16 @@ export function Modal({
           <h3 className="text-base font-semibold text-[rgb(var(--color-text))]">
             {title}
           </h3>
-          <Button
-            aria-label="Close"
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-          >
-            ×
-          </Button>
+          {!hideCloseButton && (
+            <Button
+              aria-label="Close"
+              variant="ghost"
+              size="sm"
+              onClick={onClose}
+            >
+              ×
+            </Button>
+          )}
         </div>
         <div className="card-body text-sm text-[rgb(var(--color-text))]">
           {children}

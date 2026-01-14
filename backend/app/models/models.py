@@ -39,12 +39,13 @@ class ImportStatus(str, enum.Enum):
 
 
 class ReportType(str, enum.Enum):
+    analysis_screening = "analysis_screening"
+    analysis_metric_ranking = "analysis_metric_ranking"
+    scoring_ranking = "scoring_ranking"
     scoring_scorecard = "scoring_scorecard"
     compare_stocks = "compare_stocks"
     compare_historical = "compare_historical"
     simulation_scenario = "simulation_scenario"
-    analysis_screening = "analysis_screening"
-    analysis_metric_ranking = "analysis_metric_ranking"
 
 
 class AuditLog(Base):

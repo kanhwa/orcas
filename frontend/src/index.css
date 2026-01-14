@@ -103,6 +103,10 @@ textarea:focus {
     @apply bg-[rgb(var(--color-action))] text-white hover:bg-[rgb(var(--color-action))]/90 focus-visible:ring-[rgb(var(--color-action))];
   }
 
+  .btn-report {
+    @apply bg-[#f97316] text-white hover:bg-[#ea580c] focus-visible:ring-[#f97316] focus-visible:ring-offset-2;
+  }
+
   .btn-ghost {
     @apply text-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-surface))];
   }

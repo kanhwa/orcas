@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import base64
 import io
+import logging
+import re
+import urllib.parse
 from typing import Dict, Iterable, List
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
@@ -21,6 +24,8 @@ from app.schemas.reports import (
 )
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
+
+logger = logging.getLogger(__name__)
 
 
 def _to_detail(report: Report) -> ReportDetail:
@@ -67,7 +72,7 @@ def _validate_type(raw_type: str | None) -> ReportType | None:
     if raw_type is None:
         return None
     try:
-        return ReportType(raw_type)
+        return ReportType(raw_type.strip().lower())
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid report type") from exc
 
@@ -81,6 +86,22 @@ def _merge_pdfs(reports: Iterable[Report]) -> bytes:
     buffer = io.BytesIO()
     writer.write(buffer)
     return buffer.getvalue()
+
+
+def _sanitize_ascii_filename_base(raw_name: str, fallback: str) -> str:
+    base = re.sub(r"\.pdf$", "", raw_name, flags=re.IGNORECASE)
+    base = re.sub(r"[^A-Za-z0-9._-]+", "_", base).strip("_")
+    return base or fallback
+
+
+def _build_content_disposition(report_id: int, raw_name: str | None, inline: bool = False) -> str:
+    raw = raw_name or f"report_{report_id}"
+    ascii_base = _sanitize_ascii_filename_base(raw, f"report_{report_id}")
+    ascii_filename = f"{ascii_base}.pdf"
+    utf8_filename = f"{raw}.pdf"
+    encoded = urllib.parse.quote(utf8_filename, safe="")
+    disposition_type = "inline" if inline else "attachment"
+    return f"{disposition_type}; filename=\"{ascii_filename}\"; filename*=UTF-8''{encoded}"
 
 
 @router.post("", response_model=ReportDetail, status_code=status.HTTP_201_CREATED)
@@ -146,15 +167,27 @@ def get_report(
 @router.get("/{report_id}/pdf")
 def download_report_pdf(
     report_id: int,
+    inline: bool = Query(default=False),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> Response:
     report = _get_owned_or_404(report_id, db, current_user)
-    filename = report.name.replace("\"", "") or f"report-{report.id}"
+    pdf_bytes = report.pdf_data or b""
+    if not pdf_bytes:
+        logger.warning("Report PDF missing", extra={"report_id": report.id})
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="PDF not found")
+    logger.info(
+        "Sending report PDF",
+        extra={"report_id": report.id, "bytes": len(pdf_bytes)},
+    )
+    content_disposition = _build_content_disposition(report.id, report.name, inline)
     return Response(
-        content=report.pdf_data,
+        content=pdf_bytes,
         media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename=\"{filename}.pdf\""},
+        headers={
+            "Content-Disposition": content_disposition,
+            "Access-Control-Expose-Headers": "Content-Disposition",
+        },
     )
 
 

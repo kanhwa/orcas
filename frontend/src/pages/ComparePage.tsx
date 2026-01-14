@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -18,27 +18,75 @@ import {
   WeightTemplate,
   compare,
   listWeightTemplates,
+  createReport,
 } from "../services/api";
 import InfoTip from "../components/InfoTip";
 import { Card } from "../components/ui/Card";
 import { Select } from "../components/ui/Select";
 import { Button } from "../components/ui/Button";
 import { Table } from "../components/ui/Table";
+import { Modal } from "../components/ui/Modal";
 import { MultiSelect, MultiSelectOption } from "../components/ui/MultiSelect";
 import { Toggle } from "../components/ui/Toggle";
 import { useCatalog } from "../contexts/CatalogContext";
 import Historical from "./Historical";
+import { buildReportPdfBase64Async } from "../utils/reportPdf";
+import { toErrorMessage } from "../utils/errors";
+import { getSeriesColor } from "../utils/seriesColors";
+
+const formatScore = (score: number | null | undefined): string => {
+  if (score === null || score === undefined) return "—";
+  return score.toFixed(4);
+};
+
+async function captureChartAsPng(
+  container: HTMLDivElement | null
+): Promise<{ dataUrl: string; width: number; height: number } | null> {
+  if (!container) return null;
+  const svg = container.querySelector("svg");
+  if (!svg) return null;
+
+  const { width: rawWidth, height: rawHeight } = svg.getBoundingClientRect();
+  const width = rawWidth || 800;
+  const height = rawHeight || 400;
+  const scale = 2;
+
+  const serializer = new XMLSerializer();
+  const svgString = serializer.serializeToString(svg);
+  const blob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = (err) => reject(err);
+      image.src = url;
+    });
+
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(width * scale);
+    canvas.height = Math.round(height * scale);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL("image/png");
+    return { dataUrl, width: canvas.width, height: canvas.height };
+  } catch (err) {
+    void err;
+    return null;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
 
 type Tab = "compare" | "historical";
 type Mode = "overall" | "section";
 type Section = "income" | "balance" | "cashflow";
 type MissingPolicy = "zero" | "redistribute" | "drop";
-type WeightProfile = "default" | "template" | "custom";
-
-interface MetricOption extends MultiSelectOption {
-  description?: string;
-  type?: "benefit" | "cost";
-}
+type WeightProfile = "default" | "template";
 
 const TICKER_OPTIONS: MultiSelectOption[] = [
   "BBRI",
@@ -81,14 +129,12 @@ function CompareTab() {
     getModeOptions,
     getMissingPolicyOptions,
     getYearOptions,
-    getMetricsBySection,
   } = useCatalog();
   const [tickers, setTickers] = useState<string[]>([]);
   const [yearFrom, setYearFrom] = useState(2019);
   const [yearTo, setYearTo] = useState(2024);
   const [mode, setMode] = useState<Mode>("overall");
   const [section, setSection] = useState<Section>("income");
-  const [metricKeys, setMetricKeys] = useState<string[]>([]);
   const [includeBenchmark, setIncludeBenchmark] = useState(false);
   const [missingPolicy, setMissingPolicy] = useState<MissingPolicy>("zero");
   const [weightProfile, setWeightProfile] = useState<WeightProfile>("default");
@@ -101,6 +147,12 @@ function CompareTab() {
   const [result, setResult] = useState<CompareResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [saveOpen, setSaveOpen] = useState(false);
+  const [reportName, setReportName] = useState("");
+  const [saveError, setSaveError] = useState("");
+  const [saveMessage, setSaveMessage] = useState("");
+  const [saving, setSaving] = useState(false);
+  const chartRef = useRef<HTMLDivElement | null>(null);
 
   const years = getYearOptions();
   const modeOptions = useMemo(() => getModeOptions(), [getModeOptions]);
@@ -117,9 +169,8 @@ function CompareTab() {
         const res = await listWeightTemplates(0, 50);
         setWeightTemplates(res.templates || []);
       } catch (err) {
-        const e = err as { detail?: string };
         setWeightTemplatesError(
-          e.detail ||
+          toErrorMessage(err) ||
             "Failed to load weight templates. Default weights will be used."
         );
       } finally {
@@ -129,30 +180,15 @@ function CompareTab() {
     loadTemplates();
   }, []);
 
-  // Handle mode change - clear section/metrics when switching to overall
+  // Handle mode change
   const handleModeChange = (newMode: Mode) => {
     setMode(newMode);
-    if (newMode === "overall") {
-      // Clear section-specific state when switching to overall
-      setMetricKeys([]);
-    }
   };
 
-  // Handle section change - clear metrics when section changes
+  // Handle section change
   const handleSectionChange = (newSection: Section) => {
     setSection(newSection);
-    setMetricKeys([]); // Reset metrics when section changes
   };
-
-  const metricsOptions: MetricOption[] = useMemo(() => {
-    if (mode !== "section") return [];
-    const metrics = getMetricsBySection(section);
-    return metrics.map((m) => ({
-      value: m.key,
-      label: m.label,
-      description: m.description,
-    }));
-  }, [getMetricsBySection, section, mode]);
 
   const selectedWeightTemplate = useMemo(() => {
     if (!selectedWeightTemplateId) return undefined;
@@ -170,12 +206,9 @@ function CompareTab() {
     if (tickers.length < 2) errors.push("Select at least 2 tickers");
     if (tickers.length > 4) errors.push("Maximum 4 tickers allowed");
     if (yearFrom > yearTo) errors.push("Start year must be ≤ End year");
-    if (mode === "section" && metricKeys.length === 0) {
-      errors.push("Select at least one metric for Section Ranking mode");
-    }
     if (templateSelectionRequired) errors.push("Select a weight template");
     return errors;
-  }, [tickers, yearFrom, yearTo, mode, metricKeys, templateSelectionRequired]);
+  }, [tickers, yearFrom, yearTo, templateSelectionRequired]);
 
   const isValid = validationErrors.length === 0;
 
@@ -213,19 +246,119 @@ function CompareTab() {
       const response = await compare(payload);
       setResult(response);
     } catch (err: unknown) {
-      const e = err as { detail?: string };
-      setError(e.detail || "Failed to run comparison");
+      setError(toErrorMessage(err));
     } finally {
       setLoading(false);
     }
   };
 
-  const formatScore = (score: number | null) => {
-    if (score === null) return "—";
-    return score.toFixed(4);
+  const openSaveModal = () => {
+    if (!result) return;
+    const yearsLabel = `${result.years[0]}-${
+      result.years[result.years.length - 1]
+    }`;
+    setReportName(`Compare ${yearsLabel}`);
+    setSaveError("");
+    setSaveMessage("");
+    setSaveOpen(true);
   };
 
-  const yearsAreSingle = yearFrom === yearTo;
+  const submitSave = async () => {
+    if (!result) return;
+    const name = reportName.trim();
+    if (!name) {
+      setSaveError("Name is required");
+      return;
+    }
+
+    const yearsLabel = `${result.years[0]}–${
+      result.years[result.years.length - 1]
+    }`;
+
+    const weightProfileLabel =
+      weightProfile === "template"
+        ? selectedWeightTemplate?.name
+          ? `Template (${selectedWeightTemplate.name})`
+          : "Template"
+        : "Default";
+    const modeLabel = mode === "overall" ? "Overall Score" : "Section Ranking";
+    const missingPolicyLabel =
+      missingPolicyOptions.find((p) => p.key === missingPolicy)?.label ||
+      missingPolicy;
+    const includeAverageLabel = includeBenchmark ? "Yes" : "No";
+    const tickersLabel = tickers.join(", ");
+
+    const pdfMetadata = [
+      { label: "View", value: "Compare Stocks" },
+      { label: "Mode", value: modeLabel },
+      { label: "Years", value: yearsLabel },
+      { label: "Tickers", value: tickersLabel },
+      { label: "Missing Data Policy", value: missingPolicyLabel },
+      { label: "Weight Profile", value: weightProfileLabel },
+      { label: "Include Average", value: includeAverageLabel },
+    ];
+
+    const metadataForApi = {
+      report_type: "compare_stocks",
+      tickers,
+      year_from: yearFrom,
+      year_to: yearTo,
+      mode,
+      section: mode === "section" ? section : null,
+      missing_policy: missingPolicy,
+      weight_profile: weightProfile,
+      weight_template_id: selectedWeightTemplate?.id || null,
+      include_benchmark: includeBenchmark,
+      year_range: yearsLabel,
+    };
+
+    const seriesForExport = dataWithBenchmark?.series || result.series;
+    const columns = ["Year", ...seriesForExport.map((s) => s.ticker)];
+    const tableRows = result.years.map((year, idx) => [
+      year,
+      ...seriesForExport.map((s) => formatScore(s.scores[idx])),
+    ]);
+
+    const legendItems = seriesForExport.map((s, idx) => ({
+      label: s.ticker,
+      color: getSeriesColor(idx),
+    }));
+
+    const chartImage = await captureChartAsPng(chartRef.current);
+
+    const pdf_base64 = await buildReportPdfBase64Async({
+      name,
+      type: "compare_stocks",
+      metadata: pdfMetadata,
+      legendItems,
+      chartImage: chartImage || undefined,
+      sections: [
+        {
+          title: "Compare Stocks Summary",
+          columns,
+          rows: tableRows,
+        },
+      ],
+    });
+
+    setSaving(true);
+    setSaveError("");
+    try {
+      await createReport({
+        name,
+        type: "compare_stocks",
+        pdf_base64,
+        metadata: metadataForApi,
+      });
+      setSaveMessage("Saved to Reports.");
+      setSaveOpen(false);
+    } catch (err) {
+      setSaveError(toErrorMessage(err));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const dataWithBenchmark = useMemo(() => {
     if (!result) return null;
     const series = result.series;
@@ -305,12 +438,12 @@ function CompareTab() {
 
   const renderChart = () => {
     if (!dataWithBenchmark || !result) return null;
-    const colors = ["#365E32", "#7F5235", "#4C7A9F", "#9B4F96", "#5C5C7A"];
+    const yearsAreSingle = result.years.length === 1;
 
     if (yearsAreSingle) {
       const yearLabel = result.years[0];
       return (
-        <div className="h-80 w-full">
+        <div className="h-80 w-full" ref={chartRef}>
           <ResponsiveContainer>
             <BarChart
               data={chartData}
@@ -329,7 +462,7 @@ function CompareTab() {
                   key={s.ticker}
                   dataKey={s.ticker}
                   name={s.ticker}
-                  fill={colors[idx % colors.length]}
+                  fill={getSeriesColor(idx)}
                   radius={[4, 4, 0, 0]}
                   isAnimationActive={false}
                 />
@@ -341,7 +474,7 @@ function CompareTab() {
     }
 
     return (
-      <div className="h-80 w-full">
+      <div className="h-80 w-full" ref={chartRef}>
         <ResponsiveContainer>
           <LineChart
             data={chartData}
@@ -358,7 +491,7 @@ function CompareTab() {
                 type="monotone"
                 dataKey={s.ticker}
                 name={s.ticker}
-                stroke={colors[idx % colors.length]}
+                stroke={getSeriesColor(idx)}
                 strokeWidth={2}
                 dot={{ r: 3 }}
                 isAnimationActive={false}
@@ -490,6 +623,10 @@ function CompareTab() {
                     );
                   })}
                 </Select>
+                <p className="text-xs text-[rgb(var(--color-text-subtle))] italic">
+                  Section Ranking uses all catalog metrics within the chosen
+                  section.
+                </p>
               </div>
             )}
 
@@ -535,9 +672,6 @@ function CompareTab() {
               >
                 <option value="default">Default</option>
                 <option value="template">Template</option>
-                <option value="custom" disabled>
-                  Custom (not available yet)
-                </option>
               </Select>
             </div>
 
@@ -580,33 +714,6 @@ function CompareTab() {
                 {templateSelectionRequired && (
                   <p className="text-xs text-red-600">
                     Select a template to run with template weights.
-                  </p>
-                )}
-              </div>
-            )}
-
-            {mode === "section" && (
-              <div className="space-y-1">
-                <label className="flex items-center gap-1 text-sm font-semibold text-[rgb(var(--color-text-muted))]">
-                  Metrics (catalog)
-                  <InfoTip content="Select metrics from the chosen section. At least one metric is required for Section Ranking." />
-                </label>
-                <MultiSelect
-                  options={metricsOptions}
-                  value={metricKeys}
-                  onChange={setMetricKeys}
-                  maxSelected={8}
-                  placeholder="Select metrics"
-                  disabled={metricsOptions.length === 0}
-                />
-                {metricKeys.length === 0 && mode === "section" && (
-                  <p className="text-xs text-red-600">
-                    At least one metric required for Section Ranking
-                  </p>
-                )}
-                {metricKeys.length > 0 && (
-                  <p className="text-xs text-[rgb(var(--color-text-subtle))]">
-                    {metricKeys.length} metric(s) selected
                   </p>
                 )}
               </div>
@@ -663,19 +770,29 @@ function CompareTab() {
 
         {result && dataWithBenchmark && (
           <div className="mt-6 space-y-4">
-            <div className="flex flex-wrap items-center gap-2 text-sm text-[rgb(var(--color-text-subtle))]">
-              <span>
-                Mode:{" "}
-                <strong className="text-[rgb(var(--color-text))]">
-                  {mode === "section" ? `Section (${section})` : "Overall"}
-                </strong>
-              </span>
-              <span>
-                Years:{" "}
-                <strong className="text-[rgb(var(--color-text))]">
-                  {result.years[0]} - {result.years[result.years.length - 1]}
-                </strong>
-              </span>
+            <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-[rgb(var(--color-text-subtle))]">
+              <div className="flex flex-wrap items-center gap-2">
+                <span>
+                  Mode:{" "}
+                  <strong className="text-[rgb(var(--color-text))]">
+                    {mode === "section" ? `Section (${section})` : "Overall"}
+                  </strong>
+                </span>
+                <span>
+                  Years:{" "}
+                  <strong className="text-[rgb(var(--color-text))]">
+                    {result.years[0]} - {result.years[result.years.length - 1]}
+                  </strong>
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="report" onClick={openSaveModal}>
+                  Save to Reports
+                </Button>
+                {saveMessage && (
+                  <span className="text-xs text-green-700">{saveMessage}</span>
+                )}
+              </div>
             </div>
 
             {renderChart()}
@@ -743,6 +860,29 @@ function CompareTab() {
           </div>
         )}
       </Card>
+
+      {saveOpen && (
+        <Modal title="Save to Reports" onClose={() => setSaveOpen(false)}>
+          <div className="space-y-3">
+            <input
+              type="text"
+              value={reportName}
+              onChange={(e) => setReportName(e.target.value)}
+              className="w-full border rounded px-3 py-2"
+              placeholder="Report name"
+            />
+            {saveError && <p className="text-red-500 text-sm">{saveError}</p>}
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => setSaveOpen(false)}>
+                Cancel
+              </Button>
+              <Button variant="report" onClick={submitSave} disabled={saving}>
+                {saving ? "Saving..." : "Save"}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

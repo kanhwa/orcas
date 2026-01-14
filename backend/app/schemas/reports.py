@@ -5,14 +5,17 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-ALLOWED_REPORT_TYPES = {
+CANONICAL_REPORT_TYPES: list[str] = [
+    "analysis_screening",
+    "analysis_metric_ranking",
+    "scoring_ranking",
     "scoring_scorecard",
     "compare_stocks",
     "compare_historical",
     "simulation_scenario",
-    "analysis_screening",
-    "analysis_metric_ranking",
-}
+]
+
+ALLOWED_REPORT_TYPES = set(CANONICAL_REPORT_TYPES)
 
 
 class ReportCreate(BaseModel):
@@ -24,9 +27,10 @@ class ReportCreate(BaseModel):
     @field_validator("type")
     @classmethod
     def validate_type(cls, value: str) -> str:
-        if value not in ALLOWED_REPORT_TYPES:
+        cleaned = (value or "").strip().lower()
+        if cleaned not in ALLOWED_REPORT_TYPES:
             raise ValueError("type must be one of: " + ", ".join(sorted(ALLOWED_REPORT_TYPES)))
-        return value
+        return cleaned
 
     @field_validator("pdf_base64")
     @classmethod

@@ -3,6 +3,7 @@ import { useCatalog } from "../contexts/CatalogContext";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import { Select } from "../components/ui/Select";
+import { Modal } from "../components/ui/Modal";
 import {
   getEmitens,
   EmitenItem,
@@ -12,8 +13,11 @@ import {
   SimulationAdjustmentDetail,
   listWeightTemplates,
   WeightTemplate,
+  createReport,
 } from "../services/api";
 import InfoTip from "../components/InfoTip";
+import { buildReportPdfBase64Async } from "../utils/reportPdf";
+import { toErrorMessage } from "../utils/errors";
 
 // Scoring metric option for dropdown (flattened from catalog)
 interface ScoringMetricOption {
@@ -140,6 +144,13 @@ const Simulation: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resultWeightLabel, setResultWeightLabel] = useState<string>("");
+
+  // Save to Reports
+  const [saveOpen, setSaveOpen] = useState(false);
+  const [reportName, setReportName] = useState("");
+  const [saveError, setSaveError] = useState("");
+  const [savingReport, setSavingReport] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
 
   // Lookup detail rows by metric key/name for applied adjustments
   const detailLookup = useMemo(() => {
@@ -344,9 +355,8 @@ const Simulation: React.FC = () => {
       const res = await listWeightTemplates(0, 50);
       setWeightTemplates(res.templates || []);
     } catch (err) {
-      const e = err as { detail?: string };
       setWeightTemplatesError(
-        e.detail || "Failed to load templates. Default weights will be used."
+        `${toErrorMessage(err)}. Default weights will be used.`
       );
     } finally {
       setWeightTemplatesLoading(false);
@@ -500,6 +510,7 @@ const Simulation: React.FC = () => {
     setLoading(true);
     setError(null);
     setResult(null);
+    setSaveMessage("");
 
     try {
       // Build overrides - backend expects value as the percentage adjustment
@@ -564,8 +575,7 @@ const Simulation: React.FC = () => {
       });
       setResultWeightLabel(weightLabel);
     } catch (err) {
-      const e = err as { detail?: string };
-      setError(e.detail || "Simulation failed. Please try again.");
+      setError(toErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -696,6 +706,150 @@ const Simulation: React.FC = () => {
   const formatSigned = (value: number, decimals = 4) => {
     const sign = value > 0 ? "+" : "";
     return `${sign}${formatNumber(value, decimals)}`;
+  };
+
+  const openSaveModal = () => {
+    if (!result) return;
+    setSaveError("");
+    setSaveMessage("");
+    setReportName(
+      `Simulation ${result.ticker} ${result.baseline_year}-${result.simulation_year}`
+    );
+    setSaveOpen(true);
+  };
+
+  const handleSaveReport = async () => {
+    if (!result) return;
+    const name = reportName.trim();
+    if (!name) {
+      setSaveError("Name is required");
+      return;
+    }
+
+    const safeName = name
+      .replace(/→/g, "-")
+      .replace(/\s*-\s*/g, "-")
+      .trim();
+    const normalizedName = safeName || name;
+
+    setSavingReport(true);
+    setSaveError("");
+
+    try {
+      const weightTemplateId =
+        weightProfile === "template" && selectedWeightTemplateId
+          ? Number(selectedWeightTemplateId)
+          : null;
+
+      const weightProfileLabel =
+        weightProfile === "template" && selectedWeightTemplate
+          ? `Template (${selectedWeightTemplate.name})`
+          : "Default";
+
+      const metadata = {
+        report_type: "simulation_scenario",
+        ticker: result.ticker,
+        ticker_name: result.ticker_name,
+        baseline_year: result.baseline_year,
+        simulation_year: result.simulation_year,
+        weight_profile: weightProfile,
+        weight_profile_label: weightProfileLabel,
+        weight_template_id: weightTemplateId,
+        weight_label: resultWeightLabel,
+        baseline_score: result.baseline_score,
+        simulated_score: result.simulated_score,
+        delta: result.delta,
+        delta_percent: result.delta_percent,
+        adjustments: appliedAdjustmentRows.map((adj) => ({
+          metric_name: adj.metric_name,
+          section: adj.section,
+          type: adj.type,
+          adjustment_percent: adj.adjustment_percent,
+          baseline_value: adj.baseline_value,
+          simulated_value: adj.simulated_value,
+          unit: adj.displayUnit || null,
+        })),
+      };
+
+      const pdfMetadata = [
+        { label: "View", value: "Simulation Scenario" },
+        { label: "Ticker", value: result.ticker },
+        { label: "Baseline Year", value: result.baseline_year },
+        { label: "Simulated Year", value: result.simulation_year },
+        { label: "Weight Profile", value: weightProfileLabel },
+        {
+          label: "Note",
+          value:
+            "Simulated year is a label for what-if analysis, not a forecast.",
+        },
+      ];
+
+      const summaryRow = [
+        formatNumber(result.baseline_score, 4),
+        formatNumber(result.simulated_score, 4),
+        formatSigned(result.delta, 4),
+        `(${formatSigned(result.delta_percent, 2)}%)`,
+      ];
+
+      const adjustmentRows = appliedAdjustmentRows.map((adj) => {
+        const sectionLabel =
+          (adj.section && sectionLabelByKey[adj.section]) || adj.section || "";
+        const typeLabel = adj.type
+          ? adj.type.charAt(0).toUpperCase() + adj.type.slice(1)
+          : "";
+        return [
+          adj.display_label || adj.metric_name,
+          sectionLabel,
+          typeLabel,
+          adj.baselineDisplay ?? "—",
+          adj.simulatedDisplay ?? "—",
+          `${adj.adjustment_percent >= 0 ? "+" : ""}${adj.adjustment_percent}%`,
+        ];
+      });
+
+      const pdf_base64 = await buildReportPdfBase64Async({
+        name: normalizedName,
+        type: "simulation_scenario",
+        metadata: pdfMetadata,
+        sections: [
+          {
+            title: "Simulation Summary",
+            columns: [
+              `Baseline Score (${result.baseline_year})`,
+              `Simulated Score (${result.simulation_year})`,
+              "Change",
+              "Change (%)",
+            ],
+            rows: [summaryRow],
+          },
+          {
+            title: "Applied Adjustments",
+            columns: [
+              "Metric",
+              "Section",
+              "Type",
+              `Baseline Value (${result.baseline_year})`,
+              `Simulated Value (${result.simulation_year})`,
+              "Adjustment (%)",
+            ],
+            rows: adjustmentRows,
+          },
+        ],
+      });
+
+      await createReport({
+        name: normalizedName,
+        type: "simulation_scenario",
+        pdf_base64,
+        metadata,
+      });
+      setSaveMessage("Saved to Reports.");
+      setSaveOpen(false);
+    } catch (err) {
+      setSaveError(toErrorMessage(err));
+    } finally {
+      setSavingReport(false);
+    }
   };
 
   // Build applied adjustment rows aligned to selected overrides (one row per selection)
@@ -1125,9 +1279,19 @@ const Simulation: React.FC = () => {
       {result && (
         <Card>
           <div className="p-6">
-            <h3 className="text-lg font-bold text-[rgb(var(--color-text))] mb-4 flex items-center gap-2">
-              📊 Simulation Results
-            </h3>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-lg font-bold text-[rgb(var(--color-text))] flex items-center gap-2">
+                📊 Simulation Results
+              </h3>
+              <div className="flex items-center gap-2">
+                <Button variant="report" onClick={openSaveModal}>
+                  Save to Reports
+                </Button>
+                {saveMessage && (
+                  <span className="text-xs text-green-700">{saveMessage}</span>
+                )}
+              </div>
+            </div>
 
             {/* Emiten Info */}
             <div className="mb-6 p-4 bg-[rgb(var(--color-surface))] rounded-lg">
@@ -1280,6 +1444,40 @@ const Simulation: React.FC = () => {
             </div>
           </div>
         </Card>
+      )}
+
+      {saveOpen && (
+        <Modal title="Save to Reports" onClose={() => setSaveOpen(false)}>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-[rgb(var(--color-text))]">
+                Report Name
+              </label>
+              <input
+                type="text"
+                className="mt-1 w-full rounded border border-[rgb(var(--color-border))] px-3 py-2 text-sm"
+                value={reportName}
+                onChange={(e) => setReportName(e.target.value)}
+                placeholder="Simulation report name"
+              />
+            </div>
+            {saveError && (
+              <div className="text-sm text-red-600">{saveError}</div>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => setSaveOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="report"
+                onClick={handleSaveReport}
+                disabled={savingReport}
+              >
+                {savingReport ? "Saving..." : "Save to Reports"}
+              </Button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );
