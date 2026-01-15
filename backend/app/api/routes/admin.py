@@ -1,18 +1,27 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+import math
+from datetime import datetime
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from sqlalchemy import or_, cast, String, desc, asc
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
 from app.core.security import hash_password
-from app.models import User, UserRole, UserStatus
+from app.models import User, UserRole, UserStatus, AuditLog
 from app.schemas.admin import (
     UserListResponse, 
     UserOut, 
     UserUpdateRequest, 
     UserCreateRequest,
-    AdminCountResponse
+    AdminCountResponse,
+    AuditLogOut,
+    AuditLogListResponse,
+    AuditLogFilters,
 )
 from app.core.audit import log_audit
 
@@ -431,3 +440,202 @@ def admin_edit_username(
 
     return user_to_out(user)
 
+
+# =============================================================================
+# Audit Log Endpoints
+# =============================================================================
+
+
+def audit_log_to_out(log: AuditLog, user: Optional[User] = None) -> AuditLogOut:
+    """Convert AuditLog model to AuditLogOut schema."""
+    return AuditLogOut(
+        id=log.id,
+        user_id=log.user_id,
+        username=user.username if user else None,
+        user_role=user.role.value if user else None,
+        action=log.action,
+        target_type=log.target_type,
+        target_id=log.target_id,
+        details=log.details,
+        ip_address=log.ip_address,
+        created_at=log.created_at.isoformat() if log.created_at else "",
+    )
+
+
+@router.get("/audit-logs/filters", response_model=AuditLogFilters)
+def get_audit_log_filters(
+    db: Session = Depends(get_db),
+    _admin: User = Depends(require_admin),
+) -> AuditLogFilters:
+    """
+    Get available filter options for audit logs.
+    Returns distinct actions and target_types from the database.
+    """
+    # Get distinct actions
+    actions_query = db.query(AuditLog.action).distinct().all()
+    actions = sorted([a[0] for a in actions_query if a[0]])
+
+    # Get distinct target_types
+    target_types_query = db.query(AuditLog.target_type).distinct().all()
+    target_types = sorted([t[0] for t in target_types_query if t[0]])
+
+    return AuditLogFilters(actions=actions, target_types=target_types)
+
+
+@router.get("/audit-logs", response_model=AuditLogListResponse)
+def list_audit_logs(
+    page: int = Query(default=1, ge=1, description="Page number (1-indexed)"),
+    limit: int = Query(default=50, ge=1, le=100, description="Items per page"),
+    user_id: Optional[int] = Query(default=None, description="Filter by user ID"),
+    action: Optional[str] = Query(default=None, description="Filter by action type"),
+    target_type: Optional[str] = Query(default=None, description="Filter by target type"),
+    start_date: Optional[datetime] = Query(default=None, description="Filter from date (ISO format)"),
+    end_date: Optional[datetime] = Query(default=None, description="Filter to date (ISO format)"),
+    search: Optional[str] = Query(default=None, description="Search in IP address or details"),
+    sort_by: str = Query(default="created_at", description="Sort by field"),
+    sort_order: str = Query(default="desc", description="Sort order: asc or desc"),
+    db: Session = Depends(get_db),
+    _admin: User = Depends(require_admin),
+) -> AuditLogListResponse:
+    """
+    List audit logs with filtering and pagination (admin only).
+    """
+    # Base query with left join to get user info
+    query = db.query(AuditLog, User).outerjoin(User, AuditLog.user_id == User.id)
+
+    # Apply filters
+    if user_id is not None:
+        query = query.filter(AuditLog.user_id == user_id)
+    
+    if action:
+        query = query.filter(AuditLog.action == action)
+    
+    if target_type:
+        query = query.filter(AuditLog.target_type == target_type)
+    
+    if start_date:
+        query = query.filter(AuditLog.created_at >= start_date)
+    
+    if end_date:
+        query = query.filter(AuditLog.created_at <= end_date)
+    
+    if search:
+        search_term = f"%{search}%"
+        # Search in IP address or details (cast JSONB to text for search)
+        query = query.filter(
+            or_(
+                AuditLog.ip_address.ilike(search_term),
+                cast(AuditLog.details, String).ilike(search_term),
+            )
+        )
+
+    # Get total count before pagination
+    total = query.count()
+
+    # Apply sorting
+    sort_column = {
+        "created_at": AuditLog.created_at,
+        "user_id": AuditLog.user_id,
+        "action": AuditLog.action,
+    }.get(sort_by, AuditLog.created_at)
+
+    if sort_order == "asc":
+        query = query.order_by(asc(sort_column))
+    else:
+        query = query.order_by(desc(sort_column))
+
+    # Apply pagination
+    skip = (page - 1) * limit
+    results = query.offset(skip).limit(limit).all()
+
+    # Convert to response format
+    logs = [audit_log_to_out(log, user) for log, user in results]
+    total_pages = math.ceil(total / limit) if total > 0 else 1
+
+    return AuditLogListResponse(
+        logs=logs,
+        total=total,
+        page=page,
+        limit=limit,
+        total_pages=total_pages,
+    )
+
+
+@router.get("/audit-logs/export")
+def export_audit_logs(
+    user_id: Optional[int] = Query(default=None),
+    action: Optional[str] = Query(default=None),
+    target_type: Optional[str] = Query(default=None),
+    start_date: Optional[datetime] = Query(default=None),
+    end_date: Optional[datetime] = Query(default=None),
+    search: Optional[str] = Query(default=None),
+    db: Session = Depends(get_db),
+    _admin: User = Depends(require_admin),
+) -> StreamingResponse:
+    """
+    Export filtered audit logs as CSV (admin only).
+    """
+    import csv
+    import io
+
+    # Build query with same filters as list endpoint
+    query = db.query(AuditLog, User).outerjoin(User, AuditLog.user_id == User.id)
+
+    if user_id is not None:
+        query = query.filter(AuditLog.user_id == user_id)
+    if action:
+        query = query.filter(AuditLog.action == action)
+    if target_type:
+        query = query.filter(AuditLog.target_type == target_type)
+    if start_date:
+        query = query.filter(AuditLog.created_at >= start_date)
+    if end_date:
+        query = query.filter(AuditLog.created_at <= end_date)
+    if search:
+        search_term = f"%{search}%"
+        query = query.filter(
+            or_(
+                AuditLog.ip_address.ilike(search_term),
+                cast(AuditLog.details, String).ilike(search_term),
+            )
+        )
+
+    query = query.order_by(desc(AuditLog.created_at))
+    results = query.limit(10000).all()  # Limit export to 10k rows
+
+    # Generate CSV
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Header
+    writer.writerow([
+        "ID", "Timestamp", "User ID", "Username", "Role", 
+        "Action", "Target Type", "Target ID", "IP Address", "Details"
+    ])
+    
+    # Data rows
+    for log, user in results:
+        writer.writerow([
+            log.id,
+            log.created_at.isoformat() if log.created_at else "",
+            log.user_id or "",
+            user.username if user else "",
+            user.role.value if user else "",
+            log.action,
+            log.target_type or "",
+            log.target_id or "",
+            log.ip_address or "",
+            str(log.details) if log.details else "",
+        ])
+
+    output.seek(0)
+    
+    # Return as streaming response
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"audit_logs_{timestamp}.csv"
+    
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )

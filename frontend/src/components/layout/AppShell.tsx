@@ -110,7 +110,9 @@ export function AppShell({
           <div className="flex items-center gap-3">
             <button
               type="button"
-              aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              aria-label={
+                sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
+              }
               onClick={() => setSidebarCollapsed((prev) => !prev)}
               className="hidden rounded-lg bg-white/20 p-2 text-white transition hover:bg-white/30 lg:inline-flex"
             >
@@ -122,7 +124,10 @@ export function AppShell({
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className={cn("h-5 w-5 transition", sidebarCollapsed && "scale-x-[-1]")}
+                className={cn(
+                  "h-5 w-5 transition",
+                  sidebarCollapsed && "scale-x-[-1]"
+                )}
               >
                 <path d="M4 6h16" />
                 <path d="M4 12h16" />
@@ -230,7 +235,11 @@ export function AppShell({
         <aside
           className="hidden shrink-0 border-r border-[rgb(var(--color-border))] bg-white transition-[width] duration-200 ease-in-out lg:block"
           style={{
-            width: `${sidebarCollapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH_EXPANDED}px`,
+            width: `${
+              sidebarCollapsed
+                ? SIDEBAR_WIDTH_COLLAPSED
+                : SIDEBAR_WIDTH_EXPANDED
+            }px`,
             position: "sticky",
             top: "var(--app-header-height)",
             height: "calc(100vh - var(--app-header-height))",
@@ -255,7 +264,9 @@ export function AppShell({
                   title={sidebarCollapsed ? item.label : undefined}
                 >
                   {item.icon && <span className="text-lg">{item.icon}</span>}
-                  {!sidebarCollapsed && <span className="flex-1">{item.label}</span>}
+                  {!sidebarCollapsed && (
+                    <span className="flex-1">{item.label}</span>
+                  )}
                   {!sidebarCollapsed && item.description && (
                     <span
                       className="shrink-0"

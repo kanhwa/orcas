@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List, Literal, Optional
 
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field
 
 
 class UserOut(BaseModel):
@@ -51,3 +51,40 @@ class AdminCountResponse(BaseModel):
     admin_count: int
     max_admins: int = 2
     can_create_admin: bool
+
+
+# =============================================================================
+# Audit Log Schemas
+# =============================================================================
+
+
+class AuditLogOut(BaseModel):
+    """Single audit log entry for API response."""
+    id: int
+    user_id: Optional[int] = None
+    username: Optional[str] = None
+    user_role: Optional[str] = None
+    action: str
+    target_type: Optional[str] = None
+    target_id: Optional[int] = None
+    details: Optional[dict] = None
+    ip_address: Optional[str] = None
+    created_at: str
+
+    class Config:
+        from_attributes = True
+
+
+class AuditLogListResponse(BaseModel):
+    """Paginated list of audit logs."""
+    logs: List[AuditLogOut]
+    total: int
+    page: int
+    limit: int
+    total_pages: int
+
+
+class AuditLogFilters(BaseModel):
+    """Available filter options for audit logs."""
+    actions: List[str]
+    target_types: List[str]
