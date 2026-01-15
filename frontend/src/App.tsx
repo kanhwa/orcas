@@ -9,6 +9,7 @@ import SyncData from "./pages/SyncData";
 import Analysis from "./pages/Analysis";
 import Admin from "./pages/Admin";
 import Scoring from "./pages/Scoring";
+import ActivityLog from "./pages/ActivityLog";
 import {
   AppShell,
   NavItem,
@@ -26,7 +27,8 @@ type Page =
   | "reports"
   | "profile"
   | "admin"
-  | "sync-data";
+  | "sync-data"
+  | "activity-log";
 
 function AppContent() {
   const { loading: catalogLoading, error: catalogError, retry } = useCatalog();
@@ -104,6 +106,10 @@ function AppContent() {
       title: "Sync Data",
       subtitle: "Upload and manage CSV data files",
     },
+    "activity-log": {
+      title: "Activity Log",
+      subtitle: "View system activity and audit trail",
+    },
   };
 
   const role = user?.role || "viewer";
@@ -111,7 +117,7 @@ function AppContent() {
 
   // Guard admin-only pages (prevent access by manually switching state)
   useEffect(() => {
-    if (!isAdmin && (currentPage === "admin" || currentPage === "sync-data")) {
+    if (!isAdmin && (currentPage === "admin" || currentPage === "sync-data" || currentPage === "activity-log")) {
       setCurrentPage("analysis");
     }
   }, [currentPage, isAdmin]);
@@ -185,6 +191,12 @@ function AppContent() {
             icon: "🔄",
             onClick: () => setCurrentPage("sync-data"),
           },
+          {
+            key: "activity-log",
+            label: "Activity Log",
+            icon: "📋",
+            onClick: () => setCurrentPage("activity-log"),
+          },
         ]
       : []),
     {
@@ -221,6 +233,9 @@ function AppContent() {
     }
     if (currentPage === "admin" && isAdmin && user) {
       return <Admin user={user} />;
+    }
+    if (currentPage === "activity-log" && isAdmin && user) {
+      return <ActivityLog user={user} />;
     }
     // Placeholder content for sections that are not yet implemented
     return (
