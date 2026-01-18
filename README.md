@@ -3,6 +3,12 @@
 Web-based Decision Support System for banking financial health analysis (EDA + WSM).
 Tech stack: React, FastAPI, PostgreSQL, Redis.
 
+### Redis usage
+- Redis is provisioned via Docker Compose and used for response caching on WSM endpoints (`/api/wsm/score-preview`, `/api/wsm/simulate`, `/api/wsm/compare`).
+- Config: `REDIS_HOST`, `REDIS_PORT`, `REDIS_CACHE_ENABLED` (default true), `REDIS_CACHE_TTL_SECONDS` (default 300s).
+- Health checks: `/redis-health` and `/db-health` on the backend.
+- If Redis is down, API falls back gracefully (no cache).
+
 ## Development
 
 This is a monorepo with:
