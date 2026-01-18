@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Generator
+from typing import Generator, Optional
 
 from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
@@ -53,14 +53,14 @@ def get_current_user(
     return user
 
 
-def get_redis() -> redis.Redis:
+def get_redis() -> Optional[redis.Redis]:
     """Get Redis client for caching"""
     try:
         redis_url = settings.REDIS_URL or "redis://localhost:6379/0"
-        redis_client = redis.from_url(redis_url)
+        redis_client = redis.from_url(redis_url, decode_responses=True)
         redis_client.ping()  # Test connection
         return redis_client
-    except Exception:
+    except (redis.exceptions.RedisError, OSError, ValueError):
         # Return None if Redis is not available
         # Services should handle None client gracefully
         return None

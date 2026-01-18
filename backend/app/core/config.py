@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
 
+    REDIS_CACHE_ENABLED: bool = True
+    REDIS_CACHE_TTL_SECONDS: int = 300
+
     SESSION_SECRET: str = "change_this_later"
 
     model_config = SettingsConfigDict(
