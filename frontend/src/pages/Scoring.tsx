@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import { Select } from "../components/ui/Select";
@@ -82,6 +83,16 @@ async function wsmScorePreview(
   });
 }
 
+async function wsmScoreMultiYear(
+  payload: WSMMultiYearScoreRequest
+): Promise<WSMMultiYearScoreResponse> {
+  return request<WSMMultiYearScoreResponse>("/api/wsm/score-multi-year", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+
 async function wsmScorecard(
   payload: ScorecardRequest
 ): Promise<ScorecardResponse> {
@@ -163,6 +174,31 @@ type WSMScoreRequest = {
   weight_scope?: "metric" | "section" | null;
   weights_json?: Record<string, number> | null;
 };
+
+type YearlyScore = {
+  year: number;
+  score: number;
+};
+
+type WSMMultiYearRankingItem = {
+  rank: number;
+  ticker: string;
+  average_score: number;
+  yearly_breakdown: YearlyScore[];
+};
+
+type WSMMultiYearScoreRequest = Omit<WSMScoreRequest, "year"> & {
+  start_year: number;
+  end_year: number;
+};
+
+type WSMMultiYearScoreResponse = {
+  start_year: number;
+  end_year: number;
+  missing_policy: MissingPolicy;
+  ranking: WSMMultiYearRankingItem[];
+};
+
 
 type ScorecardCoverage = {
   used: number;
@@ -284,18 +320,26 @@ function buildOfficialMetrics(
 
 const Scoring = () => {
   const [tab, setTab] = useState<Tab>("ranking");
+  const [scoringMode, setScoringMode] = useState<"single" | "multi">("single");
   const [years, setYears] = useState<number[]>([]);
   const [selectedYear, setSelectedYear] = useState<number | "">("");
+  const [startYear, setStartYear] = useState<number | "">("");
+  const [endYear, setEndYear] = useState<number | "">("");
   const [emitens, setEmitens] = useState<EmitenItem[]>([]);
   const [selectedTicker, setSelectedTicker] = useState<string>("");
   const [metrics, setMetrics] = useState<MetricWeightInput[]>([]);
   const [sections, setSections] = useState<SectionInfo[]>([]);
   const [ranking, setRanking] = useState<WSMRankingPreviewItem[]>([]);
+  const [multiRanking, setMultiRanking] = useState<WSMMultiYearRankingItem[]>([]);
   const [rankingError, setRankingError] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [breakdownModalOpen, setBreakdownModalOpen] = useState(false);
+  const [selectedBreakdown, setSelectedBreakdown] = useState<YearlyScore[] | null>(null);
+  const [selectedBreakdownTicker, setSelectedBreakdownTicker] = useState("");
+
   const [saveMessage, setSaveMessage] = useState("");
   const [saveModalContext, setSaveModalContext] = useState<
-    "ranking" | "scorecard" | null
+    "ranking" | "scorecard" | "multi_ranking" | null
   >(null);
   const [reportName, setReportName] = useState("");
   const [saveError, setSaveError] = useState("");
@@ -322,6 +366,9 @@ const Scoring = () => {
   const [scorecard, setScorecard] = useState<ScorecardResponse | null>(null);
   const [scorecardLoading, setScorecardLoading] = useState(false);
   const [scorecardError, setScorecardError] = useState("");
+  const [aiAnalysisText, setAiAnalysisText] = useState("");
+  const [aiAnalysisLoading, setAiAnalysisLoading] = useState(false);
+  const [showAiChart, setShowAiChart] = useState(false);
   const [customScope, setCustomScope] = useState<"metric" | "section">(
     "section"
   );
@@ -398,8 +445,10 @@ const Scoring = () => {
       try {
         const res = await getYears();
         setYears(res.years || []);
-        if (!selectedYear && res.years?.length) {
-          setSelectedYear(res.years[0]);
+        if (res.years?.length) {
+          if (!selectedYear) setSelectedYear(res.years[0]);
+          if (!startYear) setStartYear(res.years[res.years.length - 1]);
+          if (!endYear) setEndYear(res.years[0]);
         }
       } catch (err) {
         console.warn("Failed to load years", err);
@@ -819,11 +868,11 @@ const Scoring = () => {
 
   const canRun = useMemo(
     () =>
-      !!selectedYear &&
+      ((scoringMode === "single" && !!selectedYear) || (scoringMode === "multi" && !!startYear && !!endYear)) &&
       metrics.length > 0 &&
       !loadingMeta &&
       !weightProfileBlocked,
-    [loadingMeta, metrics.length, selectedYear, weightProfileBlocked]
+    [loadingMeta, metrics.length, selectedYear, startYear, endYear, scoringMode, weightProfileBlocked]
   );
 
   const dropEligibleTickers = useMemo(
@@ -847,7 +896,8 @@ const Scoring = () => {
     getMissingPolicyOptions() || DEFAULT_MISSING_POLICY_OPTIONS;
 
   const handleRun = async () => {
-    if (!selectedYear) return;
+    if (scoringMode === "single" && !selectedYear) return;
+    if (scoringMode === "multi" && (!startYear || !endYear)) return;
     if (!metrics.length) {
       setRankingError("Metrics are not available yet.");
       return;
@@ -866,22 +916,35 @@ const Scoring = () => {
     setRankingError("");
     setLoading(true);
     setRanking([]);
+    setMultiRanking([]);
     setRankingPolicyUsed(missingPolicy);
     try {
       const weightPayload = buildWeightPayload();
-      const result = await wsmScorePreview({
-        year: Number(selectedYear),
-        metrics,
-        missing_policy: missingPolicy,
-        ...weightPayload,
-      });
-      if (missingPolicy === "drop") {
-        setDropEligibleByYear((prev) => ({
-          ...prev,
-          [Number(selectedYear)]: result.ranking?.map((r) => r.ticker) ?? [],
-        }));
+      
+      if (scoringMode === "multi") {
+        const result = await wsmScoreMultiYear({
+          start_year: Number(startYear),
+          end_year: Number(endYear),
+          metrics,
+          missing_policy: missingPolicy,
+          ...weightPayload,
+        });
+        setMultiRanking(result.ranking || []);
+      } else {
+        const result = await wsmScorePreview({
+          year: Number(selectedYear),
+          metrics,
+          missing_policy: missingPolicy,
+          ...weightPayload,
+        });
+        if (missingPolicy === "drop") {
+          setDropEligibleByYear((prev) => ({
+            ...prev,
+            [Number(selectedYear)]: result.ranking?.map((r) => r.ticker) ?? [],
+          }));
+        }
+        setRanking(result.ranking || []);
       }
-      setRanking(result.ranking || []);
     } catch (err) {
       setRankingError(toErrorMessage(err));
     } finally {
@@ -889,13 +952,13 @@ const Scoring = () => {
     }
   };
 
+
   const handleSaveRun = () => {
-    if (!selectedYear) return;
-    if (!metrics.length) {
-      setRankingError("Metrics are not available yet.");
+    if (scoringMode === "single" && (!selectedYear || !ranking.length)) {
+      setRankingError("Run scoring before saving.");
       return;
     }
-    if (!ranking.length) {
+    if (scoringMode === "multi" && (!startYear || !endYear || !multiRanking.length)) {
       setRankingError("Run scoring before saving.");
       return;
     }
@@ -911,8 +974,13 @@ const Scoring = () => {
     }
     setSaveMessage("");
     setSaveError("");
-    setReportName(`Scoring Ranking ${selectedYear}`);
-    setSaveModalContext("ranking");
+    if (scoringMode === "multi") {
+      setReportName(`Multi-Year Avg Ranking ${startYear}-${endYear}`);
+      setSaveModalContext("multi_ranking");
+    } else {
+      setReportName(`Scoring Ranking ${selectedYear}`);
+      setSaveModalContext("ranking");
+    }
   };
 
   const handleLoadScorecard = async (opts?: {
@@ -944,6 +1012,8 @@ const Scoring = () => {
     if (opts?.ticker) setSelectedTicker(opts.ticker);
     setScorecardError("");
     setScorecard(null);
+    setAiAnalysisText("");
+    setShowAiChart(false);
     const resolvedYear = Number(year);
     if (policy === "drop") {
       const eligible = await ensureDropEligibleTickers(resolvedYear);
@@ -1015,6 +1085,24 @@ const Scoring = () => {
     setSaveError("");
     setReportName(`Scorecard ${scorecard.ticker} ${scorecard.year}`);
     setSaveModalContext("scorecard");
+  };
+
+  const handleGenerateAiAnalysis = async () => {
+    if (!scorecard) return;
+    setAiAnalysisLoading(true);
+    setAiAnalysisText("");
+    setShowAiChart(false);
+    try {
+      const response = await request<{ analysis: string }>("/api/ai/interpret-scorecard", {
+        method: "POST",
+        body: JSON.stringify(scorecard),
+      });
+      setAiAnalysisText(response.analysis || "Tidak ada hasil dari AI.");
+    } catch (err) {
+      setAiAnalysisText(`Gagal menghubungi AI: ${toErrorMessage(err)}`);
+    } finally {
+      setAiAnalysisLoading(false);
+    }
   };
 
   const submitReportSave = async () => {
@@ -1106,6 +1194,66 @@ const Scoring = () => {
           type: "scoring_scorecard",
           pdf_base64,
           metadata: rankingMetadataForApi,
+        });
+      } else if (saveModalContext === "multi_ranking") {
+        const missingPolicyLabel =
+          missingPolicyOptions.find((o) => o.key === rankingPolicyUsed)
+            ?.label || rankingPolicyUsed;
+        const weightProfileLabel =
+          weightProfile === "template"
+            ? selectedWeightTemplate
+              ? `Template: ${selectedWeightTemplate.name}`
+              : "Template"
+            : "Default";
+
+        const multiRankingMetadataLines = [
+          { label: "View", value: "Multi-Year Avg Ranking" },
+          { label: "Start Year", value: Number(startYear) || "—" },
+          { label: "End Year", value: Number(endYear) || "—" },
+          { label: "Missing Data Policy", value: missingPolicyLabel },
+          { label: "Weight Profile", value: weightProfileLabel },
+          { label: "Top N", value: multiRanking.length },
+        ];
+
+        const multiRankingMetadataForApi = {
+          report_type: "scoring_scorecard",
+          view: "multi_ranking",
+          start_year: Number(startYear),
+          end_year: Number(endYear),
+          missing_policy: rankingPolicyUsed,
+          weight_profile: weightProfileLabel,
+          weight_scope: weightScope,
+          weight_template_id: weightTemplateId,
+          ranking_count: multiRanking.length,
+        };
+
+        const multiRankingRows = multiRanking.map((item, idx) => {
+          return [
+            item.rank ?? idx + 1,
+            item.ticker,
+            formatDecimal(item.average_score, 6),
+          ];
+        });
+
+        const pdf_base64 = await buildReportPdfBase64Async({
+          name,
+          type: "scoring_scorecard",
+          typeLabelOverride: "Scoring — Multi-Year Avg Ranking",
+          metadata: multiRankingMetadataLines,
+          sections: [
+            {
+              title: "WSM Multi-Year Average Ranking",
+              columns: ["Rank", "Ticker", "Average Score"],
+              rows: multiRankingRows,
+            },
+          ],
+        });
+
+        await createReport({
+          name,
+          type: "scoring_scorecard",
+          pdf_base64,
+          metadata: multiRankingMetadataForApi,
         });
       } else if (saveModalContext === "scorecard" && scorecard) {
         const coveragePct = asPercent(scorecard.coverage?.pct ?? null);
@@ -1231,8 +1379,18 @@ const Scoring = () => {
         const pdf_base64 = await buildReportPdfBase64Async({
           name,
           type: "scoring_scorecard",
+          typeLabelOverride: `Scoring — Scorecard`,
           metadata: scorecardMetadataLines,
           sections: [
+            ...(aiAnalysisText
+              ? [
+                  {
+                    title: "Interpretasi Finansial",
+                    columns: ["Analisis"],
+                    rows: [[aiAnalysisText]],
+                  },
+                ]
+              : []),
             {
               title: "Scorecard Summary",
               columns: ["Field", "Value"],
@@ -1595,13 +1753,13 @@ const Scoring = () => {
           {
             key: "ranking",
             label: "Ranking",
-            icon: "🏅",
+            icon: "",
             tip: "Official ranking preview",
           },
           {
             key: "scorecard",
             label: "Scorecard",
-            icon: "📊",
+            icon: "",
             tip: "Per-metric breakdown",
           },
         ] as { key: Tab; label: string; icon: string; tip: string }[]
@@ -1617,7 +1775,7 @@ const Scoring = () => {
           }`}
         >
           <span className="flex items-center gap-2">
-            <span>{t.icon}</span>
+            {t.icon && <span>{t.icon}</span>}
             {t.label}
             <InfoTip content={t.tip} />
           </span>
@@ -1635,21 +1793,74 @@ const Scoring = () => {
         <div className="flex flex-wrap items-end gap-3">
           <div className="flex flex-col gap-1">
             <span className="text-xs text-[rgb(var(--color-text-subtle))]">
-              Year
+              Mode
             </span>
             <Select
-              value={selectedYear ?? ""}
-              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              value={scoringMode}
+              onChange={(e) => setScoringMode(e.target.value as "single" | "multi")}
               className="w-32"
-              disabled={loadingMeta}
+              disabled={loadingMeta || aiAnalysisLoading}
             >
-              {years.map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
+              <option value="single">Single Year</option>
+              <option value="multi">Multi-Year Avg</option>
             </Select>
           </div>
+          {scoringMode === "single" ? (
+            <div className="flex flex-col gap-1 w-32">
+              <span className="text-xs text-[rgb(var(--color-text-subtle))]">
+                Year
+              </span>
+              <Select
+                value={selectedYear ?? ""}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                className="w-32"
+                disabled={loadingMeta || aiAnalysisLoading}
+              >
+                {years.map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-col gap-1 w-32">
+                <span className="text-xs text-[rgb(var(--color-text-subtle))]">
+                  Start Year
+                </span>
+                <Select
+                  value={startYear ?? ""}
+                  onChange={(e) => setStartYear(Number(e.target.value))}
+                  className="w-28"
+                  disabled={loadingMeta || aiAnalysisLoading}
+                >
+                  {years.map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1 w-32">
+                <span className="text-xs text-[rgb(var(--color-text-subtle))]">
+                  End Year
+                </span>
+                <Select
+                  value={endYear ?? ""}
+                  onChange={(e) => setEndYear(Number(e.target.value))}
+                  className="w-28"
+                  disabled={loadingMeta || aiAnalysisLoading}
+                >
+                  {years.map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            </>
+          )}
           <div className="flex flex-col gap-1">
             <span className="text-xs text-[rgb(var(--color-text-subtle))]">
               Missing Data Policy
@@ -1660,7 +1871,7 @@ const Scoring = () => {
                 setMissingPolicy(e.target.value as MissingPolicy)
               }
               className="w-40"
-              disabled={loadingMeta}
+              disabled={loadingMeta || aiAnalysisLoading}
             >
               {missingPolicyOptions.map((opt) => (
                 <option key={opt.key} value={opt.key}>
@@ -1684,12 +1895,12 @@ const Scoring = () => {
       {!loading && rankingError && (
         <p className="text-red-500">{rankingError}</p>
       )}
-      {!loading && !rankingError && ranking.length === 0 && (
+      {!loading && !rankingError && ranking.length === 0 && multiRanking.length === 0 && (
         <p className="text-gray-500">
           No results yet. Choose a year and run scoring.
         </p>
       )}
-      {!loading && ranking.length > 0 && (
+      {!loading && (ranking.length > 0 || multiRanking.length > 0) && (
         <>
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
@@ -1709,67 +1920,103 @@ const Scoring = () => {
               Reports.
             </p>
           </div>
-          <Table>
-            <thead>
-              <tr>
-                <th>Rank</th>
-                <th>Ticker</th>
-                <th>Total Score</th>
-                <th>Coverage</th>
-                <th>Confidence</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ranking.map((item, idx) => {
-                const coveragePct = asPercent(item.coverage?.pct ?? null);
-                const coverageLabel =
-                  coveragePct === null || coveragePct === undefined
-                    ? "—"
-                    : `${formatDecimal(coveragePct, 1)}%`;
-                const confidence = item.confidence || "";
-                const confidenceToneRow =
-                  confidence === "High"
-                    ? "bg-green-100 text-green-800"
-                    : confidence === "Medium"
-                    ? "bg-amber-100 text-amber-800"
-                    : confidence === "Low"
-                    ? "bg-red-100 text-red-800"
-                    : "bg-gray-100 text-gray-600";
-                return (
+          
+          {scoringMode === "multi" ? (
+            <Table>
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>Ticker</th>
+                  <th>Average Score</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {multiRanking.map((item, idx) => (
                   <tr key={`${item.ticker}-${idx}`}>
                     <td>{idx + 1}</td>
                     <td className="font-mono">{item.ticker}</td>
-                    <td>{formatDecimal(item.score, 6)}</td>
-                    <td>{coverageLabel}</td>
-                    <td>
-                      <span
-                        className={`rounded px-2 py-1 text-xs font-semibold ${confidenceToneRow}`}
-                      >
-                        {confidence || "—"}
-                      </span>
-                    </td>
+                    <td className="font-semibold">{formatDecimal(item.average_score, 6)}</td>
                     <td>
                       <Button
                         size="sm"
                         variant="secondary"
                         onClick={() => {
-                          setTab("scorecard");
-                          handleLoadScorecard({
-                            year: Number(selectedYear) || years[0],
-                            ticker: item.ticker,
-                            missingPolicy: rankingPolicyUsed,
-                          });
+                          setSelectedBreakdownTicker(item.ticker);
+                          setSelectedBreakdown(item.yearly_breakdown);
+                          setBreakdownModalOpen(true);
                         }}
                       >
-                        View details
+                        Yearly Breakdown
                       </Button>
                     </td>
                   </tr>
-                );
-              })}
-            </tbody>
-          </Table>
+                ))}
+              </tbody>
+            </Table>
+          ) : (
+            <Table>
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>Ticker</th>
+                  <th>Total Score</th>
+                  <th>Coverage</th>
+                  <th>Confidence</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ranking.map((item, idx) => {
+                  const coveragePct = asPercent(item.coverage?.pct ?? null);
+                  const coverageLabel =
+                    coveragePct === null || coveragePct === undefined
+                      ? "—"
+                      : `${formatDecimal(coveragePct, 1)}%`;
+                  const confidence = item.confidence || "";
+                  const confidenceToneRow =
+                    confidence === "High"
+                      ? "bg-green-100 text-green-800"
+                      : confidence === "Medium"
+                      ? "bg-amber-100 text-amber-800"
+                      : confidence === "Low"
+                      ? "bg-red-100 text-red-800"
+                      : "bg-gray-100 text-gray-600";
+                  return (
+                    <tr key={`${item.ticker}-${idx}`}>
+                      <td>{idx + 1}</td>
+                      <td className="font-mono">{item.ticker}</td>
+                      <td>{formatDecimal(item.score, 6)}</td>
+                      <td>{coverageLabel}</td>
+                      <td>
+                        <span
+                          className={`rounded px-2 py-1 text-xs font-semibold ${confidenceToneRow}`}
+                        >
+                          {confidence || "—"}
+                        </span>
+                      </td>
+                      <td>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => {
+                            setTab("scorecard");
+                            handleLoadScorecard({
+                              year: Number(selectedYear) || years[0],
+                              ticker: item.ticker,
+                              missingPolicy: rankingPolicyUsed,
+                            });
+                          }}
+                        >
+                          View details
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </Table>
+          )}
         </>
       )}
       <p className="text-xs text-[rgb(var(--color-text-subtle))]">
@@ -1783,7 +2030,7 @@ const Scoring = () => {
     if (!scorecard) return null;
     const coveragePct = asPercent(scorecard.coverage?.pct ?? null) ?? 0;
     return (
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="flex flex-wrap items-start gap-4">
         <div className="rounded border border-[rgb(var(--color-border))] bg-[rgb(var(--color-surface))] p-3">
           <div className="text-xs text-[rgb(var(--color-text-subtle))]">
             Rank
@@ -1903,8 +2150,31 @@ const Scoring = () => {
     );
   };
 
+  const handleAutoBalance = () => {
+    if (customWeightsTotal <= 0) return;
+    if (customScope === "section") {
+      setCustomSectionWeights((prev) => {
+        const factor = 100 / customWeightsTotal;
+        return {
+          balance: parseFloat((prev.balance * factor).toFixed(2)),
+          income: parseFloat((prev.income * factor).toFixed(2)),
+          cash_flow: parseFloat((prev.cash_flow * factor).toFixed(2)),
+        };
+      });
+    } else {
+      setCustomMetricWeights((prev) => {
+        const factor = 100 / customWeightsTotal;
+        const next = { ...prev };
+        for (const k in next) {
+          next[k] = parseFloat((next[k] * factor).toFixed(2));
+        }
+        return next;
+      });
+    }
+  };
+
   const renderCustomWeightsPanel = () => {
-    const totalLabel = formatDecimal(customWeightsTotal, 6);
+    const totalLabel = `${formatDecimal(customWeightsTotal, 2)}%`;
     const showError = weightProfile === "custom" && customWeightsInvalid;
     const totalIsZero = weightProfile === "custom" && customWeightsTotal <= 0;
     const showSectionErrors =
@@ -1949,7 +2219,7 @@ const Scoring = () => {
               className={`w-full rounded border px-2 py-1 text-sm ${
                 invalidSectionWeights[entry.key]
                   ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                  : "border-[rgb(var(--color-border))]"
+                  : "border-[rgb(var(--color-primary))]/50"
               }`}
             />
             {invalidSectionWeights[entry.key] && (
@@ -1979,7 +2249,7 @@ const Scoring = () => {
             placeholder="Search metric"
             value={customMetricSearch}
             onChange={(e) => setCustomMetricSearch(e.target.value)}
-            className="w-52 rounded border border-[rgb(var(--color-border))] px-2 py-1 text-sm"
+            className="w-52 rounded border border-[rgb(var(--color-primary))]/50 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[rgb(var(--color-primary))]/50"
           />
           <Select
             value={customSectionFilter}
@@ -2067,6 +2337,10 @@ const Scoring = () => {
               Total weight: {totalLabel}
             </span>
             <InfoTip content="Total is the sum of raw inputs (0–100). Must be > 0 to run." />
+            <Button size="sm" variant="secondary" className="ml-2 h-6 px-3 py-0 text-xs border-blue-500 text-blue-700 font-semibold" onClick={handleAutoBalance} disabled={customWeightsTotal <= 0}>
+              Auto-Balance to 100%
+            </Button>
+            <InfoTip content="The system automatically normalizes your weight ratio to 100% to maintain mathematical integrity." />
           </div>
           <label className="ml-auto flex items-center gap-2 text-xs text-[rgb(var(--color-text))]">
             <input
@@ -2225,8 +2499,8 @@ const Scoring = () => {
 
   const renderScorecardTab = () => (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-        <div className="flex flex-col gap-1">
+      <div className="flex flex-wrap items-start gap-4">
+        <div className="flex flex-col gap-1 w-32">
           <span className="text-xs text-[rgb(var(--color-text-subtle))]">
             Year
           </span>
@@ -2242,7 +2516,7 @@ const Scoring = () => {
             ))}
           </Select>
         </div>
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1 w-64">
           <span className="text-xs text-[rgb(var(--color-text-subtle))]">
             Ticker
           </span>
@@ -2250,6 +2524,7 @@ const Scoring = () => {
             value={selectedTicker}
             onChange={(e) => setSelectedTicker(e.target.value)}
             className="w-full"
+            disabled={aiAnalysisLoading}
           >
             {emitens.map((item) => {
               const isEligible = !isDropPolicy
@@ -2296,6 +2571,7 @@ const Scoring = () => {
             value={missingPolicy}
             onChange={(e) => setMissingPolicy(e.target.value as MissingPolicy)}
             className="w-full"
+            disabled={aiAnalysisLoading}
           >
             {missingPolicyOptions.map((opt) => (
               <option key={opt.key} value={opt.key}>
@@ -2314,7 +2590,7 @@ const Scoring = () => {
       <div className="flex flex-wrap items-center gap-3">
         <Button
           onClick={() => handleLoadScorecard()}
-          disabled={scorecardLoading || weightProfileBlocked}
+          disabled={scorecardLoading || weightProfileBlocked || aiAnalysisLoading}
         >
           {scorecardLoading ? "Loading..." : "Load Scorecard"}
         </Button>
@@ -2353,13 +2629,71 @@ const Scoring = () => {
       {scorecard && (
         <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-3">
-            <Button variant="report" onClick={openScorecardSave}>
+            <Button variant="report" onClick={openScorecardSave} disabled={aiAnalysisLoading}>
               Save to Reports
             </Button>
             {saveMessage && (
               <span className="text-xs text-green-700">{saveMessage}</span>
             )}
+            <div className="ml-auto">
+              <Button
+                variant="secondary"
+                onClick={handleGenerateAiAnalysis}
+                disabled={aiAnalysisLoading}
+              >
+                {aiAnalysisLoading ? "Analyzing..." : "Generate AI Interpretation"}
+              </Button>
+            </div>
           </div>
+          {aiAnalysisText && (
+            <div className="rounded border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 shadow-sm whitespace-pre-wrap">
+              <strong className="block mb-2 text-blue-950">Financial Interpretation:</strong>
+              {aiAnalysisText}
+              
+              <div className="mt-4 pt-4 border-t border-blue-200">
+                {!showAiChart ? (
+                  <Button 
+                    variant="primary" 
+                    onClick={() => setShowAiChart(true)}
+                  >
+                    Generate Visualization
+                  </Button>
+                ) : (
+                  <div className="mt-2 relative" style={{ height: "120px" }}>
+                    <strong className="block mb-2 text-blue-950 text-xs">Scorecard Contribution Breakdown (Stacked)</strong>
+                    <div className="absolute right-0 top-0 text-sm font-bold text-blue-900 z-10">Total: {scorecard?.total_score?.toFixed(4)}</div>
+                    <ResponsiveContainer width="95%" height="60%">
+                      <BarChart 
+                        layout="vertical" 
+                        data={[{
+                          name: "Score", 
+                          Balance: scorecard?.section_subtotals?.balance || 0,
+                          Income: scorecard?.section_subtotals?.income || 0,
+                          CashFlow: scorecard?.section_subtotals?.cash_flow || 0
+                        }]}
+                        margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
+                      >
+                        <XAxis type="number" hide domain={[0, 'dataMax']} />
+                        <YAxis type="category" dataKey="name" hide />
+                        <Tooltip 
+                          formatter={(value) => Number(value).toFixed(4)} 
+                          contentStyle={{ borderRadius: '8px', fontSize: '12px' }}
+                        />
+                        <Bar dataKey="Balance" stackId="a" fill="#3b82f6" />
+                        <Bar dataKey="Income" stackId="a" fill="#22c55e" />
+                        <Bar dataKey="CashFlow" stackId="a" fill="#eab308" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                    <div className="flex gap-4 mt-2 text-xs text-blue-800">
+                      <span className="flex items-center gap-1"><span className="w-3 h-3 bg-blue-500 inline-block rounded-sm"></span> Balance</span>
+                      <span className="flex items-center gap-1"><span className="w-3 h-3 bg-green-500 inline-block rounded-sm"></span> Income</span>
+                      <span className="flex items-center gap-1"><span className="w-3 h-3 bg-yellow-500 inline-block rounded-sm"></span> Cash Flow</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
           {renderScorecardSummary()}
           {canSaveTemplate && (
             <div className="flex flex-wrap items-center gap-3">
@@ -2425,7 +2759,7 @@ const Scoring = () => {
               type="text"
               value={reportName}
               onChange={(e) => setReportName(e.target.value)}
-              className="w-full border rounded px-3 py-2"
+              className="w-full border border-[rgb(var(--color-primary))]/50 rounded px-3 py-2"
               placeholder="Report name"
             />
             {saveError && <p className="text-red-500 text-sm">{saveError}</p>}
@@ -2477,7 +2811,7 @@ const Scoring = () => {
                 type="text"
                 value={templateName}
                 onChange={(e) => setTemplateName(e.target.value)}
-                className="w-full rounded border border-[rgb(var(--color-border))] px-2 py-1 text-sm"
+                className="w-full rounded border border-[rgb(var(--color-primary))]/50 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[rgb(var(--color-primary))]/50"
                 placeholder="Template name"
               />
             </div>
@@ -2488,7 +2822,7 @@ const Scoring = () => {
               <textarea
                 value={templateDescription}
                 onChange={(e) => setTemplateDescription(e.target.value)}
-                className="min-h-[80px] w-full rounded border border-[rgb(var(--color-border))] px-2 py-1 text-sm"
+                className="min-h-[80px] w-full rounded border border-[rgb(var(--color-primary))]/50 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[rgb(var(--color-primary))]/50"
                 placeholder="Add notes for yourself"
               />
             </div>
@@ -2538,7 +2872,7 @@ const Scoring = () => {
                 type="text"
                 value={templateEditName}
                 onChange={(e) => setTemplateEditName(e.target.value)}
-                className="w-full rounded border border-[rgb(var(--color-border))] px-2 py-1 text-sm"
+                className="w-full rounded border border-[rgb(var(--color-primary))]/50 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[rgb(var(--color-primary))]/50"
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -2548,7 +2882,7 @@ const Scoring = () => {
               <textarea
                 value={templateEditDescription}
                 onChange={(e) => setTemplateEditDescription(e.target.value)}
-                className="min-h-[80px] w-full rounded border border-[rgb(var(--color-border))] px-2 py-1 text-sm"
+                className="min-h-[80px] w-full rounded border border-[rgb(var(--color-primary))]/50 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[rgb(var(--color-primary))]/50"
               />
             </div>
             <div className="space-y-2 rounded border border-[rgb(var(--color-border))] bg-[rgb(var(--color-surface))] p-2 text-xs text-[rgb(var(--color-text-subtle))]">
@@ -2656,7 +2990,7 @@ const Scoring = () => {
                     placeholder="Search metric"
                     value={editMetricSearch}
                     onChange={(e) => setEditMetricSearch(e.target.value)}
-                    className="w-52 rounded border border-[rgb(var(--color-border))] px-2 py-1 text-sm"
+                    className="w-52 rounded border border-[rgb(var(--color-primary))]/50 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[rgb(var(--color-primary))]/50"
                   />
                   <Select
                     value={editSectionFilter}
@@ -2766,6 +3100,40 @@ const Scoring = () => {
             {templateDeleteError && (
               <p className="text-sm text-red-600">{templateDeleteError}</p>
             )}
+          </div>
+        </Modal>
+      )}
+    {breakdownModalOpen && selectedBreakdown && (
+        <Modal
+          title={`Yearly Breakdown - ${selectedBreakdownTicker}`}
+          open={breakdownModalOpen}
+          onClose={() => setBreakdownModalOpen(false)}
+          footer={
+            <Button
+              variant="secondary"
+              onClick={() => setBreakdownModalOpen(false)}
+            >
+              Close
+            </Button>
+          }
+        >
+          <div className="space-y-4">
+            <Table>
+              <thead>
+                <tr>
+                  <th>Year</th>
+                  <th>Score</th>
+                </tr>
+              </thead>
+              <tbody>
+                {selectedBreakdown.map((item) => (
+                  <tr key={item.year}>
+                    <td>{item.year}</td>
+                    <td>{formatDecimal(item.score, 6)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
           </div>
         </Modal>
       )}

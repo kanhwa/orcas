@@ -134,8 +134,8 @@ export function AppShell({
                 <path d="M4 18h16" />
               </svg>
             </button>
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm text-2xl text-white">
-              🐋
+            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white backdrop-blur-sm overflow-hidden p-1 shadow-inner">
+              <img src="/orca-logo.png" alt="ORCAS Logo" className="w-full h-full object-contain" />
             </div>
             <div>
               <div className="text-lg font-bold tracking-wide text-white">
@@ -213,7 +213,7 @@ export function AppShell({
                           "flex w-full items-center gap-3 px-4 py-2.5 text-sm text-left transition",
                           item.danger
                             ? "text-red-600 hover:bg-red-50"
-                            : "text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-surface))]"
+                            : "text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-primary))]/20 hover:text-[rgb(var(--color-primary))]"
                         )}
                       >
                         {item.icon && (
@@ -258,14 +258,19 @@ export function AppShell({
                     sidebarCollapsed ? "justify-center gap-0" : "gap-3",
                     item.active
                       ? "bg-gradient-to-r from-[rgb(var(--color-primary))] to-[rgb(var(--color-action))] text-white font-semibold shadow-md"
-                      : "text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-surface))]",
+                      : "text-[rgb(var(--color-text))] hover:bg-[rgb(var(--color-primary))]/20 hover:text-[rgb(var(--color-primary))]",
                     item.disabled && "opacity-50 cursor-not-allowed"
                   )}
                   title={sidebarCollapsed ? item.label : undefined}
                 >
-                  {item.icon && <span className="text-lg">{item.icon}</span>}
+                  {sidebarCollapsed && item.icon && (
+                    <span className="text-2xl mx-auto">{item.icon}</span>
+                  )}
+                  {sidebarCollapsed && !item.icon && (
+                    <span className="text-2xl font-bold mx-auto">{item.label.charAt(0)}</span>
+                  )}
                   {!sidebarCollapsed && (
-                    <span className="flex-1">{item.label}</span>
+                    <span className="flex-1 font-medium">{item.label}</span>
                   )}
                   {!sidebarCollapsed && item.description && (
                     <span

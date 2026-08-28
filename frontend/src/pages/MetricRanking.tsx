@@ -220,8 +220,8 @@ export default function MetricRanking() {
           { label: "Metric Type", value: metricTypeLabel },
           { label: "Rank Type", value: rankTypeLabel },
           { label: "Top N", value: panelResult.top_n },
-          { label: "From Year", value: panelResult.from_year },
-          { label: "To Year", value: panelResult.to_year },
+          { label: "Start Year", value: panelResult.from_year },
+          { label: "End Year", value: panelResult.to_year },
           { label: "Rank Year", value: panelResult.rank_year },
           { label: "Unit", value: unitLabel },
         ]
@@ -322,7 +322,7 @@ export default function MetricRanking() {
     <div className="space-y-6">
       <Card>
         <div className="mb-2 flex items-center gap-2">
-          <h2 className="text-xl font-bold">🏆 Metric Ranking</h2>
+          <h2 className="text-xl font-bold">Metric Ranking</h2>
           <InfoTooltip
             ariaLabel="Info: Metric Ranking"
             content={
@@ -391,7 +391,7 @@ export default function MetricRanking() {
           <div>
             <label className="block text-sm font-medium mb-1">Metric</label>
             <select
-              className="w-full px-3 py-2 border rounded-md text-sm"
+              className="w-full px-3 py-2 border border-[rgb(var(--color-primary))]/50 rounded-md text-sm"
               value={
                 selectedMetricId
                   ? metrics.find((m) => m.id === selectedMetricId)
@@ -467,7 +467,7 @@ export default function MetricRanking() {
               type="number"
               min={1}
               max={datasetSize}
-              className="w-full px-3 py-2 border rounded-md text-sm"
+              className="w-32 px-3 py-2 border border-[rgb(var(--color-primary))]/50 rounded-md text-sm"
               value={topN}
               onChange={(e) => setTopN(clampTopN(Number(e.target.value)))}
             />
@@ -477,13 +477,13 @@ export default function MetricRanking() {
           </div>
 
           {mode === "panel" ? (
-            <div className="grid grid-cols-2 gap-2">
+            <div className="flex flex-wrap gap-6">
               <div>
                 <label className="block text-sm font-medium mb-1">
-                  From Year
+                  Start Year
                 </label>
                 <select
-                  className="w-full px-3 py-2 border rounded-md text-sm"
+                  className="w-28 px-3 py-2 border border-[rgb(var(--color-primary))]/50 rounded-md text-sm"
                   value={yearFrom}
                   onChange={(e) => {
                     const y = Number(e.target.value);
@@ -500,10 +500,10 @@ export default function MetricRanking() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">
-                  To Year
+                  End Year
                 </label>
                 <select
-                  className="w-full px-3 py-2 border rounded-md text-sm"
+                  className="w-28 px-3 py-2 border border-[rgb(var(--color-primary))]/50 rounded-md text-sm"
                   value={yearTo}
                   onChange={(e) => {
                     const y = Number(e.target.value);
@@ -523,7 +523,7 @@ export default function MetricRanking() {
             <div>
               <label className="block text-sm font-medium mb-1">Year</label>
               <select
-                className="w-full px-3 py-2 border rounded-md text-sm"
+                className="w-32 px-3 py-2 border border-[rgb(var(--color-primary))]/50 rounded-md text-sm"
                 value={singleYear}
                 onChange={(e) => setSingleYear(Number(e.target.value))}
               >
@@ -542,7 +542,7 @@ export default function MetricRanking() {
             onClick={mode === "panel" ? handleFetchPanel : handleFetchByYear}
             disabled={loading || !metrics.length}
           >
-            {loading ? "Processing..." : "🔍 View Ranking"}
+            {loading ? "Processing..." : "View Ranking"}
           </Button>
           {warning && <span className="text-sm text-amber-600">{warning}</span>}
           {error && <span className="text-sm text-red-600">{error}</span>}
@@ -690,7 +690,7 @@ export default function MetricRanking() {
               type="text"
               value={reportName}
               onChange={(e) => setReportName(e.target.value)}
-              className="w-full border rounded px-3 py-2"
+              className="w-full border border-[rgb(var(--color-primary))]/50 rounded px-3 py-2"
               placeholder="Report name"
             />
             {saveError && <p className="text-red-500 text-sm">{saveError}</p>}

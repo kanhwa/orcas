@@ -22,7 +22,7 @@ export function Toggle({
       aria-checked={pressed}
       onClick={() => onChange(!pressed)}
       className={cn(
-        "inline-flex items-center gap-2 rounded-full border border-[rgb(var(--color-border))] px-3 py-1 text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgb(var(--color-primary))]",
+        "inline-flex items-center gap-2 rounded-full border border-[rgb(var(--color-primary))]/50 px-3 py-1 text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgb(var(--color-primary))]",
         pressed
           ? "bg-[rgb(var(--color-primary))]/15 text-[rgb(var(--color-primary))]"
           : "bg-white text-[rgb(var(--color-text))]",
@@ -32,17 +32,17 @@ export function Toggle({
     >
       <span
         className={cn(
-          "relative h-4 w-9 rounded-full border transition-colors",
+          "relative h-5 w-9 shrink-0 rounded-full border transition-colors",
           pressed
             ? "bg-[rgb(var(--color-primary))] border-[rgb(var(--color-primary))]"
-            : "bg-white border-[rgb(var(--color-border))]"
+            : "bg-[rgb(var(--color-surface))] border-[rgb(var(--color-primary))]/50"
         )}
         aria-hidden
       >
         <span
           className={cn(
-            "absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform",
-            pressed ? "translate-x-4" : "translate-x-1"
+            "absolute top-[1px] left-[1px] h-4 w-4 rounded-full bg-orange-500 shadow-sm transition-transform",
+            pressed ? "translate-x-[16px]" : "translate-x-0"
           )}
         />
       </span>

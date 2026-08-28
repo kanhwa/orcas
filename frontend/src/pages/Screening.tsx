@@ -377,7 +377,7 @@ export default function Screening() {
     <div className="space-y-6">
       <Card>
         <div className="mb-2 flex items-center gap-2">
-          <h2 className="text-xl font-bold">🔍 Stock Screening</h2>
+          <h2 className="text-xl font-bold">Stock Screening</h2>
           <InfoTooltip
             ariaLabel="Info: Screening"
             content={
@@ -400,9 +400,9 @@ export default function Screening() {
 
         {/* Year Selection */}
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-1">Data Year</label>
+          <label className="block text-sm font-medium mb-1">Analyze Year</label>
           <select
-            className="w-full max-w-xs px-3 py-2 border rounded-md text-sm"
+            className="w-32 px-3 py-2 border border-[rgb(var(--color-primary))]/50 rounded-md text-sm"
             value={selectedYear}
             onChange={async (e) => {
               const y = Number(e.target.value);
@@ -442,7 +442,7 @@ export default function Screening() {
                   <>
                     {/* Metric Select */}
                     <select
-                      className="flex-1 min-w-[220px] px-3 py-2 border rounded-md text-sm"
+                      className="flex-1 min-w-[220px] px-3 py-2 border border-[rgb(var(--color-primary))]/50 rounded-md text-sm"
                       value={
                         f.metric_id
                           ? metrics.find((m) => m.id === f.metric_id)
@@ -467,7 +467,7 @@ export default function Screening() {
 
                     {/* Operator Select */}
                     <select
-                      className="w-40 px-3 py-2 border rounded-md text-sm"
+                      className="w-40 px-3 py-2 border border-[rgb(var(--color-primary))]/50 rounded-md text-sm"
                       value={f.operator}
                       onChange={(e) =>
                         updateFilter(
@@ -488,7 +488,7 @@ export default function Screening() {
                     <div className="flex items-center gap-1">
                       <input
                         type="number"
-                        className="w-32 px-3 py-2 border rounded-md text-sm"
+                        className="w-32 px-3 py-2 border border-[rgb(var(--color-primary))]/50 rounded-md text-sm"
                         placeholder={`Value (${unit})`}
                         value={f.value}
                         onChange={(e) =>
@@ -504,7 +504,7 @@ export default function Screening() {
                         <span className="text-sm text-gray-500">to</span>
                         <input
                           type="number"
-                          className="w-32 px-3 py-2 border rounded-md text-sm"
+                          className="w-32 px-3 py-2 border border-[rgb(var(--color-primary))]/50 rounded-md text-sm"
                           placeholder={`Max (${unit})`}
                           value={f.value_max}
                           onChange={(e) =>
@@ -544,7 +544,7 @@ export default function Screening() {
             + Add Filter
           </Button>
           <Button onClick={handleScreen} disabled={loading}>
-            {loading ? "Processing..." : "🔍 Run Screening"}
+            {loading ? "Processing..." : "Run Screening"}
           </Button>
         </div>
 
@@ -662,7 +662,7 @@ export default function Screening() {
               type="text"
               value={reportName}
               onChange={(e) => setReportName(e.target.value)}
-              className="w-full border rounded px-3 py-2"
+              className="w-full border border-[rgb(var(--color-primary))]/50 rounded px-3 py-2"
               placeholder="Report name"
             />
             {saveError && <p className="text-red-500 text-sm">{saveError}</p>}

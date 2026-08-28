@@ -69,7 +69,7 @@ export function MultiSelect({
         disabled={disabled}
         onClick={() => setOpen((s) => !s)}
         className={cn(
-          "w-full rounded-lg border border-[rgb(var(--color-border))] bg-white px-3 py-2 text-sm text-left focus:border-[rgb(var(--color-primary))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary))]/40",
+          "w-full rounded-lg border border-[rgb(var(--color-primary))]/50 bg-white px-3 py-2 text-sm text-left focus:border-[rgb(var(--color-primary))] focus:ring-[rgb(var(--color-primary))]/50 focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary))]/40",
           open && "ring-2 ring-[rgb(var(--color-primary))]/40",
           disabled && "opacity-60 cursor-not-allowed"
         )}
@@ -93,7 +93,7 @@ export function MultiSelect({
       </button>
 
       {open && (
-        <div className="absolute z-20 mt-1 w-full rounded-lg border border-[rgb(var(--color-border))] bg-white shadow-lg">
+        <div className="absolute z-20 mt-1 w-full rounded-lg border border-[rgb(var(--color-primary))]/50 bg-white shadow-lg">
           <ul role="listbox" className="max-h-64 overflow-auto py-1">
             {options.map((opt) => {
               const selected = value.includes(opt.value);
@@ -115,7 +115,7 @@ export function MultiSelect({
                   <div className="flex items-center gap-2">
                     <span
                       className={cn(
-                        "inline-flex h-4 w-4 items-center justify-center rounded border border-[rgb(var(--color-border))]",
+                        "inline-flex h-4 w-4 items-center justify-center rounded border border-[rgb(var(--color-primary))]/50",
                         selected && "bg-[rgb(var(--color-primary))] text-white"
                       )}
                       aria-hidden

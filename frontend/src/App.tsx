@@ -6,6 +6,7 @@ import Simulation from "./pages/Simulation";
 import Profile from "./pages/Profile";
 import Reports from "./pages/Reports";
 import SyncData from "./pages/SyncData";
+import BasicFinance from "./pages/BasicFinance";
 import Analysis from "./pages/Analysis";
 import Admin from "./pages/Admin";
 import Scoring from "./pages/Scoring";
@@ -20,6 +21,7 @@ import { Button } from "./components/ui/Button";
 import { Card } from "./components/ui/Card";
 
 type Page =
+  | "basic-finance"
   | "analysis"
   | "scoring"
   | "compare"
@@ -74,6 +76,10 @@ function AppContent() {
 
   // Page configuration
   const pageConfig: Record<Page, { title: string; subtitle?: string }> = {
+    "basic-finance": {
+      title: "Basic Finance",
+      subtitle: "Data dictionary and financial terms. A quick reference guide to understand standard banking and financial terms used in this system.",
+    },
     analysis: {
       title: "Analysis",
       subtitle: "Screening & metric ranking for stocks",
@@ -125,9 +131,17 @@ function AppContent() {
   // Sidebar navigation - 5 main features
   const navItems: NavItem[] = [
     {
+      key: "basic-finance",
+      label: "Basic Finance",
+      icon: "📖",
+      onSelect: () => setCurrentPage("basic-finance"),
+      active: currentPage === "basic-finance",
+      description: "Data dictionary and financial terms. A quick reference guide to understand standard banking and financial terms used in this system.",
+    },
+    {
       key: "analysis",
       label: "Analysis",
-      icon: "🔍",
+      icon: "📊",
       onSelect: () => setCurrentPage("analysis"),
       active: currentPage === "analysis",
       description:
@@ -144,7 +158,7 @@ function AppContent() {
     {
       key: "compare",
       label: "Compare",
-      icon: "📈",
+      icon: "⚖️",
       onSelect: () => setCurrentPage("compare"),
       active: currentPage === "compare",
       description:
@@ -161,7 +175,7 @@ function AppContent() {
     {
       key: "reports",
       label: "Reports",
-      icon: "📋",
+      icon: "📑",
       onSelect: () => setCurrentPage("reports"),
       active: currentPage === "reports",
       description: "Export and organize saved results into a report.",
@@ -210,6 +224,9 @@ function AppContent() {
   ];
 
   const renderPage = () => {
+    if (currentPage === "basic-finance" && user) {
+      return <BasicFinance user={user} />;
+    }
     if (currentPage === "analysis") {
       return <Analysis />;
     }

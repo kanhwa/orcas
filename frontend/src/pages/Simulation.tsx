@@ -953,7 +953,7 @@ const Simulation: React.FC = () => {
       <Card>
         <div className="p-6">
           <div className="flex items-center gap-3 mb-4">
-            <span className="text-2xl">🧪</span>
+            
             <div>
               <h2 className="text-xl font-bold text-[rgb(var(--color-text))]">
                 Simulation Scenario
@@ -987,9 +987,11 @@ const Simulation: React.FC = () => {
             </div>
           </div>
 
-          {/* Ticker Selection */}
-          <div className="mb-6">
-            <label className="block text-sm font-semibold text-[rgb(var(--color-text))] mb-2">
+          {/* Ticker and Weight Profile Row */}
+          <div className="flex flex-wrap items-start gap-6 mb-6">
+            {/* Ticker Selection */}
+            <div className="flex-1 min-w-[200px]">
+              <label className="block text-sm font-semibold text-[rgb(var(--color-text))] mb-2">
               Select Emiten
               <InfoTip content="Choose the emiten you want to simulate. Only one emiten can be selected per simulation." />
             </label>
@@ -1019,11 +1021,11 @@ const Simulation: React.FC = () => {
                 );
               })}
             </Select>
-          </div>
+            </div>
 
-          {/* Weight Profile */}
-          <div className="mb-6">
-            <label className="block text-sm font-semibold text-[rgb(var(--color-text))] mb-2">
+            {/* Weight Profile */}
+            <div className="flex-1 min-w-[200px]">
+              <label className="block text-sm font-semibold text-[rgb(var(--color-text))] mb-2">
               Weight Profile
             </label>
             <div className="flex flex-wrap items-center gap-3">
@@ -1085,6 +1087,7 @@ const Simulation: React.FC = () => {
                   )}
                 </div>
               )}
+            </div>
             </div>
           </div>
 
@@ -1281,7 +1284,7 @@ const Simulation: React.FC = () => {
           <div className="p-6">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <h3 className="text-lg font-bold text-[rgb(var(--color-text))] flex items-center gap-2">
-                📊 Simulation Results
+                 Simulation Results
               </h3>
               <div className="flex items-center gap-2">
                 <Button variant="report" onClick={openSaveModal}>

@@ -491,20 +491,20 @@ export default function Historical() {
   return (
     <div className="space-y-6">
       <Card>
-        <h2 className="text-xl font-bold mb-4">📊 Historical Comparison</h2>
+        <h2 className="text-xl font-bold mb-4">Historical Comparison</h2>
         <p className="text-gray-600 mb-4">
           Compare a single ticker's performance between two years. View
           metric-by-metric changes with trend indicators.
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+        <div className="flex flex-wrap items-end gap-6 mb-4">
           {/* Ticker Select */}
-          <div>
+          <div className="w-64">
             <label className="block text-sm font-medium mb-1">
               Select Ticker
             </label>
             <select
-              className="w-full px-3 py-2 border rounded-md text-sm"
+              className="w-full px-3 py-2 border border-[rgb(var(--color-primary))]/50 rounded-md text-sm"
               value={selectedTicker}
               onChange={(e) => setSelectedTicker(e.target.value)}
             >
@@ -526,7 +526,7 @@ export default function Historical() {
           <div>
             <label className="block text-sm font-medium mb-1">Start Year</label>
             <select
-              className="w-full px-3 py-2 border rounded-md text-sm"
+              className="w-32 px-3 py-2 border border-[rgb(var(--color-primary))]/50 rounded-md text-sm"
               value={year1}
               onChange={(e) => setYear1(Number(e.target.value))}
             >
@@ -542,7 +542,7 @@ export default function Historical() {
           <div>
             <label className="block text-sm font-medium mb-1">End Year</label>
             <select
-              className="w-full px-3 py-2 border rounded-md text-sm"
+              className="w-32 px-3 py-2 border border-[rgb(var(--color-primary))]/50 rounded-md text-sm"
               value={year2}
               onChange={(e) => setYear2(Number(e.target.value))}
             >
@@ -560,7 +560,7 @@ export default function Historical() {
               disabled={loading || !selectedTicker}
               className="w-full"
             >
-              {loading ? "Processing..." : "🔍 Compare"}
+              {loading ? "Processing..." : "Compare"}
             </Button>
           </div>
         </div>
@@ -639,7 +639,7 @@ export default function Historical() {
               <div>
                 <label className="text-sm font-medium mr-2">Section:</label>
                 <select
-                  className="px-2 py-1 border rounded text-sm"
+                  className="px-2 py-1 border border-[rgb(var(--color-primary))]/50 rounded text-sm"
                   value={sectionFilter}
                   onChange={(e) => setSectionFilter(e.target.value)}
                 >
@@ -751,7 +751,7 @@ export default function Historical() {
               type="text"
               value={reportName}
               onChange={(e) => setReportName(e.target.value)}
-              className="w-full border rounded px-3 py-2"
+              className="w-full border border-[rgb(var(--color-primary))]/50 rounded px-3 py-2"
               placeholder="Report name"
             />
             {saveError && <p className="text-red-500 text-sm">{saveError}</p>}

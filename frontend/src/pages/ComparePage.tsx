@@ -537,12 +537,13 @@ function CompareTab() {
             )}
           </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <div className="space-y-1">
+          <div className="flex flex-wrap items-start gap-6">
+            <div className="space-y-1 w-48">
               <label className="text-sm font-semibold text-[rgb(var(--color-text-muted))]">
                 Start Year
               </label>
               <Select
+                className="w-32"
                 value={yearFrom}
                 onChange={(e) => setYearFrom(Number(e.target.value))}
               >
@@ -554,11 +555,12 @@ function CompareTab() {
               </Select>
             </div>
 
-            <div className="space-y-1">
+            <div className="space-y-1 w-48">
               <label className="text-sm font-semibold text-[rgb(var(--color-text-muted))]">
                 End Year
               </label>
               <Select
+                className="w-32"
                 value={yearTo}
                 onChange={(e) => setYearTo(Number(e.target.value))}
               >
@@ -570,7 +572,7 @@ function CompareTab() {
               </Select>
             </div>
 
-            <div className="space-y-1">
+            <div className="space-y-1 w-48">
               <label className="flex items-center gap-1 text-sm font-semibold text-[rgb(var(--color-text-muted))]">
                 Mode
                 <InfoTip
@@ -598,7 +600,7 @@ function CompareTab() {
             </div>
 
             {mode === "section" && (
-              <div className="space-y-1">
+              <div className="space-y-1 w-48">
                 <label className="flex items-center gap-1 text-sm font-semibold text-[rgb(var(--color-text-muted))]">
                   Section
                   <InfoTip
@@ -630,7 +632,7 @@ function CompareTab() {
               </div>
             )}
 
-            <div className="space-y-1">
+            <div className="space-y-1 w-48">
               <label className="flex items-center gap-1 text-sm font-semibold text-[rgb(var(--color-text-muted))]">
                 Missing Data Policy
                 <InfoTip
@@ -656,7 +658,7 @@ function CompareTab() {
               </Select>
             </div>
 
-            <div className="space-y-1">
+            <div className="space-y-1 w-48">
               <label className="text-sm font-semibold text-[rgb(var(--color-text-muted))]">
                 Weight Profile
               </label>
@@ -676,7 +678,7 @@ function CompareTab() {
             </div>
 
             {weightProfile === "template" && (
-              <div className="space-y-1">
+              <div className="space-y-1 w-48">
                 <label className="text-sm font-semibold text-[rgb(var(--color-text-muted))]">
                   Weight Template
                 </label>
@@ -905,7 +907,7 @@ export default function ComparePage() {
             }`}
           >
             <span className="flex items-center gap-2">
-              <span>📈</span>
+              
               Compare Stocks
             </span>
             {activeTab === "compare" && (
@@ -922,7 +924,7 @@ export default function ComparePage() {
             }`}
           >
             <span className="flex items-center gap-2">
-              <span>📊</span>
+              
               Historical
             </span>
             {activeTab === "historical" && (
