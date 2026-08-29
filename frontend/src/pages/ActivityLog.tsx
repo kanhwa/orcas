@@ -159,6 +159,11 @@ const ACTION_CONFIG: Record<
   data_imported: { icon: "📥", label: "Data Imported", color: "green" },
 };
 
+const TARGET_TYPE_LABELS: Record<string, string> = {
+  user: "User",
+  financial_data: "Financial Data",
+};
+
 function getActionConfig(action: string) {
   return (
     ACTION_CONFIG[action] || {
@@ -167,6 +172,11 @@ function getActionConfig(action: string) {
       color: "gray" as const,
     }
   );
+}
+
+function formatTargetType(targetType?: string | null): string {
+  if (!targetType) return "";
+  return TARGET_TYPE_LABELS[targetType] || targetType.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function getRelativeTime(dateStr: string): string {
@@ -298,7 +308,7 @@ function LogCard({
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <span>🎯</span>
             <span>
-              Target: {log.target_type}
+              Target: {formatTargetType(log.target_type)}
               {log.target_id && ` #${log.target_id}`}
             </span>
           </div>
@@ -451,7 +461,7 @@ function FilterPanel({
               <option value="">All types</option>
               {filters?.target_types.map((type) => (
                 <option key={type} value={type}>
-                  {type}
+                  {formatTargetType(type)}
                 </option>
               ))}
             </Select>

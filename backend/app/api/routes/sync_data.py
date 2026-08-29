@@ -357,6 +357,7 @@ def validate_and_import_csv(
             "rows_updated": rows_updated,
             "tickers_count": len(ticker_values),
             "metrics_count": len(metric_cols),
+            "file_name": f"{year}.csv",
         },
         ip_address=request.client.host if request.client else None,
     )

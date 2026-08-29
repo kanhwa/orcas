@@ -152,6 +152,9 @@ function CompareTab() {
   const [saveError, setSaveError] = useState("");
   const [saveMessage, setSaveMessage] = useState("");
   const [saving, setSaving] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
+  const [aiAnalysis, setAiAnalysis] = useState("");
   const chartRef = useRef<HTMLDivElement | null>(null);
 
   const years = getYearOptions();
@@ -211,6 +214,36 @@ function CompareTab() {
   }, [tickers, yearFrom, yearTo, templateSelectionRequired]);
 
   const isValid = validationErrors.length === 0;
+
+
+  const handleGenerateAi = async () => {
+    if (!result || tickers.length < 2) return;
+    setAiLoading(true);
+    setAiError("");
+    setAiAnalysis("");
+    
+    try {
+      const payload = {
+        mode,
+        section: mode === "section" ? section : null,
+        tickers,
+        yearFrom,
+        yearTo,
+        weight_profile: selectedWeightTemplate ? selectedWeightTemplate.name : "Default",
+        missing_policy: missingPolicy,
+        include_benchmark: includeBenchmark,
+        series: result.series
+      };
+
+      const { generateCompareInterpretation } = await import("../services/api");
+      const res = await generateCompareInterpretation(payload, "English");
+      setAiAnalysis(res.analysis);
+    } catch (err: any) {
+      setAiError(err.message || "Failed to generate AI analysis");
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -492,8 +525,8 @@ function CompareTab() {
                 dataKey={s.ticker}
                 name={s.ticker}
                 stroke={getSeriesColor(idx)}
-                strokeWidth={2}
-                dot={{ r: 3 }}
+                strokeWidth={3}
+                dot={{ r: 4 }}
                 isAnimationActive={false}
               />
             ))}
@@ -788,14 +821,32 @@ function CompareTab() {
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="report" onClick={openSaveModal}>
+                <Button variant="report" onClick={openSaveModal} disabled={aiLoading}>
                   Save to Reports
                 </Button>
                 {saveMessage && (
                   <span className="text-xs text-green-700">{saveMessage}</span>
                 )}
+                <div className="ml-auto">
+                  <Button 
+                    onClick={handleGenerateAi}
+                    disabled={aiLoading}
+                    className="bg-purple-600 hover:bg-purple-700 text-white"
+                  >
+                    {aiLoading ? <span className="animate-pulse">Orcas is thinking...</span> : "Explain with Orcas AI"}
+                  </Button>
+                </div>
               </div>
             </div>
+
+            {aiError && <p className="text-red-500 text-sm mb-3 mt-4">{aiError}</p>}
+            
+            {aiAnalysis && (
+              <div className="bg-purple-50 border border-purple-100 rounded p-4 mb-6 mt-4 text-sm text-purple-900 leading-relaxed shadow-sm whitespace-pre-wrap">
+                <strong className="block mb-2 text-purple-950">AI Analysis:</strong>
+                {aiAnalysis}
+              </div>
+            )}
 
             {renderChart()}
 

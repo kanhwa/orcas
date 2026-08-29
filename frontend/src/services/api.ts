@@ -1289,3 +1289,78 @@ export async function historicalCompare(
     body: JSON.stringify(payload),
   });
 }
+export async function generateRankingInterpretation(
+  ranking_data: any[],
+  period: string,
+  language: string = "Indonesian"
+): Promise<{ analysis: string }> {
+  return request<{ analysis: string }>("/api/ai/interpret-ranking", {
+    method: "POST",
+    body: JSON.stringify({ ranking_data, period, language }),
+  });
+}
+
+export async function generateMetricRankingInterpretation(
+  data: any,
+  language: string = "English"
+): Promise<{ analysis: string }> {
+  return request<{ analysis: string }>("/api/ai/interpret-metric-ranking", {
+    method: "POST",
+    body: JSON.stringify({ data, language }),
+  });
+}
+
+export async function generateScreeningInterpretation(
+  data: any,
+  language: string = "English"
+): Promise<{ analysis: string }> {
+  return request<{ analysis: string }>("/api/ai/interpret-screening", {
+    method: "POST",
+    body: JSON.stringify({ data, language }),
+  });
+}
+
+export const generateSimulationInterpretation = async (
+  data: any,
+  language: string = "English"
+): Promise<{ analysis: string }> => {
+  const res = await fetch(`${BASE_URL}/api/ai/interpret-simulation`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ data, language }),
+  });
+  if (!res.ok) {
+    throw new Error("Failed to generate AI interpretation");
+  }
+  return res.json();
+};
+
+export const generateCompareInterpretation = async (
+  data: any,
+  language: string = "English"
+): Promise<{ analysis: string }> => {
+  const res = await fetch(`${BASE_URL}/api/ai/interpret-compare`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ data, language }),
+  });
+  if (!res.ok) {
+    throw new Error("Failed to generate AI interpretation");
+  }
+  return res.json();
+};
+
+export const generateHistoricalInterpretation = async (
+  data: any,
+  language: string = "English"
+): Promise<{ analysis: string }> => {
+  const res = await fetch(`${BASE_URL}/api/ai/interpret-historical`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ data, language }),
+  });
+  if (!res.ok) {
+    throw new Error("Failed to generate AI interpretation");
+  }
+  return res.json();
+};

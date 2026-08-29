@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from typing import Dict, Iterable, List, Tuple
 
 from fastapi import HTTPException, status
@@ -243,6 +244,44 @@ def _clamp01(value: float) -> float:
     return max(0.0, min(1.0, value))
 
 
+def _effective_metric_type(metric_name: str | None, metric_type: str | None) -> str:
+    name = (metric_name or "").strip().lower()
+    raw_type = (metric_type or "benefit").strip().lower()
+    # Business rule: Beban Usaha must always behave as a cost metric.
+    if name == "beban usaha":
+        return "cost"
+    return "cost" if raw_type == "cost" else "benefit"
+
+
+def _calculate_minmax_normalized(
+    value: float | None,
+    metric_id: int,
+    metric_type: str,
+    min_dict: Dict[int, float],
+    max_dict: Dict[int, float],
+) -> float:
+    min_val = min_dict.get(metric_id, 0.0)
+    max_val = max_dict.get(metric_id, 0.0)
+    denominator = max_val - min_val
+
+    if value is None:
+        return 0.0
+
+    value_float = float(value)
+    if math.isnan(value_float) or math.isinf(value_float):
+        return 0.0
+
+    if denominator > 0.0:
+        if metric_type == "benefit":
+            raw = (value_float - min_val) / denominator
+        else:
+            raw = (max_val - value_float) / denominator
+        return _clamp01(float(raw))
+
+    # Edge case: all values are identical for this metric.
+    return 1.0
+
+
 def _normalize_weights(metrics: Iterable[MetricWeightInput]) -> Dict[str, float]:
     total_weight = sum(metric.weight for metric in metrics)
     if total_weight <= 0:
@@ -359,7 +398,8 @@ def calculate_wsm_score(db: Session, payload: WSMScoreRequest, user_id: int | No
     metric_id_by_name = {name: definition.id for name, definition in definitions_by_name.items()}
     name_by_metric_id = {v: k for k, v in metric_id_by_name.items()}
     metric_type_by_id = {
-        metric_id_by_name[metric.metric_name]: metric.type for metric in effective_metrics
+        metric_id_by_name[metric.metric_name]: _effective_metric_type(metric.metric_name, metric.type)
+        for metric in effective_metrics
     }
     weight_by_metric_id = {
         metric_id_by_name[metric.metric_name]: normalized_weights[metric.metric_name]
@@ -437,18 +477,13 @@ def calculate_wsm_score(db: Session, payload: WSMScoreRequest, user_id: int | No
         for metric_id in available_metric_ids:
             metric_type = metric_type_by_id[metric_id]
             value = metrics_values[metric_id]
-
-            if metric_type == "benefit":
-                denominator = max_by_metric.get(metric_id, 0)
-                raw = (value / denominator) if denominator else 0.0
-                normalized_value = max(0.0, min(1.0, raw))  # clamp 0..1
-            else:
-                numerator = min_by_metric.get(metric_id, 0)
-                if value == 0 or numerator == 0:
-                    normalized_value = 0.0
-                else:
-                    raw = numerator / value
-                    normalized_value = max(0.0, min(1.0, raw))  # clamp 0..1
+            normalized_value = _calculate_minmax_normalized(
+                value=value,
+                metric_id=metric_id,
+                metric_type=metric_type,
+                min_dict=min_by_metric,
+                max_dict=max_by_metric,
+            )
 
             weight_share = weight_by_metric_id[metric_id] / weight_divisor
             score += weight_share * normalized_value
@@ -580,8 +615,65 @@ def calculate_wsm_score_preview(db: Session, payload: WSMScoreRequest, user_id: 
     )
 
 
+def calculate_wsm_score_multi_year(
+    db: Session, payload: "WSMMultiYearScoreRequest", user_id: int | None = None
+) -> "WSMMultiYearScoreResponse":
+    from app.schemas.wsm import WSMMultiYearScoreResponse, WSMMultiYearRankingItem, YearlyScore, WSMScoreRequest
+    start = payload.start_year
+    end = payload.end_year
+    if start > end:
+        start, end = end, start
+
+    ticker_scores: Dict[str, List[YearlyScore]] = {}
+    
+    for y in range(start, end + 1):
+        req = WSMScoreRequest(
+            year=y,
+            template_id=payload.template_id,
+            weight_template_id=payload.weight_template_id,
+            metrics=payload.metrics,
+            weight_scope=payload.weight_scope,
+            weights_json=payload.weights_json,
+            tickers=payload.tickers,
+            missing_policy=payload.missing_policy,
+        )
+        try:
+            year_res = calculate_wsm_score_preview(db, req, user_id)
+            for item in year_res.ranking:
+                ticker_scores.setdefault(item.ticker, []).append(YearlyScore(year=y, score=item.score))
+        except HTTPException:
+            # Skip year if no data
+            continue
+
+    ranking: List[WSMMultiYearRankingItem] = []
+    for ticker, scores in ticker_scores.items():
+        total = sum(s.score for s in scores)
+        avg = total / len(scores) if scores else 0.0
+        ranking.append(WSMMultiYearRankingItem(
+            rank=0,
+            ticker=ticker,
+            average_score=round(avg, 6),
+            yearly_breakdown=scores
+        ))
+
+    ranking.sort(key=lambda x: (-x.average_score, x.ticker))
+    for idx, item in enumerate(ranking, start=1):
+        item.rank = idx
+
+    if payload.limit:
+        ranking = ranking[:payload.limit]
+
+    return WSMMultiYearScoreResponse(
+        start_year=start,
+        end_year=end,
+        missing_policy=payload.missing_policy,
+        ranking=ranking
+    )
+
+
 # =============================================================================
 # Scorecard
+
 # =============================================================================
 
 
@@ -649,7 +741,7 @@ def compute_scorecard(db: Session, payload: ScorecardRequest, user_id: int | Non
         metric_name = name_by_id.get(metric_id)
         if not metric_name:
             continue
-        metric_type = metric_type_by_name.get(metric_name, "benefit")
+        metric_type = _effective_metric_type(metric_name, metric_type_by_name.get(metric_name, "benefit"))
         adjusted_value = float(abs(value)) if metric_type == "cost" and value < 0 else float(value)
         ticker_values.setdefault(ticker, {})[metric_id] = adjusted_value
         values_by_metric[metric_id].append(adjusted_value)
@@ -717,17 +809,14 @@ def compute_scorecard(db: Session, payload: ScorecardRequest, user_id: int | Non
 
             if raw_value is not None:
                 used_count += 1
-                if entry.type == "benefit":
-                    denom = max_by_metric.get(metric_id, 0)
-                    raw_norm = (raw_value / denom) if denom else 0.0
-                    normalized_value = _clamp01(raw_norm)
-                else:
-                    num = min_by_metric.get(metric_id, 0)
-                    if raw_value == 0 or num == 0:
-                        normalized_value = 0.0
-                    else:
-                        raw_norm = num / raw_value
-                        normalized_value = _clamp01(raw_norm)
+                metric_type = _effective_metric_type(metric_name, entry.type)
+                normalized_value = _calculate_minmax_normalized(
+                    value=raw_value,
+                    metric_id=metric_id,
+                    metric_type=metric_type,
+                    min_dict=min_by_metric,
+                    max_dict=max_by_metric,
+                )
 
                 weight_share = effective_weights.get(metric_name, 0) / weight_divisor
                 contribution = weight_share * normalized_value
@@ -966,7 +1055,9 @@ def _compute_single_ticker_score(
         return (None, "Metric definitions not found") if with_reason else None
 
     metric_id_by_name = {name: d.id for name, d in picked.items()}
-    metric_type_by_name = {m.metric_name: m.type for m in metrics}
+    metric_type_by_name = {
+        m.metric_name: _effective_metric_type(m.metric_name, m.type) for m in metrics
+    }
 
     # Normalize weights
     total_weight = sum(m.weight for m in metrics)
@@ -998,7 +1089,8 @@ def _compute_single_ticker_score(
         if val is None:
             continue
         x = float(val)
-        mtype = metric_type_by_name.get(name_by_id.get(mid, ""), "benefit")
+        metric_name = name_by_id.get(mid, "")
+        mtype = _effective_metric_type(metric_name, metric_type_by_name.get(metric_name, "benefit"))
         adjusted = abs(x) if mtype == "cost" and x < 0 else x
         values_by_metric[mid].append(adjusted)
         if t == ticker:
@@ -1010,6 +1102,7 @@ def _compute_single_ticker_score(
             mid = metric_id_by_name.get(metric_name)
             if mid is not None:
                 mtype = metric_type_by_name.get(metric_name, "benefit")
+                mtype = _effective_metric_type(metric_name, mtype)
                 adjusted = abs(override_value) if mtype == "cost" and override_value < 0 else override_value
                 ticker_values[mid] = adjusted
                 # NOTE: Do NOT add to values_by_metric - keep original min/max
@@ -1061,18 +1154,14 @@ def _compute_single_ticker_score(
             continue
         mtype = metric_type_by_name.get(metric_name, "benefit")
         value = ticker_values[mid]
-
-        if mtype == "benefit":
-            denom = max_by_metric.get(mid, 0)
-            raw = (value / denom) if denom else 0.0
-            normalized_value = max(0.0, min(1.0, raw))
-        else:
-            num = min_by_metric.get(mid, 0)
-            if value == 0 or num == 0:
-                normalized_value = 0.0
-            else:
-                raw = num / value
-                normalized_value = max(0.0, min(1.0, raw))
+        mtype = _effective_metric_type(metric_name, mtype)
+        normalized_value = _calculate_minmax_normalized(
+            value=value,
+            metric_id=mid,
+            metric_type=mtype,
+            min_dict=min_by_metric,
+            max_dict=max_by_metric,
+        )
 
         weight_share = normalized_weights.get(metric_name, 0) / weight_divisor
         score += weight_share * normalized_value

@@ -29,138 +29,173 @@ export interface MetricUIConfig {
  * Operating Cash Flow is explicitly excluded (hidden).
  */
 export const METRIC_CONFIG: Record<string, MetricUIConfig> = {
-  // BALANCE SHEET
-  "Cash and Cash Equivalents": {
+  "Aset Tetap": {
     displayUnit: "IDR bn",
     inputMode: "as_is",
     allowNegative: false,
   },
-  "Short-term Investments": {
-    displayUnit: "IDR bn",
-    inputMode: "as_is",
-    allowNegative: false,
-  },
-  "Accounts Receivable": {
-    displayUnit: "IDR bn",
-    inputMode: "as_is",
-    allowNegative: false,
-  },
-  Inventory: {
-    displayUnit: "IDR bn",
-    inputMode: "as_is",
-    allowNegative: false,
-  },
-  "Current Assets": {
-    displayUnit: "IDR bn",
-    inputMode: "as_is",
-    allowNegative: false,
-  },
-  "Fixed Assets": {
-    displayUnit: "IDR bn",
-    inputMode: "as_is",
-    allowNegative: false,
-  },
-  "Total Assets": {
-    displayUnit: "IDR bn",
-    inputMode: "as_is",
-    allowNegative: false,
-  },
-  "Accounts Payable": {
-    displayUnit: "IDR bn",
-    inputMode: "as_is",
-    allowNegative: false,
-  },
-  "Short-term Debt": {
-    displayUnit: "IDR bn",
-    inputMode: "as_is",
-    allowNegative: false,
-  },
-  "Current Liabilities": {
-    displayUnit: "IDR bn",
-    inputMode: "as_is",
-    allowNegative: false,
-  },
-  "Long-term Debt": {
-    displayUnit: "IDR bn",
-    inputMode: "as_is",
-    allowNegative: false,
-  },
-  "Total Liabilities": {
-    displayUnit: "IDR bn",
-    inputMode: "as_is",
-    allowNegative: false,
-  },
-  "Shareholders' Equity": {
-    displayUnit: "IDR bn",
-    inputMode: "as_is",
-    allowNegative: true,
-  },
-  "Retained Earnings": {
-    displayUnit: "IDR bn",
-    inputMode: "as_is",
-    allowNegative: true,
-  },
-
-  // INCOME STATEMENT
-  Revenue: {
-    displayUnit: "IDR bn",
-    inputMode: "as_is",
-    allowNegative: false,
-  },
-  "Cost of Goods Sold": {
-    displayUnit: "IDR bn",
-    inputMode: "as_is",
-    allowNegative: false,
-  },
-  "Gross Profit": {
-    displayUnit: "IDR bn",
-    inputMode: "as_is",
-    allowNegative: true,
-  },
-  "Operating Expense": {
-    displayUnit: "IDR bn",
-    inputMode: "as_is",
-    allowNegative: false,
-  },
-  "Operating Income": {
-    displayUnit: "IDR bn",
-    inputMode: "as_is",
-    allowNegative: true,
-  },
-  "Interest Expense": {
-    displayUnit: "IDR bn",
-    inputMode: "as_is",
-    allowNegative: false,
-  },
-  "Tax Expense": {
-    displayUnit: "IDR bn",
-    inputMode: "as_is",
-    allowNegative: false,
-  },
-  "Net Income": {
-    displayUnit: "IDR bn",
-    inputMode: "as_is",
-    allowNegative: true,
-  },
-
-  // RATIOS
-  "Current Ratio": {
-    displayUnit: "x",
-    inputMode: "as_is",
-    allowNegative: false,
-  },
-  "Quick Ratio": {
-    displayUnit: "x",
-    inputMode: "as_is",
-    allowNegative: false,
-  },
-  "Debt to Equity Ratio": {
+  "Asset Turnover": {
     displayUnit: "ratio",
     inputMode: "as_is",
     allowNegative: false,
   },
-  "Debt to Assets Ratio": {
-    displayUnit: "ratio",
+  "Book Value Per Share (BVPS)": {
+    displayUnit: "IDR/share",
+    inputMode: "as_is",
+    allowNegative: false,
+  },
+  "Giro Pada Bank Indonesia": {
+    displayUnit: "IDR bn",
+    inputMode: "as_is",
+    allowNegative: false,
+  },
+  "Kas Dan Setara Kas": {
+    displayUnit: "IDR bn",
+    inputMode: "as_is",
+    allowNegative: false,
+  },
+  "Penempatan Pada Bank Indonesia": {
+    displayUnit: "IDR bn",
+    inputMode: "as_is",
+    allowNegative: false,
+  },
+  "Pinjaman Yang Diberikan": {
+    displayUnit: "IDR bn",
+    inputMode: "as_is",
+    allowNegative: false,
+  },
+  "Pinjaman yang Diterima": {
+    displayUnit: "IDR bn",
+    inputMode: "as_is",
+    allowNegative: false,
+  },
+  "Price to Book Value (PBV)": {
+    displayUnit: "x",
+    inputMode: "as_is",
+    allowNegative: false,
+  },
+  "Simpanan Nasabah": {
+    displayUnit: "IDR bn",
+    inputMode: "as_is",
+    allowNegative: false,
+  },
+  "Tangible Book Value Per Share": {
+    displayUnit: "IDR/share",
+    inputMode: "as_is",
+    allowNegative: false,
+  },
+  "Total Aset": {
+    displayUnit: "IDR bn",
+    inputMode: "as_is",
+    allowNegative: false,
+  },
+  "Total Ekuitas": {
+    displayUnit: "IDR bn",
+    inputMode: "as_is",
+    allowNegative: false,
+  },
+  "Total Liabilitas": {
+    displayUnit: "IDR bn",
+    inputMode: "as_is",
+    allowNegative: false,
+  },
+  "Arus Kas Dari Aktivitas Investasi": {
+    displayUnit: "IDR bn",
+    inputMode: "as_is",
+    allowNegative: true,
+  },
+  "Arus Kas Dari Aktivitas Operasi": {
+    displayUnit: "IDR bn",
+    inputMode: "as_is",
+    allowNegative: true,
+  },
+  "Arus Kas Dari Aktivitas Pendanaan": {
+    displayUnit: "IDR bn",
+    inputMode: "as_is",
+    allowNegative: true,
+  },
+  "Capital expenditure": {
+    displayUnit: "IDR bn",
+    inputMode: "as_is",
+    allowNegative: true,
+  },
+  "Free cash flow": {
+    displayUnit: "IDR bn",
+    inputMode: "as_is",
+    allowNegative: true,
+  },
+  "Free cash flow per share": {
+    displayUnit: "IDR/share",
+    inputMode: "as_is",
+    allowNegative: true,
+  },
+  "Kas Dan Setara Kas Akhir Periode": {
+    displayUnit: "IDR bn",
+    inputMode: "as_is",
+    allowNegative: true,
+  },
+  "Kas Dan Setara Kas Awal Periode": {
+    displayUnit: "IDR bn",
+    inputMode: "as_is",
+    allowNegative: true,
+  },
+  "Kenaikan (Penurunan) Bersih Kas dan Setara Kas": {
+    displayUnit: "IDR bn",
+    inputMode: "as_is",
+    allowNegative: true,
+  },
+  "Beban Pajak Penghasilan": {
+    displayUnit: "IDR bn",
+    inputMode: "as_is",
+    allowNegative: true,
+  },
+  "Beban Usaha": {
+    displayUnit: "IDR bn",
+    inputMode: "as_is",
+    allowNegative: true,
+  },
+  "Earnings per Share (EPS)": {
+    displayUnit: "IDR/share",
+    inputMode: "as_is",
+    allowNegative: true,
+  },
+  "Jumlah Laba Komprehensif": {
+    displayUnit: "IDR bn",
+    inputMode: "as_is",
+    allowNegative: true,
+  },
+  "Laba Bersih Tahun Berjalan": {
+    displayUnit: "IDR bn",
+    inputMode: "as_is",
+    allowNegative: true,
+  },
+  "Laba Kotor": {
+    displayUnit: "IDR bn",
+    inputMode: "as_is",
+    allowNegative: true,
+  },
+  "Laba Sebelum Pajak": {
+    displayUnit: "IDR bn",
+    inputMode: "as_is",
+    allowNegative: true,
+  },
+  "Laba Usaha": {
+    displayUnit: "IDR bn",
+    inputMode: "as_is",
+    allowNegative: true,
+  },
+  "Pendapatan/Beban Lain-lain": {
+    displayUnit: "IDR bn",
+    inputMode: "as_is",
+    allowNegative: true,
+  },
+  "Price to Earnings Ratio (PER)": {
+    displayUnit: "x",
+    inputMode: "as_is",
+    allowNegative: true,
+  },
+  "Price to Sales (P/S)": {
+    displayUnit: "x",
     inputMode: "as_is",
     allowNegative: false,
   },
@@ -174,59 +209,17 @@ export const METRIC_CONFIG: Record<string, MetricUIConfig> = {
     inputMode: "percent_points",
     allowNegative: true,
   },
-  "Gross Profit Margin": {
-    displayUnit: "%",
-    inputMode: "percent_points",
-    allowNegative: true,
-  },
-  "Operating Profit Margin": {
-    displayUnit: "%",
-    inputMode: "percent_points",
-    allowNegative: true,
-  },
-  "Net Profit Margin": {
-    displayUnit: "%",
-    inputMode: "percent_points",
-    allowNegative: true,
-  },
-  "Earnings Per Share (EPS)": {
-    displayUnit: "IDR/share",
-    inputMode: "as_is",
-    allowNegative: true,
-  },
-
-  // CASH FLOW
-  "Operating Cash Flow": {
-    displayUnit: "IDR bn",
-    inputMode: "as_is",
-    allowNegative: true,
-  },
-  "Investing Cash Flow": {
-    displayUnit: "IDR bn",
-    inputMode: "as_is",
-    allowNegative: true,
-  },
-  "Financing Cash Flow": {
-    displayUnit: "IDR bn",
-    inputMode: "as_is",
-    allowNegative: true,
-  },
-  "Free Cash Flow": {
-    displayUnit: "IDR bn",
-    inputMode: "as_is",
-    allowNegative: true,
-  },
-  "Capital Expenditure": {
-    displayUnit: "IDR bn",
+  "Saham Beredar (Share Outstanding)": {
+    displayUnit: "bn shares",
     inputMode: "as_is",
     allowNegative: false,
   },
-  "Cash Flow from Core Operations": {
+  "Total Beban Pokok Penjualan": {
     displayUnit: "IDR bn",
     inputMode: "as_is",
     allowNegative: true,
   },
-  "Net Cash Flow": {
+  "Total Pendapatan": {
     displayUnit: "IDR bn",
     inputMode: "as_is",
     allowNegative: true,
@@ -286,26 +279,32 @@ export function formatMetricValue(
     displayValue = rawValue * 100;
   }
 
+  const formatNum = (val: number, decimals: number) => 
+    new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: decimals
+    }).format(val);
+
   // Format based on unit
   switch (config.displayUnit) {
     case "%":
-      return `${displayValue.toFixed(2)}%`;
+      return `${formatNum(displayValue, 2)}%`;
 
     case "IDR bn":
-      return `${displayValue.toFixed(2)} IDR bn`;
+      return `${formatNum(displayValue, 2)} IDR bn`;
 
     case "x":
-      return `${displayValue.toFixed(2)}x`;
+      return `${formatNum(displayValue, 2)}x`;
 
     case "IDR/share":
-      return `${displayValue.toFixed(2)} IDR/share`;
+      return `${formatNum(displayValue, 2)} IDR/share`;
 
     case "bn shares":
-      return `${displayValue.toFixed(2)} bn shares`;
+      return `${formatNum(displayValue, 2)} bn shares`;
 
     case "ratio":
     default:
-      return displayValue.toFixed(4);
+      return formatNum(displayValue, 4);
   }
 }
 

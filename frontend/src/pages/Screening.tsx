@@ -95,8 +95,7 @@ export default function Screening() {
       value_max: "",
     },
   ]);
-  const [activeSummary, setActiveSummary] =
-    useState<MetricSummaryResponse | null>(null);
+  const [summaries, setSummaries] = useState<Record<number, MetricSummaryResponse>>({});
   const [result, setResult] = useState<ScreeningResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -104,6 +103,9 @@ export default function Screening() {
   const [reportName, setReportName] = useState("");
   const [saveError, setSaveError] = useState("");
   const [saveMessage, setSaveMessage] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
+  const [aiAnalysis, setAiAnalysis] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -138,7 +140,6 @@ export default function Screening() {
   }, [catalogMetrics]);
 
   const handleMetricChange = async (rowId: number, metricKey: string) => {
-    // Find the metric by key to get its ID for the API
     const selectedMetric = metrics.find((m) => m.metric_name === metricKey);
     const metricId = selectedMetric?.id || null;
 
@@ -152,11 +153,36 @@ export default function Screening() {
     try {
       if (metricId) {
         const summary = await getMetricSummary(metricId, selectedYear);
-        setActiveSummary(summary);
+        setSummaries(prev => ({...prev, [rowId]: summary}));
+      } else {
+        setSummaries(prev => {
+          const next = {...prev};
+          delete next[rowId];
+          return next;
+        });
       }
     } catch (e) {
-      setActiveSummary(null);
+      console.error(e);
     }
+  };
+
+
+  const moveFilterUp = (index: number) => {
+    if (index === 0) return;
+    setFilters(prev => {
+      const next = [...prev];
+      [next[index - 1], next[index]] = [next[index], next[index - 1]];
+      return next;
+    });
+  };
+
+  const moveFilterDown = (index: number) => {
+    if (index === filters.length - 1) return;
+    setFilters(prev => {
+      const next = [...prev];
+      [next[index + 1], next[index]] = [next[index], next[index + 1]];
+      return next;
+    });
   };
 
   const addFilter = () => {
@@ -186,6 +212,48 @@ export default function Screening() {
     setFilters((prev) =>
       prev.map((f) => (f.id === id ? { ...f, [field]: value } : f))
     );
+  };
+
+
+  const handleGenerateScreeningAi = async () => {
+    if (!result) return;
+    setAiLoading(true);
+    setAiError("");
+    setAiAnalysis("");
+    
+    try {
+      let selectedBanks = result.passed;
+      if (selectedBanks.length > 4) {
+        selectedBanks = [
+          selectedBanks[0],
+          selectedBanks[1],
+          selectedBanks[Math.floor(selectedBanks.length / 2)],
+          selectedBanks[selectedBanks.length - 1]
+        ];
+      }
+      
+      const metricsInfo = filters.filter(f => f.metric_name).map(f => {
+         const summary = summaries[f.id];
+         return {
+           metric: f.metric_name,
+           hint: summary ? { min: summary.min, median: summary.median, max: summary.max } : null
+         };
+      });
+
+      const payload = {
+        year: selectedYear,
+        metrics: metricsInfo,
+        banks: selectedBanks
+      };
+
+      const { generateScreeningInterpretation } = await import("../services/api");
+      const res = await generateScreeningInterpretation(payload, "English");
+      setAiAnalysis(res.analysis);
+    } catch (err: any) {
+      setAiError(err.message || "Failed to generate AI analysis");
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   const handleScreen = async () => {
@@ -248,12 +316,7 @@ export default function Screening() {
     }
   };
 
-  const activeMetric = activeSummary
-    ? metrics.find((m) => m.id === activeSummary.metric_id)
-    : null;
-  const activeMetricName =
-    filters.find((f) => f.metric_id === activeSummary?.metric_id)
-      ?.metric_name || "";
+
 
   const visibleConditions = useMemo(
     () =>
@@ -403,17 +466,24 @@ export default function Screening() {
           <label className="block text-sm font-medium mb-1">Analyze Year</label>
           <select
             className="w-32 px-3 py-2 border border-[rgb(var(--color-primary))]/50 rounded-md text-sm"
+            disabled={aiLoading}
             value={selectedYear}
             onChange={async (e) => {
               const y = Number(e.target.value);
               setSelectedYear(y);
-              if (activeMetric) {
-                try {
-                  const summary = await getMetricSummary(activeMetric.id, y);
-                  setActiveSummary(summary);
-                } catch {
-                  setActiveSummary(null);
-                }
+              try {
+                const updatedSummaries: Record<number, any> = {};
+                await Promise.all(
+                  filters.map(async (f) => {
+                    if (f.metric_id) {
+                      const summary = await getMetricSummary(f.metric_id, y);
+                      updatedSummaries[f.id] = summary;
+                    }
+                  })
+                );
+                setSummaries(updatedSummaries);
+              } catch (err) {
+                console.error(err);
               }
             }}
           >
@@ -433,7 +503,25 @@ export default function Screening() {
               key={f.id}
               className="flex flex-wrap gap-2 items-center p-3 bg-gray-50 rounded-lg"
             >
-              <span className="text-sm text-gray-500 w-6">{idx + 1}.</span>
+              <div className="flex flex-col items-center justify-center mr-1 gap-1">
+                <button 
+                  type="button"
+                  onClick={() => moveFilterUp(idx)}
+                  disabled={idx === 0 || aiLoading}
+                  className="text-gray-400 hover:text-gray-700 disabled:opacity-20"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clipRule="evenodd" /></svg>
+                </button>
+                <span className="text-sm text-gray-500 font-bold">{idx + 1}</span>
+                <button 
+                  type="button"
+                  onClick={() => moveFilterDown(idx)}
+                  disabled={idx === filters.length - 1 || aiLoading}
+                  className="text-gray-400 hover:text-gray-700 disabled:opacity-20"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                </button>
+              </div>
 
               {(() => {
                 const metric = metrics.find((m) => m.id === f.metric_id);
@@ -442,6 +530,7 @@ export default function Screening() {
                   <>
                     {/* Metric Select */}
                     <select
+                      disabled={aiLoading}
                       className="flex-1 min-w-[220px] px-3 py-2 border border-[rgb(var(--color-primary))]/50 rounded-md text-sm"
                       value={
                         f.metric_id
@@ -453,20 +542,30 @@ export default function Screening() {
                     >
                       <option value="">-- Select Metric --</option>
                       {Object.entries(metricsBySection).map(
-                        ([section, mets]) => (
+                        ([section, mets]) => {
+                          const usedKeys = new Set(
+                            filters
+                              .filter((flt) => flt.id !== f.id && flt.metric_name)
+                              .map((flt) => flt.metric_name)
+                          );
+                          const availableMets = mets.filter(m => !usedKeys.has(m.key));
+                          if (availableMets.length === 0) return null;
+                          return (
                           <optgroup key={section} label={section}>
-                            {mets.map((m) => (
+                            {availableMets.map((m) => (
                               <option key={m.key} value={m.key}>
                                 {m.label}
                               </option>
                             ))}
                           </optgroup>
-                        )
+                          );
+                        }
                       )}
                     </select>
 
                     {/* Operator Select */}
                     <select
+                      disabled={aiLoading}
                       className="w-40 px-3 py-2 border border-[rgb(var(--color-primary))]/50 rounded-md text-sm"
                       value={f.operator}
                       onChange={(e) =>
@@ -490,6 +589,7 @@ export default function Screening() {
                         type="number"
                         className="w-32 px-3 py-2 border border-[rgb(var(--color-primary))]/50 rounded-md text-sm"
                         placeholder={`Value (${unit})`}
+                        disabled={aiLoading}
                         value={f.value}
                         onChange={(e) =>
                           updateFilter(f.id, "value", e.target.value)
@@ -506,6 +606,7 @@ export default function Screening() {
                           type="number"
                           className="w-32 px-3 py-2 border border-[rgb(var(--color-primary))]/50 rounded-md text-sm"
                           placeholder={`Max (${unit})`}
+                          disabled={aiLoading}
                           value={f.value_max}
                           onChange={(e) =>
                             updateFilter(f.id, "value_max", e.target.value)
@@ -518,7 +619,14 @@ export default function Screening() {
                     {filters.length > 1 && (
                       <button
                         type="button"
-                        onClick={() => removeFilter(f.id)}
+                        onClick={() => {
+                          removeFilter(f.id);
+                          setSummaries(prev => {
+                            const next = {...prev};
+                            delete next[f.id];
+                            return next;
+                          });
+                        }}
                         className="text-red-500 hover:text-red-700 text-lg"
                       >
                         ✕
@@ -526,10 +634,29 @@ export default function Screening() {
                     )}
 
                     {metric && (
-                      <p className="text-xs text-gray-500 w-full">
+                      <p className="text-xs text-gray-500 w-full mb-1">
                         Type: {metric.type || "unknown"} • Unit:{" "}
                         {metric.unit_config?.unit || "n/a"}
                       </p>
+                    )}
+                    
+                    {/* Data Hint */}
+                    {summaries[f.id] && (
+                      <div className="w-full mt-2 p-3 bg-blue-50 border border-blue-100 rounded-md text-sm">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="font-semibold text-blue-900">Data Hint: {f.metric_name}</span>
+                          <span className="text-blue-700 text-xs">Missing: {summaries[f.id].missing_count}/{summaries[f.id].total_count}</span>
+                        </div>
+                        {summaries[f.id].has_data ? (
+                          <p className="text-blue-900">
+                            min: <span className="font-mono bg-white px-1 rounded">{formatMetricValue(f.metric_name || "", summaries[f.id].min)}</span> • 
+                            median: <span className="font-mono bg-white px-1 rounded">{formatMetricValue(f.metric_name || "", summaries[f.id].median)}</span> • 
+                            max: <span className="font-mono bg-white px-1 rounded">{formatMetricValue(f.metric_name || "", summaries[f.id].max)}</span>
+                          </p>
+                        ) : (
+                          <p className="text-red-600">No data available for this metric/year.</p>
+                        )}
+                      </div>
                     )}
                   </>
                 );
@@ -540,50 +667,27 @@ export default function Screening() {
 
         {/* Actions */}
         <div className="flex gap-2">
-          <Button onClick={addFilter} variant="secondary">
+          <Button 
+            onClick={addFilter} 
+            variant="secondary"
+            disabled={aiLoading || filters.length > 0 && (() => {
+              const last = filters[filters.length - 1];
+              if (!last.metric_name) return true;
+              if (last.operator === "between") {
+                return last.value === "" || last.value_max === "";
+              }
+              return last.value === "";
+            })()}
+          >
             + Add Filter
           </Button>
-          <Button onClick={handleScreen} disabled={loading}>
+          <Button onClick={handleScreen} disabled={loading || aiLoading}>
             {loading ? "Processing..." : "Run Screening"}
           </Button>
         </div>
 
         {error && <p className="mt-3 text-red-600 text-sm">{error}</p>}
       </Card>
-
-      {/* Data Hint */}
-      {activeSummary && (
-        <Card>
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-bold">
-                Data Hint — {activeMetric?.metric_name || "Unknown"}
-              </h3>
-              <p className="text-sm text-gray-600">
-                Type: {activeSummary.type || "unknown"}{" "}
-                {activeSummary.type === "benefit" && "(Higher is better)"}
-                {activeSummary.type === "cost" && "(Lower is better)"} • Unit:{" "}
-                {activeSummary.unit_config?.unit || "n/a"}
-              </p>
-            </div>
-            <div className="text-sm text-gray-600">
-              Missing: {activeSummary.missing_count}/{activeSummary.total_count}
-            </div>
-          </div>
-          {activeSummary.has_data ? (
-            <p className="text-sm text-gray-700 mt-2">
-              Range ({activeSummary.year}): min{" "}
-              {formatMetricValue(activeMetricName, activeSummary.min)} • median{" "}
-              {formatMetricValue(activeMetricName, activeSummary.median)} • max{" "}
-              {formatMetricValue(activeMetricName, activeSummary.max)}
-            </p>
-          ) : (
-            <p className="text-sm text-red-600 mt-2">
-              No data available for this metric/year.
-            </p>
-          )}
-        </Card>
-      )}
 
       {/* Results */}
       {result && (
@@ -592,15 +696,34 @@ export default function Screening() {
             <h3 className="text-lg font-bold">Screening Results</h3>
             {result.passed.length > 0 && (
               <div className="flex items-center gap-2">
-                <Button variant="report" onClick={openSaveModal}>
+                <Button variant="report" onClick={openSaveModal} disabled={aiLoading}>
                   Save to Reports
                 </Button>
                 {saveMessage && (
                   <span className="text-xs text-green-700">{saveMessage}</span>
                 )}
+                <div className="ml-auto">
+                  <Button 
+                    onClick={handleGenerateScreeningAi}
+                    disabled={aiLoading}
+                    className="bg-purple-600 hover:bg-purple-700 text-white"
+                  >
+                    {aiLoading ? <span className="animate-pulse">Orcas is thinking...</span> : "Explain with Orcas AI"}
+                  </Button>
+                </div>
               </div>
             )}
           </div>
+          
+          {aiError && <p className="text-red-500 text-sm mb-3">{aiError}</p>}
+          
+          {aiAnalysis && (
+            <div className="bg-purple-50 border border-purple-100 rounded p-4 mb-3 text-sm text-purple-900 leading-relaxed shadow-sm whitespace-pre-wrap">
+              <strong className="block mb-2 text-purple-950">AI Analysis:</strong>
+              {aiAnalysis}
+            </div>
+          )}
+          
           <p className="text-sm text-gray-500 mb-4">
             Year {result.year} • {visibleConditions.length} filters • Passed{" "}
             {result.stats.passed}/{result.stats.total}

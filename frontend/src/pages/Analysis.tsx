@@ -33,7 +33,7 @@ export default function Analysis() {
             }`}
           >
             <span className="flex items-center gap-2">
-              <span>🔍</span>
+              
               Screening
               <InfoTip content={screeningInfo} />
             </span>
@@ -51,7 +51,7 @@ export default function Analysis() {
             }`}
           >
             <span className="flex items-center gap-2">
-              <span>🏆</span>
+              
               Metric Ranking
               <InfoTip content={rankingInfo} />
             </span>

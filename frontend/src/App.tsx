@@ -36,7 +36,7 @@ function AppContent() {
   const { loading: catalogLoading, error: catalogError, retry } = useCatalog();
   const [user, setUser] = useState<User | null>(null);
   const [checking, setChecking] = useState(true);
-  const [currentPage, setCurrentPage] = useState<Page>("analysis");
+  const [currentPage, setCurrentPage] = useState<Page>("basic-finance");
   const apiBase = BASE_URL;
 
   // Check existing session on mount
@@ -45,6 +45,7 @@ function AppContent() {
       try {
         const currentUser = await authMe();
         setUser(currentUser);
+        setCurrentPage(currentUser.role === "admin" ? "sync-data" : "basic-finance");
       } catch {
         // Not logged in or session expired
         setUser(null);
@@ -57,7 +58,7 @@ function AppContent() {
 
   const handleLoginSuccess = async (loggedInUser: User) => {
     setUser(loggedInUser);
-    setCurrentPage("analysis");
+    setCurrentPage(loggedInUser.role === "admin" ? "sync-data" : "basic-finance");
   };
 
   const handleLogout = async () => {
@@ -130,6 +131,18 @@ function AppContent() {
 
   // Sidebar navigation - 5 main features
   const navItems: NavItem[] = [
+    ...(isAdmin
+      ? [
+          {
+            key: "sync-data",
+            label: "Sync Data",
+            icon: "🗄️",
+            onSelect: () => setCurrentPage("sync-data"),
+            active: currentPage === "sync-data",
+            description: "Synchronize database with upstream APIs or CSV files.",
+          } as NavItem,
+        ]
+      : []),
     {
       key: "basic-finance",
       label: "Basic Finance",
@@ -198,12 +211,6 @@ function AppContent() {
             icon: "👥",
             onClick: () => setCurrentPage("admin"),
             separator: true,
-          },
-          {
-            key: "sync-data",
-            label: "Sync Data",
-            icon: "🔄",
-            onClick: () => setCurrentPage("sync-data"),
           },
           {
             key: "activity-log",

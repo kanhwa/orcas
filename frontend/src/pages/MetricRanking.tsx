@@ -48,6 +48,10 @@ export default function MetricRanking() {
   const [saveError, setSaveError] = useState("");
   const [saveMessage, setSaveMessage] = useState("");
   const [saving, setSaving] = useState(false);
+  
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
+  const [aiAnalysis, setAiAnalysis] = useState("");
 
   useEffect(() => {
     getAvailableMetrics()
@@ -99,6 +103,71 @@ export default function MetricRanking() {
     }
     setWarning("");
     return value;
+  };
+
+  const handleGenerateMetricAi = async (isMulti: boolean) => {
+    setAiLoading(true);
+    setAiError("");
+    setAiAnalysis("");
+    
+    try {
+      let dataToAnalyze: any = {};
+      
+      if (isMulti && panelResult) {
+        // Multi year
+        const rows = panelResult.rows;
+        if (!rows.length) return;
+        const top2 = rows.slice(0, 2);
+        const middle = rows.length > 2 ? [rows[Math.floor(rows.length / 2)]] : [];
+        const bottom = rows.length > 3 ? [rows[rows.length - 1]] : [];
+        
+        // Ensure no duplicates by using Set or just filtering
+        const selectedRows = [...new Set([...top2, ...middle, ...bottom])];
+        
+        dataToAnalyze = {
+          metric_name: panelResult.metric_name,
+          unit: unit || "n/a",
+          start_year: panelResult.from_year,
+          end_year: panelResult.to_year,
+          selected_banks: selectedRows.map((r) => ({
+            rank: rows.findIndex(x => x.ticker === r.ticker) + 1,
+            ticker: r.ticker,
+            values: r.values
+          }))
+        };
+      } else if (!isMulti && yearResult) {
+        // Single year
+        const rows = yearResult.rankings;
+        if (!rows.length) return;
+        const top2 = rows.slice(0, 2);
+        const middle = rows.length > 2 ? [rows[Math.floor(rows.length / 2)]] : [];
+        const bottom = rows.length > 3 ? [rows[rows.length - 1]] : [];
+        
+        const selectedRows = [...new Set([...top2, ...middle, ...bottom])];
+        
+        dataToAnalyze = {
+          metric_name: yearResult.metric_name,
+          unit: unit || "n/a",
+          start_year: yearResult.year,
+          end_year: yearResult.year,
+          selected_banks: selectedRows.map((r) => ({
+            rank: r.rank,
+            ticker: r.ticker,
+            value: r.value
+          }))
+        };
+      } else {
+        return;
+      }
+
+      const { generateMetricRankingInterpretation } = await import("../services/api");
+      const result = await generateMetricRankingInterpretation(dataToAnalyze, "English");
+      setAiAnalysis(result.analysis);
+    } catch (err: any) {
+      setAiError(err.message || "Failed to generate AI analysis");
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   const handleFetchPanel = async () => {
@@ -441,7 +510,7 @@ export default function MetricRanking() {
                 }`}
                 onClick={() => setRankType("best")}
               >
-                ⬆️ Best
+                Best
               </button>
               <button
                 className={`flex-1 px-3 py-2 rounded-md border text-sm font-medium transition-colors ${
@@ -451,7 +520,7 @@ export default function MetricRanking() {
                 }`}
                 onClick={() => setRankType("worst")}
               >
-                ⬇️ Worst
+                Worst
               </button>
             </div>
             <p className="text-xs text-gray-500 mt-1">
@@ -540,7 +609,7 @@ export default function MetricRanking() {
         <div className="flex items-center gap-3 mt-4">
           <Button
             onClick={mode === "panel" ? handleFetchPanel : handleFetchByYear}
-            disabled={loading || !metrics.length}
+            disabled={loading || !metrics.length || aiLoading}
           >
             {loading ? "Processing..." : "View Ranking"}
           </Button>
@@ -564,14 +633,33 @@ export default function MetricRanking() {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="report" onClick={openSaveModal}>
+              <Button variant="report" onClick={openSaveModal} disabled={aiLoading}>
                 Save to Reports
               </Button>
               {saveMessage && (
                 <span className="text-xs text-green-700">{saveMessage}</span>
               )}
+              <div className="ml-auto">
+                <Button 
+                  onClick={() => handleGenerateMetricAi(true)}
+                  disabled={aiLoading}
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  {aiLoading ? <span className="animate-pulse">Orcas is thinking...</span> : "Explain with Orcas AI"}
+                </Button>
+              </div>
             </div>
           </div>
+          
+          {aiError && <p className="text-red-500 text-sm mb-3">{aiError}</p>}
+          
+          {aiAnalysis && (
+            <div className="bg-purple-50 border border-purple-100 rounded p-4 mb-3 text-sm text-purple-900 leading-relaxed shadow-sm whitespace-pre-wrap">
+              <strong className="block mb-2 text-purple-950">AI Analysis:</strong>
+              {aiAnalysis}
+            </div>
+          )}
+          
           {panelResult.rows.length === 0 ? (
             <p className="text-gray-500">
               No data available for this metric/year range.
@@ -639,14 +727,33 @@ export default function MetricRanking() {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="report" onClick={openSaveModal}>
+              <Button variant="report" onClick={openSaveModal} disabled={aiLoading}>
                 Save to Reports
               </Button>
               {saveMessage && (
                 <span className="text-xs text-green-700">{saveMessage}</span>
               )}
+              <div className="ml-auto">
+                <Button 
+                  onClick={() => handleGenerateMetricAi(false)}
+                  disabled={aiLoading}
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  {aiLoading ? <span className="animate-pulse">Orcas is thinking...</span> : "Explain with Orcas AI"}
+                </Button>
+              </div>
             </div>
           </div>
+          
+          {aiError && <p className="text-red-500 text-sm mb-3">{aiError}</p>}
+          
+          {aiAnalysis && (
+            <div className="bg-purple-50 border border-purple-100 rounded p-4 mb-3 text-sm text-purple-900 leading-relaxed shadow-sm whitespace-pre-wrap">
+              <strong className="block mb-2 text-purple-950">AI Analysis:</strong>
+              {aiAnalysis}
+            </div>
+          )}
+          
           {yearResult.rankings.length === 0 ? (
             <p className="text-gray-500">
               No data available for this metric/year.

@@ -21,7 +21,10 @@ from app.schemas.wsm import (
     WSMScoreRequest,
     WSMScorePreviewResponse,
     WSMScoreResponse,
+    WSMMultiYearScoreRequest,
+    WSMMultiYearScoreResponse,
 )
+
 from app.services.wsm_service import (
     calculate_wsm_score,
     calculate_wsm_score_preview,
@@ -144,6 +147,32 @@ def wsm_score_preview(
     result = calculate_wsm_score_preview(db, payload, user_id=_current_user.id)
     _try_set_cached(redis_client, cache_key, result.model_dump())
     return result
+
+
+@router.post("/score-multi-year", response_model=WSMMultiYearScoreResponse)
+def wsm_score_multi_year(
+    payload: WSMMultiYearScoreRequest,
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(get_current_user),
+    redis_client: redis.Redis | None = Depends(get_redis),
+) -> WSMMultiYearScoreResponse:
+    """
+    Return average WSM score across a range of years.
+    """
+    from app.services.wsm_service import calculate_wsm_score_multi_year
+    cache_key = _cache_key(
+        "wsm:score_multi_year",
+        user_id=_current_user.id,
+        payload=payload.model_dump(),
+    )
+    cached = _try_get_cached(redis_client, cache_key)
+    if cached is not None:
+        return WSMMultiYearScoreResponse.model_validate(cached)
+
+    result = calculate_wsm_score_multi_year(db, payload, user_id=_current_user.id)
+    _try_set_cached(redis_client, cache_key, result.model_dump())
+    return result
+
 
 
 @router.post("/scorecard", response_model=ScorecardResponse)

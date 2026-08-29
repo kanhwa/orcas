@@ -11,7 +11,7 @@ from app.db.database import ping_db
 from app.db.session import SessionLocal
 from app.models import MetricDefinition
 from app.scripts.seed_metric_definitions import read_mapping, upsert_metrics
-from app.api.routes import activity, admin, auth, emitens, export, financial_data, historical, metric_ranking, ranking, reports, scoring_runs, screening, stocks, sync_data, templates, weight_templates, wsm, years, metrics
+from app.api.routes import activity, admin, auth, emitens, export, financial_data, historical, metric_ranking, ranking, reports, scoring_runs, screening, stocks, sync_data, templates, weight_templates, wsm, years, metrics, ai
 
 app = FastAPI(title="ORCAS API")
 
@@ -56,6 +56,7 @@ app.include_router(metrics.router)
 app.include_router(historical.router)
 app.include_router(stocks.router)
 app.include_router(sync_data.router)
+app.include_router(ai.router)
 
 app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
 

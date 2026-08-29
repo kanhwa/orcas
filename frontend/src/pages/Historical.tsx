@@ -46,8 +46,38 @@ export default function Historical() {
   const [result, setResult] = useState<HistoricalCompareResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
+  const [aiAnalysis, setAiAnalysis] = useState("");
   const [sectionFilter, setSectionFilter] = useState<string>("all");
   const [showSignificantOnly, setShowSignificantOnly] = useState(false);
+  const [customThresholds, setCustomThresholds] = useState<number[]>(() => {
+    const saved = localStorage.getItem("orcas_custom_thresholds");
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [activeThreshold, setActiveThreshold] = useState<number>(20);
+  const [isAddingThreshold, setIsAddingThreshold] = useState(false);
+  const [newThresholdVal, setNewThresholdVal] = useState("");
+  
+  const handleAddThreshold = () => {
+    const val = parseInt(newThresholdVal);
+    if (!isNaN(val) && val > 0) {
+      const updated = Array.from(new Set([...customThresholds, val])).sort((a, b) => a - b);
+      setCustomThresholds(updated);
+      localStorage.setItem("orcas_custom_thresholds", JSON.stringify(updated));
+      setActiveThreshold(val);
+      setIsAddingThreshold(false);
+      setNewThresholdVal("");
+    }
+  };
+  
+  const handleDeleteThreshold = (val: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const updated = customThresholds.filter(t => t !== val);
+    setCustomThresholds(updated);
+    localStorage.setItem("orcas_custom_thresholds", JSON.stringify(updated));
+    if (activeThreshold === val) setActiveThreshold(20);
+  };
   const [saveOpen, setSaveOpen] = useState(false);
   const [reportName, setReportName] = useState("");
   const [saveError, setSaveError] = useState("");
@@ -234,7 +264,7 @@ export default function Historical() {
 
       const formatNum = (value: number, decimals: number) =>
         new Intl.NumberFormat(undefined, {
-          minimumFractionDigits: decimals,
+          minimumFractionDigits: 0,
           maximumFractionDigits: decimals,
         }).format(value);
 
@@ -269,6 +299,46 @@ export default function Historical() {
     },
     [resolveUnitConfig]
   );
+
+
+  const handleGenerateAi = async () => {
+    if (!result) return;
+    setAiLoading(true);
+    setAiError("");
+    setAiAnalysis("");
+    
+    try {
+      const payload = {
+        ticker: selectedTicker,
+        year_1: year1,
+        year_2: year2,
+        section_filter: sectionFilter,
+        threshold: activeThreshold,
+        metrics: result.metrics.filter(m => !isForbiddenMetricName(m.metric_name)).filter(m => {
+          if (sectionFilter !== "all" && m.section !== sectionFilter) return false;
+          if (showSignificantOnly) {
+            const isSig = m.pct_change !== null && Math.abs(m.pct_change) >= activeThreshold;
+            if (!isSig) return false;
+          }
+          return true;
+        }).map(m => ({
+          metric_name: m.metric_name,
+          base_value: m.value_year1,
+          current_value: m.value_year2,
+          change_pct: m.pct_change,
+          trend: m.trend
+        }))
+      };
+
+      const { generateHistoricalInterpretation } = await import("../services/api");
+      const res = await generateHistoricalInterpretation(payload, "English");
+      setAiAnalysis(res.analysis);
+    } catch (err: any) {
+      setAiError(err.message || "Failed to generate AI analysis");
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const handleCompare = async () => {
     if (!selectedTicker) {
@@ -329,7 +399,7 @@ export default function Historical() {
       sectionFilter === "all"
         ? "All Sections"
         : sectionFilter.charAt(0).toUpperCase() + sectionFilter.slice(1);
-    const significantLabel = showSignificantOnly ? "Yes (20%)" : "No";
+    const significantLabel = showSignificantOnly ? `Yes (${activeThreshold}%)` : "No";
 
     const metadataForApi = {
       report_type: "compare_historical",
@@ -440,10 +510,10 @@ export default function Historical() {
   };
 
   const getTrendIcon = (trend: string): string => {
-    if (trend === "up") return "📈";
-    if (trend === "down") return "📉";
-    if (trend === "stable") return "➡️";
-    return "❓";
+    if (trend === "up") return "↗";
+    if (trend === "down") return "↘";
+    if (trend === "stable") return "→";
+    return "—";
   };
 
   const getTrendColor = (trend: string): string => {
@@ -463,6 +533,11 @@ export default function Historical() {
 
   const filteredMetrics = visibleMetrics.filter((m) => {
     if (sectionFilter !== "all" && m.section !== sectionFilter) return false;
+    
+    // Override backend's is_significant based on user's active threshold
+    const isSig = m.pct_change !== null && Math.abs(m.pct_change) >= activeThreshold;
+    m.is_significant = isSig; // mutate for rendering the warning icon
+    
     if (showSignificantOnly && !m.is_significant) return false;
     return true;
   });
@@ -557,7 +632,7 @@ export default function Historical() {
           <div className="flex items-end">
             <Button
               onClick={handleCompare}
-              disabled={loading || !selectedTicker}
+              disabled={loading || aiLoading || !selectedTicker}
               className="w-full"
             >
               {loading ? "Processing..." : "Compare"}
@@ -602,7 +677,7 @@ export default function Historical() {
               </div>
               <div className="flex flex-col items-end gap-3 text-sm">
                 <div className="flex items-center gap-2">
-                  <Button variant="report" onClick={openSaveModal}>
+                  <Button variant="report" onClick={openSaveModal} disabled={aiLoading}>
                     Save to Reports
                   </Button>
                   {saveMessage && (
@@ -610,6 +685,13 @@ export default function Historical() {
                       {saveMessage}
                     </span>
                   )}
+                  <Button 
+                    onClick={handleGenerateAi}
+                    disabled={aiLoading}
+                    className="bg-purple-600 hover:bg-purple-700 text-white"
+                  >
+                    {aiLoading ? <span className="animate-pulse">Orcas is thinking...</span> : "Explain with Orcas AI"}
+                  </Button>
                 </div>
                 <div className="flex gap-4">
                   <div className="text-center">
@@ -635,6 +717,15 @@ export default function Historical() {
             </div>
 
             {/* Filters */}
+            
+            {aiError && <p className="text-red-500 text-sm mb-3 mt-4">{aiError}</p>}
+            {aiAnalysis && (
+              <div className="bg-purple-50 border border-purple-100 rounded p-4 mb-4 mt-4 text-sm text-purple-900 leading-relaxed shadow-sm whitespace-pre-wrap">
+                <strong className="block mb-2 text-purple-950">AI Analysis:</strong>
+                {aiAnalysis}
+              </div>
+            )}
+
             <div className="flex gap-4 items-center border-t pt-4">
               <div>
                 <label className="text-sm font-medium mr-2">Section:</label>
@@ -651,14 +742,56 @@ export default function Historical() {
                   ))}
                 </select>
               </div>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={showSignificantOnly}
-                  onChange={(e) => setShowSignificantOnly(e.target.checked)}
-                />
-                Only significant changes (&gt;20%)
-              </label>
+              <div className="flex items-center gap-4 flex-wrap">
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={showSignificantOnly}
+                    onChange={(e) => setShowSignificantOnly(e.target.checked)}
+                  />
+                  Only significant changes
+                </label>
+                
+                {showSignificantOnly && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs text-gray-500">Threshold:</span>
+                    <button 
+                      onClick={() => setActiveThreshold(20)}
+                      className={`px-3 py-1 text-xs rounded-full border transition-colors ${activeThreshold === 20 ? 'bg-[rgb(var(--color-primary))] text-white border-transparent' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'}`}
+                    >
+                      20% (Default)
+                    </button>
+                    {customThresholds.map(t => (
+                      <div key={t} className={`flex items-center text-xs rounded-full border overflow-hidden transition-colors ${activeThreshold === t ? 'bg-[rgb(var(--color-primary))] text-white border-transparent' : 'bg-white text-gray-600 border-gray-300'}`}>
+                        <button onClick={() => setActiveThreshold(t)} className="px-3 py-1 hover:bg-black/5">
+                          {t}%
+                        </button>
+                        <button onClick={(e) => handleDeleteThreshold(t, e)} className="px-2 py-1 hover:bg-red-500 hover:text-white transition-colors border-l border-inherit" title="Delete custom threshold">
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                    
+                    {isAddingThreshold ? (
+                      <input 
+                        type="number" 
+                        min="1"
+                        autoFocus
+                        className="w-16 px-2 py-1 text-xs border rounded-full text-center focus:outline-none focus:ring-1 focus:ring-[rgb(var(--color-primary))]" 
+                        placeholder="%"
+                        value={newThresholdVal}
+                        onChange={e => setNewThresholdVal(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && handleAddThreshold()}
+                        onBlur={() => setIsAddingThreshold(false)}
+                      />
+                    ) : (
+                      <button onClick={() => setIsAddingThreshold(true)} className="px-3 py-1 text-xs rounded-full border border-dashed border-gray-400 text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors">
+                        + Add Custom
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </Card>
 
@@ -719,7 +852,7 @@ export default function Historical() {
                         {formatChangePct(m.pct_change)}
                         {m.is_significant && " ⚠️"}
                       </td>
-                      <td className="px-4 py-2 text-center text-xl">
+                      <td className={`px-4 py-2 text-center text-2xl font-bold ${getTrendColor(m.trend)}`}>
                         {getTrendIcon(m.trend)}
                       </td>
                     </tr>

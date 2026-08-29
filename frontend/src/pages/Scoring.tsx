@@ -369,6 +369,11 @@ const Scoring = () => {
   const [aiAnalysisText, setAiAnalysisText] = useState("");
   const [aiAnalysisLoading, setAiAnalysisLoading] = useState(false);
   const [showAiChart, setShowAiChart] = useState(false);
+  const [rankFilterType, setRankFilterType] = useState<"all" | "top" | "worst">("top");
+  const [rankFilterCount, setRankFilterCount] = useState<number>(32);
+  const [rankingAiAnalysis, setRankingAiAnalysis] = useState<string>("");
+  const [rankingAiLoading, setRankingAiLoading] = useState(false);
+  const [rankingAiError, setRankingAiError] = useState("");
   const [customScope, setCustomScope] = useState<"metric" | "section">(
     "section"
   );
@@ -1087,6 +1092,32 @@ const Scoring = () => {
     setSaveModalContext("scorecard");
   };
 
+  const handleGenerateRankingAi = async (displayedRanking: any[]) => {
+    if (!displayedRanking.length) return;
+    setRankingAiLoading(true);
+    setRankingAiError("");
+    setRankingAiAnalysis("");
+    
+    // Max 4 emitens to mention as requested by user
+    const emitensToMention = displayedRanking.slice(0, 4).map(r => ({
+      ticker: r.ticker,
+      score: (r.score ?? r.average_score ?? 0).toFixed(4),
+      rank: r.rank
+    }));
+
+    const period = scoringMode === 'multi' ? `${startYear}-${endYear}` : String(selectedYear);
+
+    try {
+      const { generateRankingInterpretation } = await import("../services/api");
+      const result = await generateRankingInterpretation(emitensToMention, period, "Indonesian");
+      setRankingAiAnalysis(result.analysis);
+    } catch (err: any) {
+      setRankingAiError(err.message || "Failed to generate AI analysis");
+    } finally {
+      setRankingAiLoading(false);
+    }
+  };
+
   const handleGenerateAiAnalysis = async () => {
     if (!scorecard) return;
     setAiAnalysisLoading(true);
@@ -1799,7 +1830,7 @@ const Scoring = () => {
               value={scoringMode}
               onChange={(e) => setScoringMode(e.target.value as "single" | "multi")}
               className="w-32"
-              disabled={loadingMeta || aiAnalysisLoading}
+              disabled={loadingMeta || aiAnalysisLoading || rankingAiLoading}
             >
               <option value="single">Single Year</option>
               <option value="multi">Multi-Year Avg</option>
@@ -1814,7 +1845,7 @@ const Scoring = () => {
                 value={selectedYear ?? ""}
                 onChange={(e) => setSelectedYear(Number(e.target.value))}
                 className="w-32"
-                disabled={loadingMeta || aiAnalysisLoading}
+                disabled={loadingMeta || aiAnalysisLoading || rankingAiLoading}
               >
                 {years.map((y) => (
                   <option key={y} value={y}>
@@ -1833,7 +1864,7 @@ const Scoring = () => {
                   value={startYear ?? ""}
                   onChange={(e) => setStartYear(Number(e.target.value))}
                   className="w-28"
-                  disabled={loadingMeta || aiAnalysisLoading}
+                  disabled={loadingMeta || aiAnalysisLoading || rankingAiLoading}
                 >
                   {years.map((y) => (
                     <option key={y} value={y}>
@@ -1850,7 +1881,7 @@ const Scoring = () => {
                   value={endYear ?? ""}
                   onChange={(e) => setEndYear(Number(e.target.value))}
                   className="w-28"
-                  disabled={loadingMeta || aiAnalysisLoading}
+                  disabled={loadingMeta || aiAnalysisLoading || rankingAiLoading}
                 >
                   {years.map((y) => (
                     <option key={y} value={y}>
@@ -1871,7 +1902,7 @@ const Scoring = () => {
                 setMissingPolicy(e.target.value as MissingPolicy)
               }
               className="w-40"
-              disabled={loadingMeta || aiAnalysisLoading}
+              disabled={loadingMeta || aiAnalysisLoading || rankingAiLoading}
             >
               {missingPolicyOptions.map((opt) => (
                 <option key={opt.key} value={opt.key}>
@@ -1881,7 +1912,7 @@ const Scoring = () => {
             </Select>
           </div>
           {renderWeightProfileSelector()}
-          <Button onClick={handleRun} disabled={!canRun || loading}>
+          <Button onClick={handleRun} disabled={!canRun || loading || aiAnalysisLoading || rankingAiLoading}>
             {loading ? "Running..." : "Run Scoring"}
           </Button>
         </div>
@@ -1902,24 +1933,78 @@ const Scoring = () => {
       )}
       {!loading && (ranking.length > 0 || multiRanking.length > 0) && (
         <>
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={handleSaveRun}
-                disabled={weightProfileBlocked}
-                variant="report"
-              >
-                Save to Reports
-              </Button>
-              {saveMessage && (
-                <span className="text-xs text-green-700">{saveMessage}</span>
-              )}
+          <div className="rounded border border-[rgb(var(--color-border))] bg-[rgb(var(--color-surface))] p-4 mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
+              <div className="font-semibold text-sm">Ranking Filter:</div>
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-1 text-sm cursor-pointer">
+                  <input type="radio" name="rankFilter" checked={rankFilterType === 'top'} onChange={() => setRankFilterType('top')} className="text-[rgb(var(--color-primary))] focus:ring-[rgb(var(--color-primary))]" />
+                  Top
+                </label>
+                <label className="flex items-center gap-1 text-sm cursor-pointer">
+                  <input type="radio" name="rankFilter" checked={rankFilterType === 'worst'} onChange={() => setRankFilterType('worst')} className="text-[rgb(var(--color-primary))] focus:ring-[rgb(var(--color-primary))]" />
+                  Worst
+                </label>
+                
+                <input 
+                  type="number" 
+                  min="1" 
+                  max="32"
+                  value={rankFilterCount} 
+                  onChange={e => {
+                    let val = Number(e.target.value) || 1;
+                    if (val > 32) val = 32;
+                    if (val < 1) val = 1;
+                    setRankFilterCount(val);
+                  }}
+                  className="w-16 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:border-[rgb(var(--color-primary))]"
+                />
+              </div>
             </div>
-            <p className="text-xs text-[rgb(var(--color-text-subtle))]">
-              Preview uses the selected weight profile; save to persist in
-              Reports.
-            </p>
+
           </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              onClick={handleSaveRun}
+              disabled={weightProfileBlocked || rankingAiLoading}
+              variant="report"
+            >
+              Save to Reports
+            </Button>
+            {saveMessage && (
+              <span className="text-xs text-green-700">{saveMessage}</span>
+            )}
+            <p className="text-xs text-[rgb(var(--color-text-subtle))] hidden sm:block">
+              Preview uses the selected weight profile.
+            </p>
+            <div className="ml-auto">
+              <Button 
+                onClick={() => handleGenerateRankingAi(
+                  (() => {
+                    const baseRanking = scoringMode === "multi" ? multiRanking : ranking;
+                    if (rankFilterType === 'all') return baseRanking;
+                    if (rankFilterType === 'top') return baseRanking.slice(0, rankFilterCount);
+                    if (rankFilterType === 'worst') return baseRanking.slice(-rankFilterCount);
+                    return baseRanking;
+                  })()
+                )}
+                disabled={rankingAiLoading || weightProfileBlocked}
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                {rankingAiLoading ? <span className="animate-pulse">Orcas is thinking...</span> : "Explain with Orcas AI"}
+              </Button>
+            </div>
+          </div>
+
+          {rankingAiError && <p className="text-red-500 text-sm mt-2">{rankingAiError}</p>}
+          
+          {rankingAiAnalysis && (
+            <div className="bg-purple-50 border border-purple-100 rounded p-4 mt-2 text-sm text-purple-900 leading-relaxed shadow-sm whitespace-pre-wrap">
+              <strong className="block mb-2 text-purple-950">Ranking Analysis:</strong>
+              {rankingAiAnalysis}
+            </div>
+          )}
           
           {scoringMode === "multi" ? (
             <Table>
@@ -1967,7 +2052,10 @@ const Scoring = () => {
                 </tr>
               </thead>
               <tbody>
-                {ranking.map((item, idx) => {
+                {(rankFilterType === 'all' ? ranking : 
+                  rankFilterType === 'top' ? ranking.slice(0, rankFilterCount) : 
+                  ranking.slice(-rankFilterCount)
+                ).map((item, idx) => {
                   const coveragePct = asPercent(item.coverage?.pct ?? null);
                   const coverageLabel =
                     coveragePct === null || coveragePct === undefined
@@ -2580,31 +2668,31 @@ const Scoring = () => {
             ))}
           </Select>
         </div>
-        <div className="flex flex-col gap-1">
-          {renderWeightProfileSelector()}
+        {renderWeightProfileSelector()}
+        
+        <div className="flex flex-col gap-1 justify-end h-full mt-4">
+          <Button
+            onClick={() => handleLoadScorecard()}
+            disabled={scorecardLoading || weightProfileBlocked || aiAnalysisLoading || rankingAiLoading}
+          >
+            {scorecardLoading ? "Loading..." : "Load Scorecard"}
+          </Button>
+        </div>
+        <div className="flex flex-col justify-end mt-4">
+          {templateSelectionRequired && weightProfile === "template" && (
+            <span className="text-xs text-red-600">
+              Select a template before loading.
+            </span>
+          )}
+          {weightProfile === "custom" && customWeightsInvalid && (
+            <span className="text-xs text-red-600">
+              Enter custom weights 0–100; total must be greater than 0 to load.
+            </span>
+          )}
         </div>
       </div>
 
       {weightProfile === "custom" && renderCustomWeightsPanel()}
-
-      <div className="flex flex-wrap items-center gap-3">
-        <Button
-          onClick={() => handleLoadScorecard()}
-          disabled={scorecardLoading || weightProfileBlocked || aiAnalysisLoading}
-        >
-          {scorecardLoading ? "Loading..." : "Load Scorecard"}
-        </Button>
-        {templateSelectionRequired && weightProfile === "template" && (
-          <span className="text-xs text-red-600">
-            Select a template before loading.
-          </span>
-        )}
-        {weightProfile === "custom" && customWeightsInvalid && (
-          <span className="text-xs text-red-600">
-            Enter custom weights 0–100; total must be greater than 0 to load.
-          </span>
-        )}
-      </div>
 
       {!scorecard && !scorecardLoading && !scorecardError && (
         <div className="rounded border border-[rgb(var(--color-border))] bg-[rgb(var(--color-surface))] px-3 py-3">
@@ -2637,11 +2725,11 @@ const Scoring = () => {
             )}
             <div className="ml-auto">
               <Button
-                variant="secondary"
+                className="bg-purple-600 hover:bg-purple-700 text-white"
                 onClick={handleGenerateAiAnalysis}
                 disabled={aiAnalysisLoading}
               >
-                {aiAnalysisLoading ? "Analyzing..." : "Generate AI Interpretation"}
+                {aiAnalysisLoading ? <span className="animate-pulse">Orcas is thinking...</span> : "Explain with Orcas AI"}
               </Button>
             </div>
           </div>

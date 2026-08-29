@@ -203,7 +203,7 @@ export default function SyncData({ user: _ }: SyncDataProps) {
           </div>
 
           <div className="mt-4 p-3 bg-blue-50 rounded-lg text-sm text-blue-800">
-            <strong>📝 File format:</strong> Filename must be in{" "}
+            <strong>File format:</strong> Filename must be in{" "}
             <code className="bg-blue-100 px-1 rounded">YYYY.csv</code> format
             (e.g., 2024.csv, 2025.csv)
           </div>

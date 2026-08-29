@@ -148,6 +148,9 @@ const Simulation: React.FC = () => {
   // Save to Reports
   const [saveOpen, setSaveOpen] = useState(false);
   const [reportName, setReportName] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
+  const [aiAnalysis, setAiAnalysis] = useState("");
   const [saveError, setSaveError] = useState("");
   const [savingReport, setSavingReport] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
@@ -718,6 +721,39 @@ const Simulation: React.FC = () => {
     setSaveOpen(true);
   };
 
+
+  const handleGenerateAi = async () => {
+    if (!result) return;
+    setAiLoading(true);
+    setAiError("");
+    setAiAnalysis("");
+    
+    try {
+      const payload = {
+        emiten: result.ticker,
+        weight_profile: resultWeightLabel,
+        baseline_score: result.baseline_score,
+        simulated_score: result.simulated_score,
+        delta: result.delta,
+        delta_percent: result.delta_percent,
+        adjustments: result.adjustments_detail.map(adj => ({
+          metric: adj.metric_name,
+          adjustment_percent: adj.adjustment_percent > 0 ? `+${adj.adjustment_percent}%` : `${adj.adjustment_percent}%`,
+          baseline_value: adj.baseline_value,
+          simulated_value: adj.simulated_value
+        }))
+      };
+
+      const { generateSimulationInterpretation } = await import("../services/api");
+      const res = await generateSimulationInterpretation(payload, "English");
+      setAiAnalysis(res.analysis);
+    } catch (err: any) {
+      setAiError(err.message || "Failed to generate AI analysis");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   const handleSaveReport = async () => {
     if (!result) return;
     const name = reportName.trim();
@@ -803,7 +839,7 @@ const Simulation: React.FC = () => {
           typeLabel,
           adj.baselineDisplay ?? "—",
           adj.simulatedDisplay ?? "—",
-          `${adj.adjustment_percent >= 0 ? "+" : ""}${adj.adjustment_percent}%`,
+          `${adj.adjustment_percent > 0 ? "+" : ""}${adj.adjustment_percent}%`,
         ];
       });
 
@@ -1195,31 +1231,44 @@ const Simulation: React.FC = () => {
                           <span>-100%</span>
                           <span
                             className={`font-bold ${
-                              adj.adjustment_percent >= 0
-                                ? "text-green-600"
-                                : "text-red-600"
+                              adj.adjustment_percent > 0
+                                ? "text-[rgb(var(--color-action))]"
+                                : adj.adjustment_percent < 0
+                                ? "text-red-600"
+                                : "text-gray-400"
                             }`}
                           >
-                            {adj.adjustment_percent >= 0 ? "+" : ""}
+                            {adj.adjustment_percent > 0 ? "+" : ""}
                             {adj.adjustment_percent}%
                           </span>
                           <span>+300%</span>
                         </div>
-                        <input
-                          type="range"
-                          min={-100}
-                          max={300}
-                          step={5}
-                          value={adj.adjustment_percent}
-                          onChange={(e) =>
-                            updateAdjustment(
-                              adj.id,
-                              "adjustment_percent",
-                              parseInt(e.target.value)
-                            )
+                        {(() => {
+                          const val = adj.adjustment_percent;
+                          let thumbClass = "[&::-webkit-slider-thumb]:bg-gray-400 [&::-moz-range-thumb]:bg-gray-400";
+                          if (val < 0) {
+                            thumbClass = "[&::-webkit-slider-thumb]:bg-red-500 [&::-moz-range-thumb]:bg-red-500";
+                          } else if (val > 0) {
+                            thumbClass = "[&::-webkit-slider-thumb]:bg-[rgb(var(--color-action))] [&::-moz-range-thumb]:bg-[rgb(var(--color-action))]";
                           }
-                          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[rgb(var(--color-primary))]"
-                        />
+                          return (
+                            <input
+                              type="range"
+                              min={-100}
+                              max={300}
+                              step={5}
+                              value={adj.adjustment_percent}
+                              onChange={(e) =>
+                                updateAdjustment(
+                                  adj.id,
+                                  "adjustment_percent",
+                                  parseInt(e.target.value)
+                                )
+                              }
+                              className={`w-full h-[10px] rounded-full appearance-none cursor-pointer bg-white border border-[rgb(var(--color-action))] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:rounded-full ${thumbClass}`}
+                            />
+                          );
+                        })()}
                       </div>
 
                       {/* Manual Input */}
@@ -1287,14 +1336,32 @@ const Simulation: React.FC = () => {
                  Simulation Results
               </h3>
               <div className="flex items-center gap-2">
-                <Button variant="report" onClick={openSaveModal}>
+                <Button variant="report" onClick={openSaveModal} disabled={aiLoading}>
                   Save to Reports
                 </Button>
                 {saveMessage && (
                   <span className="text-xs text-green-700">{saveMessage}</span>
                 )}
+                <div className="ml-auto">
+                  <Button 
+                    onClick={handleGenerateAi}
+                    disabled={aiLoading}
+                    className="bg-purple-600 hover:bg-purple-700 text-white"
+                  >
+                    {aiLoading ? <span className="animate-pulse">Orcas is thinking...</span> : "Explain with Orcas AI"}
+                  </Button>
+                </div>
               </div>
             </div>
+            
+            {aiError && <p className="text-red-500 text-sm mb-3 px-6">{aiError}</p>}
+            
+            {aiAnalysis && (
+              <div className="mx-6 bg-purple-50 border border-purple-100 rounded p-4 mb-4 text-sm text-purple-900 leading-relaxed shadow-sm whitespace-pre-wrap">
+                <strong className="block mb-2 text-purple-950">AI Analysis:</strong>
+                {aiAnalysis}
+              </div>
+            )}
 
             {/* Emiten Info */}
             <div className="mb-6 p-4 bg-[rgb(var(--color-surface))] rounded-lg">
