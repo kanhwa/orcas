@@ -268,7 +268,7 @@ export default function Dashboard({
                     <tr key={item.ticker}>
                       <td>{index + 1}</td>
                       <td className="font-semibold">{item.ticker}</td>
-                      <td>{item.score.toFixed(4)}</td>
+                      <td>{parseFloat(item.score.toFixed(4)).toString()}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -703,7 +703,7 @@ const Simulation: React.FC = () => {
 
   // Format number with sign
   const formatNumber = (value: number, decimals = 4) => {
-    return value.toFixed(decimals);
+    return parseFloat(value.toFixed(decimals)).toString();
   };
 
   const formatSigned = (value: number, decimals = 4) => {

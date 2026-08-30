@@ -371,3 +371,26 @@ a044013 feat: delete/remove avatar (backend DELETE endpoint + frontend UI)
 ---
 
 **Implementation Status**: ✅ **COMPLETE** - All requested features implemented and refactored successfully.
+
+---
+
+## Phase 3: Sync Data Refactor & Clone Detection Fixes (COMPLETED)
+
+### A. Authentication & Restore Fixes
+- Fixed missing credentials in `fetch` requests for all Trash operations (View, Delete, Restore, Empty).
+- Fixed a backend unpack crash (500 Error) in `POST /trash/{filename}/restore` when injecting CSV data back into the database.
+
+### B. UI/UX Improvements
+- **Loading State:** Added a fullscreen loading overlay ("Loading... Importing data") to all long-running Trash operations (Restore, Delete, Empty).
+- **Trash Layout:** Completely redesigned the Trash interface into a center-screen Modal Popup rather than an inline expansion, mirroring the View Report feature.
+- **Data Files Table:** 
+  - Adjusted column widths evenly (20%, 20%, 20%, 25%, 15%) to prevent bunching.
+  - Aligned the 'Action' column strictly to the right.
+  - Simplified the 'Action' button to a plain red text "Delete" without icons.
+
+### C. Clone Detection Pipeline
+- **Backend Communication:** Updated `UploadResponse` schema and `upload_csv` endpoint to properly return the `[WARN-01]` clone detection message to the frontend.
+- **Warning Modal:** Overhauled the frontend warning display from an easily-ignored inline banner into a blocking Modal Popup without an auto-dismiss timeout.
+- **Translation:** Standardized the clone warning message into professional English.
+- **Move to Trash Action:** Added an instant "Move to trash" action directly within the warning modal to quickly discard duplicated datasets.
+- **Styling:** The "I Understand, Dismiss" button was styled with the ORCAS header's signature green gradient, while the "Move to trash" button uses a clean, borderless white design with red text.

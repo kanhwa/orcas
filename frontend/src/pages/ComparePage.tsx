@@ -36,7 +36,7 @@ import { getSeriesColor } from "../utils/seriesColors";
 
 const formatScore = (score: number | null | undefined): string => {
   if (score === null || score === undefined) return "—";
-  return score.toFixed(4);
+  return parseFloat(score.toFixed(4)).toString();
 };
 
 async function captureChartAsPng(
@@ -455,7 +455,7 @@ function CompareTab() {
     value,
     name
   ) => {
-    const numeric = typeof value === "number" ? value.toFixed(4) : "—";
+    const numeric = typeof value === "number" ? parseFloat(value.toFixed(4)).toString() : "—";
     return [numeric, String(name)];
   };
 
@@ -464,7 +464,7 @@ function CompareTab() {
     name,
     props
   ) => {
-    const numeric = typeof value === "number" ? value.toFixed(4) : "—";
+    const numeric = typeof value === "number" ? parseFloat(value.toFixed(4)).toString() : "—";
     const year = (props?.payload as { year?: number } | undefined)?.year;
     return [numeric, `${String(name)}${year ? ` (${year})` : ""}`];
   };

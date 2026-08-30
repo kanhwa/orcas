@@ -291,7 +291,7 @@ function displayWeightValue(weight: number | undefined): string | number {
 
 function formatDecimal(value: number | null | undefined, digits = 6): string {
   if (value === null || value === undefined || Number.isNaN(value)) return "—";
-  return value.toFixed(digits);
+  return parseFloat(value.toFixed(digits)).toString();
 }
 
 function asPercent(value: number | null | undefined): number | null {
@@ -1101,7 +1101,7 @@ const Scoring = () => {
     // Max 4 emitens to mention as requested by user
     const emitensToMention = displayedRanking.slice(0, 4).map(r => ({
       ticker: r.ticker,
-      score: (r.score ?? r.average_score ?? 0).toFixed(4),
+      score: parseFloat((r.score ?? r.average_score ?? 0).toFixed(4)).toString(),
       rank: r.rank
     }));
 
@@ -2749,7 +2749,7 @@ const Scoring = () => {
                 ) : (
                   <div className="mt-2 relative" style={{ height: "120px" }}>
                     <strong className="block mb-2 text-blue-950 text-xs">Scorecard Contribution Breakdown (Stacked)</strong>
-                    <div className="absolute right-0 top-0 text-sm font-bold text-blue-900 z-10">Total: {scorecard?.total_score?.toFixed(4)}</div>
+                    <div className="absolute right-0 top-0 text-sm font-bold text-blue-900 z-10">Total: {scorecard?.total_score != null ? parseFloat(scorecard.total_score.toFixed(4)).toString() : ""}</div>
                     <ResponsiveContainer width="95%" height="60%">
                       <BarChart 
                         layout="vertical" 
@@ -2764,7 +2764,7 @@ const Scoring = () => {
                         <XAxis type="number" hide domain={[0, 'dataMax']} />
                         <YAxis type="category" dataKey="name" hide />
                         <Tooltip 
-                          formatter={(value) => Number(value).toFixed(4)} 
+                          formatter={(value) => parseFloat(Number(value).toFixed(4)).toString()} 
                           contentStyle={{ borderRadius: '8px', fontSize: '12px' }}
                         />
                         <Bar dataKey="Balance" stackId="a" fill="#3b82f6" />
