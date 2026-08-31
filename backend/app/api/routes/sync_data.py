@@ -497,6 +497,35 @@ def validate_and_import_csv(
         res["warning"] = warning_msg
     return res
 
+@router.get("/files/{filename}/content")
+def get_csv_content(
+    filename: str,
+    _admin: User = Depends(require_admin),
+) -> dict:
+    """Get the raw content of a CSV file for viewing."""
+    if not filename.endswith(".csv"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Can only view CSV files",
+        )
+    
+    filepath = os.path.join(DATA_DIR, filename)
+    if not os.path.exists(filepath):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="File not found",
+        )
+        
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            content = f.read()
+        return {"filename": filename, "content": content}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to read file: {str(e)}",
+        )
+
 
 @router.delete("/files/{filename}")
 def delete_csv_file(
