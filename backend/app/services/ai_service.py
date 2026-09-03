@@ -27,7 +27,6 @@ def handle_ai_retry(client_call, max_retries=3):
             return client_call()
         except Exception as e:
             print(f"AI ERROR: {e}")
-            print(f"AI ERROR: {e}")
             if "503" in str(e) or "UNAVAILABLE" in str(e) or "429" in str(e) or "quota" in str(e).lower():
                 if attempt < max_retries - 1:
                     time.sleep(2 ** attempt)
@@ -42,10 +41,6 @@ def get_client():
     return genai.Client(api_key=api_key)
 
 def generate_scorecard_interpretation(payload: dict) -> str:
-    try:
-        client = get_client()
-    except Exception:
-        return "API Key Gemini tidak ditemukan."
         
     scorecard_data = payload.get("scorecard", payload)
     language = payload.get("language", "Indonesian")
@@ -66,19 +61,16 @@ ATURAN MUTLAK (STRICT RULES):
 4. JANGAN gunakan kata ganti (ini, itu, tersebut). Sebut nama Ticker (contoh: BBCA) dan nama metrik secara spesifik.
 
 Data Scorecard:
-{json.dumps(data, indent=2)}
+{json.dumps(scorecard_data, indent=2)}
 """
     
     def call():
-        response = client.models.generate_content(model='antigravity', contents=prompt)
+        client = get_client()
+        response = client.models.generate_content(model='gemini-3.5-flash-lite', contents=prompt)
         return response.text.strip().replace('**', '')
     return handle_ai_retry(call)
 
 def generate_ranking_interpretation(ranking_data: list, period: str, language: str = "Indonesian") -> str:
-    try:
-        client = get_client()
-    except Exception:
-        return "API Key Gemini tidak ditemukan."
 
     prompt = f"""
 You are a senior banking data analyst. Analyze the Ranking data for the period {period}.
@@ -93,15 +85,12 @@ Data:
 """
     
     def call():
-        response = client.models.generate_content(model='antigravity', contents=prompt)
+        client = get_client()
+        response = client.models.generate_content(model='gemini-3.5-flash-lite', contents=prompt)
         return response.text.strip().replace('**', '')
     return handle_ai_retry(call)
 
 def generate_metric_ranking_interpretation(data: dict, language: str = "English") -> str:
-    try:
-        client = get_client()
-    except Exception:
-        return "API Key Gemini tidak ditemukan."
 
     # Slicing: List 4 (Top 2, Mid 1, Last 1) or List 3 (Top 1, Mid 1, Last 1)
     ranking = data.get("ranking", [])
@@ -123,19 +112,16 @@ STRICT RULES:
 4. Do NOT use bullet points, bold text (**), or emojis. Do NOT give stock investment advice.
 
 Data:
-{json.dumps(data, indent=2)}
+{json.dumps(scorecard_data, indent=2)}
 """
     
     def call():
-        response = client.models.generate_content(model='antigravity', contents=prompt)
+        client = get_client()
+        response = client.models.generate_content(model='gemini-3.5-flash-lite', contents=prompt)
         return response.text.strip().replace('**', '')
     return handle_ai_retry(call)
 
 def generate_screening_interpretation(data: dict, language: str = "English") -> str:
-    try:
-        client = get_client()
-    except Exception:
-        return "API Key Gemini tidak ditemukan."
 
     passing_banks = data.get("passing_banks", [])
     n = len(passing_banks)
@@ -152,19 +138,16 @@ STRICT RULES:
 4. Do NOT use bullet points, bold text (**), or emojis. Do NOT give stock investment advice.
 
 Data:
-{json.dumps(data, indent=2)}
+{json.dumps(scorecard_data, indent=2)}
 """
 
     def call():
-        response = client.models.generate_content(model='antigravity', contents=prompt)
+        client = get_client()
+        response = client.models.generate_content(model='gemini-3.5-flash-lite', contents=prompt)
         return response.text.strip().replace('**', '')
     return handle_ai_retry(call)
 
 def generate_simulation_interpretation(data: dict, language: str = "English") -> str:
-    try:
-        client = get_client()
-    except Exception:
-        return "API Key Gemini tidak ditemukan."
 
     prompt = f"""
 You are a senior banking data analyst. Analyze the What-If Simulation data.
@@ -175,19 +158,16 @@ STRICT RULES:
 4. Do NOT use bullet points, bold text (**), or emojis. Do NOT give stock investment advice.
 
 Data:
-{json.dumps(data, indent=2)}
+{json.dumps(scorecard_data, indent=2)}
 """
 
     def call():
-        response = client.models.generate_content(model='antigravity', contents=prompt)
+        client = get_client()
+        response = client.models.generate_content(model='gemini-3.5-flash-lite', contents=prompt)
         return response.text.strip().replace('**', '')
     return handle_ai_retry(call)
 
 def generate_compare_interpretation(data: dict, language: str = "English") -> str:
-    try:
-        client = get_client()
-    except Exception:
-        return "API Key Gemini tidak ditemukan."
 
     # Slicing: Only keep start score, end score, and average for each bank
     series = data.get("series", [])
@@ -212,19 +192,16 @@ STRICT RULES:
 4. Do NOT use bullet points, bold text (**), or emojis. Do NOT give stock investment advice.
 
 Data:
-{json.dumps(data, indent=2)}
+{json.dumps(scorecard_data, indent=2)}
 """
 
     def call():
-        response = client.models.generate_content(model='antigravity', contents=prompt)
+        client = get_client()
+        response = client.models.generate_content(model='gemini-3.5-flash-lite', contents=prompt)
         return response.text.strip().replace('**', '')
     return handle_ai_retry(call)
 
 def generate_historical_interpretation(data: dict, language: str = "English") -> str:
-    try:
-        client = get_client()
-    except Exception:
-        return "API Key Gemini tidak ditemukan."
 
     # Slicing: Top 3 positive and Top 3 negative changes
     changes = data.get("significant_changes", [])
@@ -243,19 +220,16 @@ STRICT RULES:
 4. Do NOT use bullet points, bold text (**), or emojis. Do NOT give stock investment advice.
 
 Data:
-{json.dumps(data, indent=2)}
+{json.dumps(scorecard_data, indent=2)}
 """
 
     def call():
-        response = client.models.generate_content(model='antigravity', contents=prompt)
+        client = get_client()
+        response = client.models.generate_content(model='gemini-3.5-flash-lite', contents=prompt)
         return response.text.strip().replace('**', '')
     return handle_ai_retry(call)
 
 def generate_glossary_chat(question: str, history: list, language: str = "English") -> str:
-    try:
-        client = get_client()
-    except Exception:
-        return "API Key Gemini tidak ditemukan."
 
     context = f"""
 Kamu adalah "Orcas", asisten edukasi finansial untuk aplikasi ORCAS.
@@ -276,6 +250,7 @@ ATURAN SANGAT KETAT:
     messages.append({"role": "user", "parts": [{"text": question}]})
     
     def call():
-        response = client.models.generate_content(model='antigravity', contents=messages)
+        client = get_client()
+        response = client.models.generate_content(model='gemini-3.5-flash-lite', contents=messages)
         return response.text.strip().replace('**', '')
     return handle_ai_retry(call)
