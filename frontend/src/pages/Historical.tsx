@@ -47,6 +47,12 @@ export default function Historical() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
+
+  useEffect(() => {
+    document.body.classList.toggle("ai-is-loading", Boolean(aiLoading));
+    return () => document.body.classList.remove("ai-is-loading");
+  }, [aiLoading]);
+
   const [aiLanguage, setAiLanguage] = useState<"Indonesian" | "English">("Indonesian");
   const [aiError, setAiError] = useState("");
   const [aiAnalysis, setAiAnalysis] = useState("");

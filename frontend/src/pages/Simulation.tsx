@@ -149,6 +149,12 @@ const Simulation: React.FC = () => {
   const [saveOpen, setSaveOpen] = useState(false);
   const [reportName, setReportName] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
+
+  useEffect(() => {
+    document.body.classList.toggle("ai-is-loading", Boolean(aiLoading));
+    return () => document.body.classList.remove("ai-is-loading");
+  }, [aiLoading]);
+
   const [aiLanguage, setAiLanguage] = useState<"Indonesian" | "English">("Indonesian");
   const [aiError, setAiError] = useState("");
   const [aiAnalysis, setAiAnalysis] = useState("");

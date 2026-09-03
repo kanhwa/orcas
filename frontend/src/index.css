@@ -152,3 +152,11 @@ select option:hover,
 select option:checked {
   background-color: rgb(var(--color-surface));
 }
+
+/* Global lock for main content during AI Loading */
+body.ai-is-loading main {
+  pointer-events: none !important;
+  opacity: 0.6;
+  filter: grayscale(0.3);
+  cursor: wait;
+}

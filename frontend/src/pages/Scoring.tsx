@@ -368,12 +368,19 @@ const Scoring = () => {
   const [scorecardError, setScorecardError] = useState("");
   const [aiAnalysisText, setAiAnalysisText] = useState("");
   const [aiAnalysisLoading, setAiAnalysisLoading] = useState(false);
+
+
   const [aiLanguage, setAiLanguage] = useState<"Indonesian" | "English">("Indonesian");
   const [showAiChart, setShowAiChart] = useState(false);
   const [rankFilterType, setRankFilterType] = useState<"all" | "top" | "worst">("top");
   const [rankFilterCount, setRankFilterCount] = useState<number>(32);
   const [rankingAiAnalysis, setRankingAiAnalysis] = useState<string>("");
   const [rankingAiLoading, setRankingAiLoading] = useState(false);
+  useEffect(() => {
+    document.body.classList.toggle("ai-is-loading", Boolean(aiAnalysisLoading || rankingAiLoading));
+    return () => document.body.classList.remove("ai-is-loading");
+  }, [aiAnalysisLoading, rankingAiLoading]);
+
   const [rankingAiError, setRankingAiError] = useState("");
   const [customScope, setCustomScope] = useState<"metric" | "section">(
     "section"
