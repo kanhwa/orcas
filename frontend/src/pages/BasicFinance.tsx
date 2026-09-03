@@ -71,15 +71,15 @@ export default function BasicFinance({ user }: BasicFinanceProps) {
       category: "Keuangan Umum",
       items: [
         { term: "Bank", definition: "Lembaga keuangan yang memiliki lisensi untuk menerima simpanan, memberikan pinjaman, dan bertindak sebagai perantara dalam perekonomian." },
-        { term: "Kode Saham (Ticker)", definition: "Singkatan unik yang mengidentifikasi saham perusahaan terbuka di bursa efek." }
+        { term: "Kode Saham", definition: "Singkatan unik yang mengidentifikasi saham perusahaan terbuka di bursa efek." }
       ]
     },
     {
-      category: "Neraca Keuangan (Balance Sheet)",
+      category: "Neraca Keuangan",
       description: "Laporan keuangan yang menunjukkan aset, kewajiban, dan ekuitas bank pada titik waktu tertentu.",
       items: [
         { term: "Total Aset", definition: "Total nilai dari semua yang dimiliki bank, termasuk uang tunai, pinjaman yang diberikan, dan properti fisik." },
-        { term: "Total Liabilitas", definition: "Total jumlah yang dihutangkan bank kepada pihak lain, utamanya simpanan nasabah dan dana pinjaman." },
+        { term: "Total Liabilitas", definition: "Total jumlah yang dihutang bank kepada pihak lain, utamanya simpanan nasabah dan dana pinjaman." },
         { term: "Total Ekuitas", definition: "Kekayaan bersih bank, yang mewakili sisa klaim pemilik setelah semua utang dibayar." },
         { term: "Simpanan Nasabah", definition: "Uang yang ditempatkan ke dalam bank oleh nasabah, yang bertindak sebagai sumber utama modal pinjaman." },
         { term: "Aset Tetap", definition: "Aset fisik jangka panjang seperti bangunan dan peralatan yang digunakan dalam operasi sehari-hari bank." },
@@ -95,32 +95,40 @@ export default function BasicFinance({ user }: BasicFinanceProps) {
       ]
     },
     {
-      category: "Laporan Laba Rugi (Income Statement)",
+      category: "Laporan Laba Rugi",
       description: "Laporan keuangan yang menunjukkan pendapatan dan pengeluaran bank, yang menghasilkan laba atau rugi selama suatu periode.",
       items: [
         { term: "Total Pendapatan", definition: "Semua manfaat ekonomi masuk yang dihasilkan dari bunga, biaya, dan operasi perbankan lainnya." },
         { term: "Laba Bersih", definition: "Keuntungan akhir yang tersisa setelah semua biaya operasional, pajak, dan provisi dikurangi." },
-        { term: "Laba Kotor", definition: "Keuntungan operasional inti sebelum dikurangi beban pajak dan non-operasional." },
-        { term: "Beban Operasional", definition: "Biaya harian untuk menjalankan bank, seperti gaji pegawai, biaya IT, dan pemeliharaan cabang." },
-        { term: "Pendapatan Bunga Bersih (NII)", definition: "Selisih antara bunga yang diperoleh dari peminjam dan bunga yang dibayarkan kepada nasabah penyimpan." },
-        { term: "Penyisihan Kerugian Penurunan Nilai (CKPN)", definition: "Dana cadangan yang disiapkan sebagai bantalan jika peminjam gagal bayar (kredit macet)." },
+        { term: "Beban Operasional", definition: "Biaya harian untuk menjalankan bank, seperti gaji pegawai, sewa, dan biaya administrasi." },
+        { term: "Laba Sebelum Pajak", definition: "Keuntungan murni bisnis yang dihasilkan oleh bank sebelum pajak pemerintah dikenakan." },
+        { term: "Beban Pajak Penghasilan", definition: "Kewajiban finansial wajib yang dibayarkan kepada pemerintah berdasarkan keuntungan bank." },
+        { term: "Laba Operasional", definition: "Keuntungan yang dihasilkan secara spesifik dari aktivitas operasional inti bank sebelum faktor luar." },
+        { term: "Laba Kotor", definition: "Keuntungan yang tersisa setelah mengurangi biaya langsung layanan, sebelum biaya operasional umum." },
+        { term: "Harga Pokok Penjualan", definition: "Biaya langsung yang terkait dengan menghasilkan pendapatan; biaya yang lebih tinggi mengikis laba kotor." },
+        { term: "Pendapatan / Beban Lainnya", definition: "Hasil keuangan bersih dari aktivitas perbankan non-inti atau kejadian luar biasa." },
+        { term: "Laba Komprehensif", definition: "Laba bersih ditambah keuntungan atau kerugian belum direalisasi lainnya, menunjukkan total perubahan ekuitas." },
+        { term: "Saham Beredar", definition: "Total jumlah saham perusahaan yang saat ini dipegang oleh semua investor di pasar." },
         { term: "Laba per Saham (EPS)", definition: "Porsi laba bank yang dialokasikan untuk setiap lembar saham yang beredar." },
-        { term: "Tingkat Pengembalian Aset (ROA)", definition: "Rasio profitabilitas yang menunjukkan seberapa banyak laba yang dihasilkan dari setiap rupiah aset yang dimiliki." },
-        { term: "Tingkat Pengembalian Ekuitas (ROE)", definition: "Rasio profitabilitas yang menunjukkan seberapa efisien bank menggunakan uang pemegang saham untuk mencetak laba." },
-        { term: "Margin Laba Bersih (NPM)", definition: "Persentase sisa pendapatan yang menjadi laba bersih setelah semua biaya operasional dibayar." },
-        { term: "Margin Laba Kotor (GPM)", definition: "Persentase pendapatan kotor yang tersisa setelah mengurangi beban operasional langsung." },
-        { term: "Rasio Beban Operasional terhadap Pendapatan Operasional (BOPO)", definition: "Rasio krusial yang mengukur seberapa efisien pengeluaran bank dibandingkan dengan pendapatannya." },
-        { term: "Rasio Biaya terhadap Pendapatan (CIR)", definition: "Serupa dengan BOPO, rasio ini mengukur efisiensi operasional dengan membandingkan biaya dengan pendapatan operasional inti." }
+        { term: "Rasio Harga terhadap Laba (PER)", definition: "Rasio pasar yang mengukur harga saham relatif terhadap laba yang dihasilkannya." },
+        { term: "Rasio Harga terhadap Penjualan (P/S)", definition: "Rasio valuasi yang membandingkan harga saham bank dengan total pendapatan yang dihasilkannya." },
+        { term: "Tingkat Pengembalian Aset (ROA)", definition: "Rasio efisiensi yang menunjukkan seberapa baik bank menggunakan total asetnya untuk menghasilkan laba." },
+        { term: "Tingkat Pengembalian Ekuitas (ROE)", definition: "Rasio efisiensi yang menunjukkan seberapa efektif bank menghasilkan laba menggunakan ekuitas pemegang saham." }
       ]
     },
     {
-      category: "Laporan Arus Kas (Cash Flow Statement)",
-      description: "Laporan keuangan yang menunjukkan pergerakan masuk dan keluarnya uang tunai, menyoroti likuiditas bank.",
+      category: "Laporan Arus Kas",
+      description: "Laporan keuangan yang melacak uang tunai aktual yang masuk dan keluar dari bank, memastikan likuiditas jangka pendek.",
       items: [
-        { term: "Arus Kas Operasional", definition: "Uang tunai murni yang dihasilkan dari bisnis inti bank sehari-hari (pinjaman dan simpanan)." },
-        { term: "Arus Kas Investasi", definition: "Uang tunai yang digunakan untuk atau dihasilkan dari investasi jangka panjang, seperti membeli obligasi atau properti." },
-        { term: "Arus Kas Pendanaan", definition: "Uang tunai yang terkait dengan pembiayaan bank, seperti menerbitkan saham, membagikan dividen, atau mengambil utang besar." },
-        { term: "Kenaikan/Penurunan Kas Bersih", definition: "Total gabungan arus kas operasional, investasi, dan pendanaan, yang menunjukkan likuiditas akhir bank." }
+        { term: "Arus Kas Operasional", definition: "Uang tunai aktual yang dihasilkan dari aktivitas bisnis inti bank, seperti bunga yang diterima." },
+        { term: "Arus Kas Investasi", definition: "Kas bersih yang digunakan atau dihasilkan dari pembelian atau penjualan aset dan investasi jangka panjang." },
+        { term: "Arus Kas Pendanaan", definition: "Pergerakan kas yang terkait dengan peminjaman, pembayaran utang, atau pembagian dividen kepada pemegang saham." },
+        { term: "Arus Kas Bebas", definition: "Kas yang tersisa setelah bank membayar biaya operasional dan pengeluaran modalnya." },
+        { term: "Arus Kas Bebas per Saham", definition: "Jumlah arus kas bebas yang dialokasikan untuk setiap lembar saham beredar." },
+        { term: "Pengeluaran Modal", definition: "Uang yang dihabiskan oleh bank untuk membeli, memelihara, atau meningkatkan aset fisik jangka panjangnya." },
+        { term: "Perubahan Bersih Kas", definition: "Total selisih antara kas yang masuk dan keluar dari bank selama tahun keuangan." },
+        { term: "Saldo Kas Awal", definition: "Total jumlah kas likuid yang dipegang bank pada awal tahun keuangan." },
+        { term: "Saldo Kas Akhir", definition: "Total jumlah kas likuid akhir yang dipegang bank pada akhir tahun keuangan." }
       ]
     }
   ];
