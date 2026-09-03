@@ -62,7 +62,7 @@ def generate_scorecard_interpretation(payload: dict) -> str:
 You are a senior banking data analyst. Analyze the Scorecard data.
 STRICT RULES:
 1. Output MUST be purely in {language}.
-2. First part: Write EXACTLY 1 paragraph (maximum 6 sentences) summarizing the data using the 5W1H framework (Who, What, Where, When, Why, How). DO NOT explicitly write "Who:", "What:", etc. Make it a seamless narrative.
+2. First part: Write EXACTLY 1 paragraph (maximum 3 sentences) summarizing the data using the 5W1H framework (Who, What, Where, When, Why, How). DO NOT explicitly write "Who:", "What:", etc. Make it a seamless narrative.
 3. Second part: Write EXACTLY 1 standalone concluding sentence on a new line (e.g. "Kesimpulan: ..."). This conclusion MUST state an analytical verdict on why the bank won or lost, rather than just repeating visible scores.
 4. Do NOT use bullet points, bold text (**), or emojis. Do NOT give stock investment advice.
 
@@ -85,7 +85,7 @@ def generate_ranking_interpretation(ranking_data: list, period: str, language: s
 You are a senior banking data analyst. Analyze the Ranking data for the period {period}.
 STRICT RULES:
 1. Output MUST be purely in {language}.
-2. First part: Write EXACTLY 1 paragraph (maximum 6 sentences) summarizing the data using the 5W1H framework (Who, What, Where, When, Why, How). DO NOT explicitly write "Who:", "What:", etc. Make it a seamless narrative.
+2. First part: Write EXACTLY 1 paragraph (maximum 3 sentences) summarizing the data using the 5W1H framework (Who, What, Where, When, Why, How). DO NOT explicitly write "Who:", "What:", etc. Make it a seamless narrative.
 3. Second part: Write EXACTLY 1 standalone concluding sentence on a new line (e.g. "Kesimpulan: ..."). This conclusion MUST state an analytical verdict on why the top bank won and the bottom bank lost.
 4. Do NOT use bullet points, bold text (**), or emojis. Do NOT give stock investment advice.
 
@@ -119,7 +119,7 @@ def generate_metric_ranking_interpretation(data: dict, language: str = "English"
 You are a senior banking data analyst. Analyze the Metric Ranking data.
 STRICT RULES:
 1. Output MUST be purely in {language}.
-2. First part: Write EXACTLY 1 paragraph (maximum 6 sentences) summarizing the data using the 5W1H framework (Who, What, Where, When, Why, How). DO NOT explicitly write "Who:", "What:", etc. Make it a seamless narrative.
+2. First part: Write EXACTLY 1 paragraph (maximum 3 sentences) summarizing the data using the 5W1H framework (Who, What, Where, When, Why, How). DO NOT explicitly write "Who:", "What:", etc. Make it a seamless narrative.
 3. Second part: Write EXACTLY 1 standalone concluding sentence on a new line (e.g. "Kesimpulan: ..."). This conclusion MUST state an analytical verdict on the performance gap between the top and bottom banks.
 4. Do NOT use bullet points, bold text (**), or emojis. Do NOT give stock investment advice.
 
@@ -148,7 +148,7 @@ def generate_screening_interpretation(data: dict, language: str = "English") -> 
 You are a senior banking data analyst. Analyze the Screening data.
 STRICT RULES:
 1. Output MUST be purely in {language}.
-2. First part: Write EXACTLY 1 paragraph (maximum 6 sentences) summarizing the data using the 5W1H framework (Who, What, Where, When, Why, How). DO NOT explicitly write "Who:", "What:", etc. Make it a seamless narrative.
+2. First part: Write EXACTLY 1 paragraph (maximum 3 sentences) summarizing the data using the 5W1H framework (Who, What, Where, When, Why, How). DO NOT explicitly write "Who:", "What:", etc. Make it a seamless narrative.
 3. Second part: Write EXACTLY 1 standalone concluding sentence on a new line (e.g. "Kesimpulan: ..."). This conclusion MUST state an analytical verdict on the overall quality of the banks that passed.
 4. Do NOT use bullet points, bold text (**), or emojis. Do NOT give stock investment advice.
 
@@ -171,7 +171,7 @@ def generate_simulation_interpretation(data: dict, language: str = "English") ->
 You are a senior banking data analyst. Analyze the What-If Simulation data.
 STRICT RULES:
 1. Output MUST be purely in {language}.
-2. First part: Write EXACTLY 1 paragraph (maximum 6 sentences) summarizing the data using the 5W1H framework (Who, What, Where, When, Why, How). DO NOT explicitly write "Who:", "What:", etc. Make it a seamless narrative.
+2. First part: Write EXACTLY 1 paragraph (maximum 3 sentences) summarizing the data using the 5W1H framework (Who, What, Where, When, Why, How). DO NOT explicitly write "Who:", "What:", etc. Make it a seamless narrative.
 3. Second part: Write EXACTLY 1 standalone concluding sentence on a new line (e.g. "Kesimpulan: ..."). This conclusion MUST state an analytical verdict on whether the simulated changes significantly improve or harm the bank.
 4. Do NOT use bullet points, bold text (**), or emojis. Do NOT give stock investment advice.
 
@@ -208,7 +208,7 @@ def generate_compare_interpretation(data: dict, language: str = "English") -> st
 You are a senior banking data analyst. Analyze the Compare Stocks data.
 STRICT RULES:
 1. Output MUST be purely in {language}.
-2. First part: Write EXACTLY 1 paragraph (maximum 6 sentences) summarizing the data using the 5W1H framework (Who, What, Where, When, Why, How). DO NOT explicitly write "Who:", "What:", etc. Make it a seamless narrative.
+2. First part: Write EXACTLY 1 paragraph (maximum 3 sentences) summarizing the data using the 5W1H framework (Who, What, Where, When, Why, How). DO NOT explicitly write "Who:", "What:", etc. Make it a seamless narrative.
 3. Second part: Write EXACTLY 1 standalone concluding sentence on a new line (e.g. "Kesimpulan: ..."). This conclusion MUST state an analytical verdict on which bank is superior across the timeline.
 4. Do NOT use bullet points, bold text (**), or emojis. Do NOT give stock investment advice.
 
@@ -239,7 +239,7 @@ def generate_historical_interpretation(data: dict, language: str = "English") ->
 You are a senior banking data analyst. Analyze the Historical Comparison data.
 STRICT RULES:
 1. Output MUST be purely in {language}.
-2. First part: Write EXACTLY 1 paragraph (maximum 6 sentences) summarizing the data using the 5W1H framework (Who, What, Where, When, Why, How). DO NOT explicitly write "Who:", "What:", etc. Make it a seamless narrative.
+2. First part: Write EXACTLY 1 paragraph (maximum 3 sentences) summarizing the data using the 5W1H framework (Who, What, Where, When, Why, How). DO NOT explicitly write "Who:", "What:", etc. Make it a seamless narrative.
 3. Second part: Write EXACTLY 1 standalone concluding sentence on a new line (e.g. "Kesimpulan: ..."). This conclusion MUST state an analytical verdict on whether the bank's historical trajectory makes it superior or declining.
 4. Do NOT use bullet points, bold text (**), or emojis. Do NOT give stock investment advice.
 
