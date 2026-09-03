@@ -26,6 +26,8 @@ def handle_ai_retry(client_call, max_retries=3):
         try:
             return client_call()
         except Exception as e:
+            print(f"AI ERROR: {e}")
+            print(f"AI ERROR: {e}")
             if "503" in str(e) or "UNAVAILABLE" in str(e) or "429" in str(e) or "quota" in str(e).lower():
                 if attempt < max_retries - 1:
                     time.sleep(2 ** attempt)
@@ -69,7 +71,7 @@ Data:
 """
     
     def call():
-        response = client.models.generate_content(model='gemini-1.5-flash', contents=prompt)
+        response = client.models.generate_content(model='gemini-3.6-flash', contents=prompt)
         return response.text.strip().replace('**', '')
     return handle_ai_retry(call)
 
@@ -92,7 +94,7 @@ Data:
 """
     
     def call():
-        response = client.models.generate_content(model='gemini-1.5-flash', contents=prompt)
+        response = client.models.generate_content(model='gemini-3.6-flash', contents=prompt)
         return response.text.strip().replace('**', '')
     return handle_ai_retry(call)
 
@@ -126,7 +128,7 @@ Data:
 """
     
     def call():
-        response = client.models.generate_content(model='gemini-1.5-flash', contents=prompt)
+        response = client.models.generate_content(model='gemini-3.6-flash', contents=prompt)
         return response.text.strip().replace('**', '')
     return handle_ai_retry(call)
 
@@ -155,7 +157,7 @@ Data:
 """
 
     def call():
-        response = client.models.generate_content(model='gemini-1.5-flash', contents=prompt)
+        response = client.models.generate_content(model='gemini-3.6-flash', contents=prompt)
         return response.text.strip().replace('**', '')
     return handle_ai_retry(call)
 
@@ -178,7 +180,7 @@ Data:
 """
 
     def call():
-        response = client.models.generate_content(model='gemini-1.5-flash', contents=prompt)
+        response = client.models.generate_content(model='gemini-3.6-flash', contents=prompt)
         return response.text.strip().replace('**', '')
     return handle_ai_retry(call)
 
@@ -215,7 +217,7 @@ Data:
 """
 
     def call():
-        response = client.models.generate_content(model='gemini-1.5-flash', contents=prompt)
+        response = client.models.generate_content(model='gemini-3.6-flash', contents=prompt)
         return response.text.strip().replace('**', '')
     return handle_ai_retry(call)
 
@@ -246,7 +248,7 @@ Data:
 """
 
     def call():
-        response = client.models.generate_content(model='gemini-1.5-flash', contents=prompt)
+        response = client.models.generate_content(model='gemini-3.6-flash', contents=prompt)
         return response.text.strip().replace('**', '')
     return handle_ai_retry(call)
 
@@ -275,6 +277,6 @@ ATURAN SANGAT KETAT:
     messages.append({"role": "user", "parts": [{"text": question}]})
     
     def call():
-        response = client.models.generate_content(model='gemini-1.5-flash', contents=messages)
+        response = client.models.generate_content(model='gemini-3.6-flash', contents=messages)
         return response.text.strip().replace('**', '')
     return handle_ai_retry(call)
