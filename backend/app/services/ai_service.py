@@ -81,7 +81,35 @@ def generate_scorecard_interpretation(payload: dict) -> str:
                 
         scorecard_data["metrics"] = {"top_contributors": top_3, "bottom_contributors": bottom_3}
 
-    prompt = f"""
+    if language.lower() == 'english':
+        prompt = f"""
+You are a fundamental analyst specializing in macro perspectives. DO NOT hallucinate under any circumstances.
+Your task is to summarize the Scorecard into 1 dense narrative paragraph and 1 concluding paragraph.
+
+ABSOLUTE RULES:
+- DO NOT write a title at the beginning of the text (such as 'Financial Interpretation:', 'Scorecard Analysis:', etc.). Go straight into the paragraph.
+- Use the term "section".
+- Look for the metric with the highest/largest and lowest/worst "Contribution". IF there are multiple metrics with EXACTLY IDENTICAL contribution scores at the top or bottom, MENTION ALL OF THEM using the word "respectively". If there are no ties, mention just 1.
+- You MUST translate the Indonesian metric names ("metric_name" in the JSON) into standard English (basic finance terminology).
+- You MUST mention the exact "contribution" nominal numbers identical to the number strings shown in the JSON.
+- Mention the total score (total_score) WITH EXACTLY 2 DECIMAL DIGITS. Use a period '.' for decimal separators.
+- Percentage Rule (Coverage and Section): If the number has a .0 decimal (e.g. 100.0% or 41.0%), you MUST remove the decimal and round it (100% or 41%). If the decimal is not .0 (e.g. 97.4%), keep 1 decimal place. Use a period '.' for decimals.
+
+CONCLUDING PARAGRAPH RULES:
+Write 1 concluding sentence (starting with "In conclusion, ..."). You MUST DYNAMICALLY CHOOSE ONE of the 2 following conclusion styles based on your analyst instincts regarding the data conditions:
+- Style A (Section Strength): Highlight and praise the dominance of a specific section (Income/Balance/Cashflow) that successfully became the absolute backbone supporting the company's score.
+- Style B (Tug-of-War Effect): Highlight the "tug-of-war" effect where the performance of the hero metric contributing the highest score must battle against the burden of the metric contributing the worst score.
+
+OUTPUT EXAMPLE THAT MUST BE IMITATED:
+In the 2024 BBCA Scorecard evaluation, the company successfully achieved a total score of 0.59 (Rank 3) with an excellent data coverage rate of 97.4%. Structurally, the Income section became the main backbone with the highest contribution portion reaching 41%. Specifically, this fundamental foundation was mostly supported by the "Net Income for the Year" metric which provided the largest individual score contribution of 0.025604, while the "Operating Expenses" metric recorded the worst contribution of 0.000018 compared to all other metrics.
+
+In conclusion, the dominance of the Income section and the robustness of the Net Income for the Year metric proved to be the main drivers of the company's positive score, although slightly held back by high Operating Expenses.
+
+Scorecard Data:
+{json.dumps(payload, indent=2)}
+"""
+    else:
+        prompt = f"""
 Anda adalah analis fundamental spesialis sudut pandang makro. DILARANG KERAS berhalusinasi.
 Tugas Anda adalah merangkum Scorecard menjadi 1 paragraf naratif padat dan 1 paragraf kesimpulan.
 
@@ -127,7 +155,37 @@ def generate_ranking_interpretation(ranking_data: list, period: str, filter_type
         
     filter_label = "terbaik" if filter_type == "top" else "terburuk"
 
-    prompt = f"""
+    if language.lower() == 'english':
+        filter_label_en = "top" if filter_type == "top" else "bottom"
+        prompt = f"""
+You are a banking stock rating analyst. DO NOT hallucinate under any circumstances.
+
+ABSOLUTE RULES:
+- DO NOT write a title at the beginning of the text (such as 'Ranking Analysis:', 'Interpretation:', etc.). Go straight into the paragraph.
+- The data you receive is already filtered ({filter_count} {filter_label_en} stocks).
+- You MUST mention the filter type (e.g., "the list of the top 15 stocks" or "the list of the bottom 32 stocks") in the introductory sentence.
+- If data <= 4 stocks: Mention ALL of them in order.
+- If data > 4 stocks: ONLY mention these 4 entities in order: (1) First rank in data, (2) Second rank in data, (3) Middle rank, and (4) The very last rank in the data.
+- You MUST mention the original Rank of each stock.
+- WSM Score must be written WITH EXACTLY 2 DECIMAL DIGITS (e.g. 0.71). Use a period '.' for decimal separators.
+- Write 1 Narrative Paragraph and 1 Concluding Paragraph.
+
+CONCLUDING PARAGRAPH RULES:
+Write 1 concluding sentence (starting with "In conclusion, ..."). You MUST DYNAMICALLY CHOOSE ONE of the 3 following conclusion styles based on data conditions:
+- Style 1 (Gap/Distance): Highlight the fundamental gap/score difference between the top-ranked stock in the table and the bottom-ranked stock in the table.
+- Style 2 (Dominance/Tightness): Highlight whether the first-ranked stock dominates by a very large point margin, OR if the competition is very tight.
+- Style 3 (Historical Trend): SPECIFICALLY if the analysis period is multi-year (e.g., 2022-2024) and the json data has a "yearly_breakdown" property, highlight the trend of score growth consistency of the first-ranked stock from year to year.
+
+OUTPUT EXAMPLE THAT MUST BE IMITATED:
+In the Scoring evaluation for the {period} period, here is the list of the {filter_count} {filter_label_en} stocks. The first stock in this table is BBRI (Rank 1) with a score of 0.71, followed by BMRI (Rank 2) with a score of 0.71. In the middle position of the table is MEGA (Rank 11) with a score of 0.39, while the very last position in the table is closed by MAYA (Rank 17) with a score of 0.35.
+
+In conclusion, the fundamental gap seen between the top-ranked stocks in the table and the bottom-ranked stocks in the table shows a significant performance disparity in this group.
+
+Data:
+{json.dumps(sliced_ranking, indent=2)}
+"""
+    else:
+        prompt = f"""
 Anda adalah analis pemeringkat emiten perbankan. DILARANG KERAS berhalusinasi.
 
 ATURAN MUTLAK:
@@ -165,7 +223,32 @@ Data:
 
 def generate_metric_ranking_interpretation(data: dict, language: str = "English") -> str:
 
-    prompt = f"""
+    if language.lower() == 'english':
+        prompt = f"""
+You are a table translator for the Metric Ranking feature. DO NOT hallucinate under any circumstances.
+
+NUMBER & UNIT CONVERSION RULES:
+- FOR 'IDR/share' units: You MUST change it to 'Rp [Number] per share' (example: 533.80 IDR/share becomes Rp 533.80 per share). Use a period '.' for decimal separators.
+- FOR 'IDR bn' units: You MUST change it to 'Rp [Number] Trillion'. If the number is in the thousands (e.g., 243802 IDR bn or 1033 IDR bn), remove the last three digits and round to Trillion (e.g., Rp 243 Trillion, or Rp 1 Trillion).
+- IF the original value is 1205 IDR bn, just round it to Rp 1 Trillion.
+- You MUST translate the Indonesian metric names into standard English (basic finance terminology).
+
+PARAGRAPH 1 RULES (Narrative):
+Write 1 Paragraph (max 2 sentences). Use language style like this:
+"In the evaluation of the [Metric Name] metric for the [Year] period, here are the [Top N] [best/worst] banks out of a total of [Total Banks] banks evaluated. In the ending year of [End Year], [Ticker 1] ranked 1st with a value of [Value 1], followed by [Ticker 2] in 2nd Rank with [Value 2] and [Ticker 3] in 3rd Rank with [Value 3], while [Bottom Ticker] occupied the lowest position in this group with a value of [Bottom Value]."
+*Note: Adjust rank (best/worst) and numbers according to the JSON (see rank_type, top_n, total_banks).*
+
+PARAGRAPH 2 RULES (Conclusion):
+Write 1 concluding sentence (starting with "In conclusion, ..."). CHOOSE ONE of the following 3 conclusion styles, whichever fits the data best:
+- Style 1 (Gap): Highlight the distance/difference in value between Rank 1 and the bottom rank in the group.
+- Style 2 (Dominance): Highlight if Rank 1 & 2 dominate very far from the rest of the banks (huge disparity).
+- Style 3 (Trend): (Only if start_year and end_year are different) Highlight the growth trend/consistency of the winning bank from year to year.
+
+JSON Data:
+{json.dumps(data, indent=2)}
+"""
+    else:
+        prompt = f"""
 Anda adalah penerjemah tabel untuk fitur Metric Ranking. DILARANG KERAS berhalusinasi.
 
 ATURAN KONVERSI ANGKA & UNIT:
@@ -203,7 +286,30 @@ def generate_screening_interpretation(data: dict, language: str = "English") -> 
         sliced = [passing_banks[0], passing_banks[1], passing_banks[n//2], passing_banks[-1]]
         data["passing_banks"] = sliced
 
-    prompt = f"""
+    if language.lower() == 'english':
+        prompt = f"""
+You are a translation engine for the Stock Screening table. DO NOT hallucinate under any circumstances. 
+You MUST COPY EXACTLY the language style and structure of the OUTPUT EXAMPLE below. DO NOT make up your own style!
+
+NUMBER & UNIT CONVERSION RULES:
+- FOR 'IDR/share' units: You MUST change it to 'Rp [Number] per share' (example: 533.80 IDR/share becomes Rp 533.80 per share). Use a period '.' for decimal separators.
+- Translate "IDR bn" to "Rp [Number] Trillion". If the number is in the thousands (e.g., 243802 IDR bn), remove the last three digits and make it Trillion (e.g., Rp 243 Trillion).
+- If the filter value is 120000 IDR bn, write it as Rp 120 Trillion. 
+- Translate symbols (like >) into verbal words (example: "above").
+- You MUST translate the Indonesian metric names into standard English (basic finance terminology).
+
+OUTPUT EXAMPLE THAT YOU MUST COPY EXACTLY:
+In the 2024 screening with the criteria of Beginning Cash and Cash Equivalents above Rp 120 Trillion, 4 out of 32 stocks successfully passed. BMRI took 1st Rank with a value of Rp 243 Trillion and was followed by BBRI in 2nd Rank with a value of Rp 218 Trillion, while BBNI took the middle position with Rp 154 Trillion and BBCA was at the very bottom rank with Rp 124 Trillion.
+
+In conclusion, BMRI led this beginning cash criteria with a significant margin, almost twice as large as BBCA which only narrowly passed above the filter criteria limit.
+
+(Note: If the number of passing stocks is NOT 4, adjust the mentioning but STILL use the language style above).
+
+Current Screening Data:
+{json.dumps(data, indent=2)}
+"""
+    else:
+        prompt = f"""
 Anda adalah mesin penerjemah tabel Stock Screening. DILARANG KERAS berhalusinasi. 
 Anda WAJIB MENIRU PERSIS gaya bahasa dan struktur dari CONTOH OUTPUT di bawah ini. JANGAN berkreasi sendiri!
 
@@ -232,7 +338,35 @@ Data Screening Saat Ini:
 
 def generate_simulation_interpretation(data: dict, language: str = "English") -> str:
 
-    prompt = f"""
+    if language.lower() == 'english':
+        prompt = f"""
+You are a financial analyst specializing in What-If Simulations. DO NOT hallucinate under any circumstances.
+You MUST copy the style and format of the OUTPUT EXAMPLE below. DO NOT create outside of this structure.
+
+MANDATORY RULES:
+- DO NOT write a title at the beginning of the text (such as 'Analysis:', etc.). Go straight into the paragraph.
+- SPECIFICALLY FOR WSM SCORE (baseline_score & simulated_score): Write the score using exactly 4 decimal digits (example: 0.5911 becomes 0.5935). DO NOT cut it to 2 digits. Use a period '.' for decimal separators.
+- METRIC NUMBER FORMAT: 
+  > If the unit is "IDR bn", round it to "Rp [Number] Trillion" (example: 35228.60 IDR bn becomes Rp 35 Trillion). Ignore the minus sign if any.
+  > If the unit is "IDR/share", change the format to "Rp [Number] per share" and use a period '.' for decimals (example: 533.80 IDR/share becomes Rp 533.80 per share).
+  > If the unit is %, keep the original number.
+- METRIC MENTIONING: 
+  > If total metrics changed <= 4: Mention ALL of them.
+  > If total metrics changed > 4: ONLY mention the 2 metrics with the most extreme percentage changes (whether it went up the sharpest or dropped the sharpest).
+  > You MUST translate the Indonesian metric names into standard English (basic finance terminology).
+- Must mention the nature of the metric: (Benefit nature) or (Cost nature).
+- Write 1 Top Paragraph (Narrative) and 1 Concluding Paragraph.
+
+OUTPUT EXAMPLE THAT MUST BE IMITATED (e.g., if there are 2 metrics):
+In the simulation of the BBCA stock (projection from year {data.get("baseline_year", "")} to {data.get("simulated_year", "")}), the overall score is projected to experience an increase from 0.5911 to 0.5935 (up 0.4%). This change is driven by an upside scenario on the EPS metric (Benefit nature) by +20% to Rp 533.80 per share, which battled against the swelling of the Operating Expenses metric (Cost nature) by +10% to minus Rp 35 Trillion.
+
+In conclusion, although operating expenses experienced a swelling, the positive impact of the profitability surge (EPS) was still more dominant, successfully pulling BBCA's final score up to remain in the positive zone.
+
+Simulation Data:
+{json.dumps(data, indent=2)}
+"""
+    else:
+        prompt = f"""
 Anda adalah analis finansial spesialis What-If Simulation. DILARANG KERAS berhalusinasi.
 Anda WAJIB meniru gaya dan format CONTOH OUTPUT di bawah ini. JANGAN berkreasi di luar struktur ini.
 
@@ -282,7 +416,29 @@ def generate_compare_interpretation(data: dict, language: str = "English") -> st
             })
     data["series"] = optimized_series
 
-    prompt = f"""
+    if language.lower() == 'english':
+        prompt = f"""
+You are a financial analyst specializing in stock comparisons. DO NOT hallucinate under any circumstances.
+You MUST copy the style and format of the OUTPUT EXAMPLE below. DO NOT create outside of this structure.
+
+MANDATORY RULES:
+- DO NOT write a title at the beginning of the text (such as 'Analysis:', etc.). Go straight into the paragraph.
+- WSM Score (Overall Score or Section Score) does not have a currency unit. Just display a rounded number with exactly 2 decimal digits (example: 0.71, 0.51). Use a period '.' for decimal separators.
+- If there are 2 banks, compare both against the average score (Average). If there are >2 banks, mention the leading bank, the middle position bank, and the lagging bank.
+- Write 1 Top Paragraph (Narrative) and 1 Concluding Paragraph.
+
+OUTPUT EXAMPLE THAT MUST BE IMITATED (If 2 Banks):
+In the comparison of Overall Score values for the 2023-2024 period, BBRI showed solid performance and consistently remained above average with a final score of 0.71. Conversely, BBNI continued to be pressured below the average limit and experienced a decline, hitting a final score of 0.51 in the last evaluation year.
+
+In conclusion, BBRI demonstrated a far superior dominance in fundamental stability, in contrast to BBNI which lost its performance momentum for two consecutive years.
+
+(Note: If the selected stocks are more than 2, adjust the mentioning by mentioning the "Middle Position", but still strictly use the 2 decimal digits limit and without units).
+
+Compare Data:
+{json.dumps(data, indent=2)}
+"""
+    else:
+        prompt = f"""
 Anda adalah analis finansial spesialis pembanding emiten. DILARANG KERAS berhalusinasi.
 Anda WAJIB meniru gaya dan format CONTOH OUTPUT di bawah ini. JANGAN berkreasi di luar struktur ini.
 
@@ -321,7 +477,31 @@ def generate_historical_interpretation(data: dict, language: str = "English") ->
         bottom_3 = changes_sorted[-3:] if len(changes_sorted) > 3 else []
         data["significant_changes"] = {"top_improving": top_3, "top_declining": bottom_3}
 
-    prompt = f"""
+    if language.lower() == 'english':
+        prompt = f"""
+You are a historical analyst of metric movements. DO NOT hallucinate under any circumstances.
+You MUST copy the style and format of the OUTPUT EXAMPLE below. DO NOT create outside of this structure.
+
+MANDATORY RULES:
+- DO NOT write a title at the beginning of the text (such as 'Analysis:', etc.). Go straight into the paragraph.
+- You may only highlight a MAXIMUM of 2 METRICS ONLY (whether it's 1 most improved & 1 most deteriorated, or both most improved/deteriorated). Do not mention more than 2 metrics to keep the text concise.
+- You must translate the Indonesian metric names into standard English (basic finance terminology).
+- Must mention the Ticker name (e.g., BBCA), period (e.g., 2022-2024), and the extreme threshold filter number (e.g., 70%).
+- FINANCIAL NUMBER FORMAT: Round to "Rp [Number] Trillion" without decimals (example: -38457 IDR bn or 2243 IDR bn are rounded and written as Rp 38 Trillion or Rp 2 Trillion). Ignore the minus sign if you use the word "minus" or "plunged".
+- PERCENTAGE FORMAT: Leave percentages using their original % sign.
+
+OUTPUT EXAMPLE THAT MUST BE IMITATED:
+In the historical analysis of BBCA for the 2022-2024 period (with an extreme change filtering above 70%), there were metrics that experienced improvements and declines. The most positive improvement occurred in the Received Loans metric which surged 70% to Rp 2 Trillion, while the most severe decline was experienced by the Net Increase in Cash metric which plunged sharply by 117% to minus Rp 38 Trillion.
+
+In conclusion, the improvement that occurred in BBCA's funding sector seemed to fail to offset the massive pressure that occurred in its investment cash flows and net cash over the past two years.
+
+(Note: Adjust the sentence if both metrics improved or both deteriorated).
+
+Historical Data:
+{json.dumps(data, indent=2)}
+"""
+    else:
+        prompt = f"""
 Anda adalah analis historis pergerakan metrik. DILARANG KERAS berhalusinasi.
 Anda WAJIB meniru gaya dan format CONTOH OUTPUT di bawah ini. JANGAN berkreasi di luar struktur ini.
 
@@ -353,7 +533,22 @@ Data Historical:
 
 def generate_glossary_chat(question: str, history: list, language: str = "English") -> str:
 
-    context = f"""
+    if language.lower() == 'english':
+        context = f"""
+You are "Orcas", a financial education assistant for the ORCAS application.
+Your task is ONLY to answer questions related to basic banking, finance, and accounting terms.
+VERY STRICT RULES:
+1. You MUST answer completely in English natively.
+2. DO NOT use any emojis or emoticons.
+3. DO NOT use bolding (such as **text**) or star Markdown. Use plain text only.
+4. Answer warmly, briefly, and easily understood by laypeople.
+5. DO NOT give stock investment advice.
+6. NEVER start your answer with greetings (like "Hello", "Hi", "Greetings"). Just answer straight to the point.
+"""
+        messages = [{"role": "user", "parts": [{"text": context}]}]
+        messages.append({"role": "model", "parts": [{"text": "Understood. I will answer purely in English with no emojis and no bold markdown."}]})
+    else:
+        context = f"""
 Kamu adalah "Orcas", asisten edukasi finansial untuk aplikasi ORCAS.
 Tugasmu HANYA menjawab pertanyaan seputar istilah perbankan, keuangan, dan akuntansi dasar.
 ATURAN SANGAT KETAT:
@@ -364,8 +559,9 @@ ATURAN SANGAT KETAT:
 5. JANGAN memberikan saran investasi saham.
 6. JANGAN PERNAH mengawali jawabanmu dengan sapaan (seperti "Halo", "Hai", "Salam"). Langsung jawab intinya saja.
 """
-    messages = [{"role": "user", "parts": [{"text": context}]}]
-    messages.append({"role": "model", "parts": [{"text": f"Understood. I will answer purely in {language} with no emojis and no bold markdown."}]})
+        messages = [{"role": "user", "parts": [{"text": context}]}]
+        messages.append({"role": "model", "parts": [{"text": f"Understood. I will answer purely in {language} with no emojis and no bold markdown."}]})
+
     for i, msg in enumerate(history):
         role = "user" if i % 2 == 0 else "model"
         messages.append({"role": role, "parts": [{"text": msg}]})
