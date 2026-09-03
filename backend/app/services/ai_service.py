@@ -252,7 +252,7 @@ JSON Data:
 Anda adalah penerjemah tabel untuk fitur Metric Ranking. DILARANG KERAS berhalusinasi.
 
 ATURAN KONVERSI ANGKA & UNIT:
-- KHUSUS unit 'IDR/share': Anda WAJIB mengubahnya menjadi 'Rp [Angka] per lembar' (contoh: 533.80 IDR/share menjadi Rp 533,80 per lembar).
+- KHUSUS unit 'IDR/share': Anda WAJIB mengubahnya menjadi 'Rp [Angka] per lembar' (contoh: 533.80 IDR/share menjadi Rp 533.80 per lembar).
 - Anda WAJIB membulatkan angka ke "Triliun". Jika angkanya ribuan (contoh: 243802 IDR bn atau 1033 IDR bn), buang tiga angka di belakang dan bulatkan menjadi Triliun (contoh: Rp 243 Triliun, atau Rp 1 Triliun).
 - BILA nilai asli adalah 1205 IDR bn, bulatkan saja menjadi Rp 1 Triliun.
 
@@ -314,7 +314,7 @@ Anda adalah mesin penerjemah tabel Stock Screening. DILARANG KERAS berhalusinasi
 Anda WAJIB MENIRU PERSIS gaya bahasa dan struktur dari CONTOH OUTPUT di bawah ini. JANGAN berkreasi sendiri!
 
 ATURAN KONVERSI ANGKA & UNIT:
-- KHUSUS unit 'IDR/share': Anda WAJIB mengubahnya menjadi 'Rp [Angka] per lembar' (contoh: 533.80 IDR/share menjadi Rp 533,80 per lembar).
+- KHUSUS unit 'IDR/share': Anda WAJIB mengubahnya menjadi 'Rp [Angka] per lembar' (contoh: 533.80 IDR/share menjadi Rp 533.80 per lembar).
 - Terjemahkan "IDR bn" menjadi "Triliun". Jika angkanya ribuan (contoh: 243802 IDR bn), hilangkan tiga angka di belakang dan jadikan Triliun (contoh: Rp 243 Triliun).
 - Jika nilai filter adalah 120000 IDR bn, tulis menjadi Rp 120 Triliun. 
 - Terjemahkan simbol (seperti >) menjadi kata verbal (contoh: "di atas").
@@ -375,7 +375,7 @@ ATURAN WAJIB:
 - KHUSUS UNTUK SKOR WSM (baseline_score & simulated_score): Tulis skor menggunakan 4 digit desimal (contoh: 0.5911 menjadi 0.5935). JANGAN dipotong jadi 2 digit.
 - FORMAT ANGKA METRIK: 
   > Jika unitnya "IDR bn", bulatkan ke "Triliun" tanpa koma (contoh: 35228.60 IDR bn menjadi Rp 35 Triliun). Abaikan tanda minus jika ada.
-  > Jika unitnya "IDR/share", ubah formatnya menjadi "Rp [Angka] per lembar" dan gunakan koma sebagai desimal (contoh: 533.80 IDR/share menjadi Rp 533,80 per lembar).
+  > Jika unitnya "IDR/share", ubah formatnya menjadi "Rp [Angka] per lembar" dan gunakan titik sebagai desimal (contoh: 533.80 IDR/share menjadi Rp 533.80 per lembar).
   > Jika unitnya %, biarkan angka aslinya.
 - PENYEBUTAN METRIK: 
   > Jika total metrik yang diubah <= 4: Sebutkan SEMUANYA.
@@ -384,7 +384,7 @@ ATURAN WAJIB:
 - Tulis 1 Paragraf atas (Naratif) dan 1 Paragraf Kesimpulan.
 
 CONTOH OUTPUT YANG HARUS DITIRU (Misal ada 2 metrik):
-Pada simulasi emiten BBCA (proyeksi tahun {data.get("baseline_year", "")} ke {data.get("simulated_year", "")}), skor keseluruhan diproyeksikan mengalami kenaikan dari 0.5911 menjadi 0.5935 (naik 0.4%). Perubahan ini didorong oleh skenario kenaikan pada metrik EPS (bersifat Benefit) sebesar +20% menjadi Rp 533,80 per lembar, yang beradu dengan pembengkakan pada metrik Beban Usaha (bersifat Cost) sebesar +10% menjadi minus Rp 35 Triliun.
+Pada simulasi emiten BBCA (proyeksi tahun {data.get("baseline_year", "")} ke {data.get("simulated_year", "")}), skor keseluruhan diproyeksikan mengalami kenaikan dari 0.5911 menjadi 0.5935 (naik 0.4%). Perubahan ini didorong oleh skenario kenaikan pada metrik EPS (bersifat Benefit) sebesar +20% menjadi Rp 533.80 per lembar, yang beradu dengan pembengkakan pada metrik Beban Usaha (bersifat Cost) sebesar +10% menjadi minus Rp 35 Triliun.
 
 Kesimpulannya, meskipun beban usaha mengalami pembengkakan, dampak positif dari lonjakan profitabilitas (EPS) masih lebih dominan sehingga mampu menarik skor akhir BBCA tetap naik di zona positif.
 
