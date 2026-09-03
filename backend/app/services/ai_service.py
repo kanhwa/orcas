@@ -73,12 +73,15 @@ Data Scorecard:
 def generate_ranking_interpretation(ranking_data: list, period: str, language: str = "Indonesian") -> str:
 
     prompt = f"""
-You are a senior banking data analyst. Analyze the Ranking data for the period {period}.
-STRICT RULES:
-1. Output MUST be purely in {language}.
-2. First part: Write EXACTLY 1 paragraph (maximum 3 sentences) summarizing the data using the 5W1H framework (Who, What, Where, When, Why, How). DO NOT explicitly write "Who:", "What:", etc. Make it a seamless narrative.
-3. Second part: Write EXACTLY 1 standalone concluding sentence on a new line (e.g. "Kesimpulan: ..."). This conclusion MUST state an analytical verdict on why the top bank won and the bottom bank lost.
-4. Do NOT use bullet points, bold text (**), or emojis. Do NOT give stock investment advice.
+ATURAN MUTLAK (STRICT RULES):
+1. Anda adalah penerjemah tabel untuk Peringkat Bank (Ranking). DILARANG KERAS berhalusinasi.
+2. Tulis 1 Paragraf (maksimal 2 kalimat) merangkum hasil pemeringkatan periode {period}.
+3. Aturan Penyebutan Emiten (TIDAK BOLEH pakai format list/poin):
+   - Sebutkan Peringkat 1, Peringkat 2, posisi menengah (Median), dan posisi paling bawah (Bottom).
+4. Tulis 1 kalimat kesimpulan di paragraf baru (dimulai dengan "Kesimpulannya, ...") murni merangkum performa pemenang utama dibandingkan yang terbawah.
+5. FORMAT ANGKA: WAJIB memformat skor dengan titik desimal yang benar. Skor WSM tidak memiliki unit uang (contoh: Skor 85.4).
+6. JANGAN gunakan kata ganti (ini, itu, tersebut). Sebut nama Ticker secara spesifik.
+7. Output harus dalam bahasa {language}.
 
 Data:
 {json.dumps(ranking_data, indent=2)}
@@ -104,15 +107,19 @@ def generate_metric_ranking_interpretation(data: dict, language: str = "English"
         data["ranking"] = [ranking[0], ranking[1], ranking[2]]
 
     prompt = f"""
-You are a senior banking data analyst. Analyze the Metric Ranking data.
-STRICT RULES:
-1. Output MUST be purely in {language}.
-2. First part: Write EXACTLY 1 paragraph (maximum 3 sentences) summarizing the data using the 5W1H framework (Who, What, Where, When, Why, How). DO NOT explicitly write "Who:", "What:", etc. Make it a seamless narrative.
-3. Second part: Write EXACTLY 1 standalone concluding sentence on a new line (e.g. "Kesimpulan: ..."). This conclusion MUST state an analytical verdict on the performance gap between the top and bottom banks.
-4. Do NOT use bullet points, bold text (**), or emojis. Do NOT give stock investment advice.
+ATURAN MUTLAK (STRICT RULES):
+1. Anda adalah penerjemah tabel untuk Peringkat Metrik. DILARANG KERAS berhalusinasi.
+2. Tulis 1 Paragraf (maksimal 2 kalimat). 
+3. Aturan Penyebutan Emiten (TIDAK BOLEH pakai format list/poin):
+   - Jika data >= 4 emiten: Sebutkan Peringkat 1, Peringkat 2, posisi menengah (Median), dan posisi paling bawah (Bottom).
+   - Jika data < 4 emiten: Sebutkan Peringkat 1, posisi menengah, dan posisi paling bawah.
+4. Tulis 1 kalimat kesimpulan di paragraf baru (dimulai dengan "Kesimpulannya, ...") murni merangkum ketimpangan atau selisih antara pemenang dan posisi bawah.
+5. FORMAT ANGKA: WAJIB memformat semua angka dengan titik ribuan (contoh: 243.802). WAJIB sertakan satuan unit di belakang SETIAP angka (contoh: 120.000 IDR bn atau 2.5%). Jangan gunakan angka telanjang.
+6. JANGAN gunakan kata ganti (ini, itu, tersebut). Sebut nama Ticker secara spesifik.
+7. Output harus dalam bahasa {language}.
 
 Data:
-{json.dumps(scorecard_data, indent=2)}
+{json.dumps(data, indent=2)}
 """
     
     def call():
@@ -133,10 +140,12 @@ def generate_screening_interpretation(data: dict, language: str = "English") -> 
 ATURAN MUTLAK (STRICT RULES):
 1. Anda adalah penerjemah tabel untuk fitur Stock Screening. DILARANG KERAS berhalusinasi.
 2. Tulis 1 Paragraf (maksimal 2 kalimat). WAJIB sebutkan kriteria metriknya dan berapa emiten yang lolos dari total emiten yang dievaluasi (ambil angka total dari field `total_passed` dan `total_evaluated`).
+   - PENTING: Terjemahkan simbol matematika pada kriteria filter menjadi kata verbal (contoh: ">" menjadi "di atas", "<" menjadi "di bawah", "<=" menjadi "kurang dari atau sama dengan").
+   - PENTING: Pastikan angka kriteria filter juga DIBERI SATUAN UNIT (contoh: di atas 120.000 IDR bn).
 3. Aturan Penyebutan Emiten:
    - WAJIB sebut Peringkat 1, Peringkat 2, posisi menengah, dan posisi terbawah. (TIDAK BOLEH pakai format list/poin).
 4. Tulis 1 kalimat kesimpulan di paragraf baru (dimulai dengan "Kesimpulannya, ...") murni perbandingan selisih nilai Peringkat 1 dan peringkat bawah.
-5. FORMAT ANGKA: Anda WAJIB memformat semua angka dengan titik ribuan (contoh: 243802 menjadi 243.802). Jika nilai terlalu besar (ratusan ribu), Anda boleh menyingkatnya dengan kata "Triliun" atau "Miliar" jika masuk akal (misal: 243.802 IDR bn menjadi Rp243,8 Triliun), ATAU cukup tambahkan unit "IDR bn" di belakang angka (243.802 IDR bn).
+5. FORMAT ANGKA: Anda WAJIB memformat semua angka dengan titik ribuan (contoh: 243802 menjadi 243.802). Selalu sertakan unit di belakang setiap angka.
 6. JANGAN gunakan kata ganti (ini, itu, tersebut). Sebut nama Ticker secara spesifik. Gunakan kata "penyaringan".
 7. Output harus dalam bahasa {language}.
 
@@ -187,15 +196,16 @@ def generate_compare_interpretation(data: dict, language: str = "English") -> st
     data["series"] = optimized_series
 
     prompt = f"""
-You are a senior banking data analyst. Analyze the Compare Stocks data.
-STRICT RULES:
-1. Output MUST be purely in {language}.
-2. First part: Write EXACTLY 1 paragraph (maximum 3 sentences) summarizing the data using the 5W1H framework (Who, What, Where, When, Why, How). DO NOT explicitly write "Who:", "What:", etc. Make it a seamless narrative.
-3. Second part: Write EXACTLY 1 standalone concluding sentence on a new line (e.g. "Kesimpulan: ..."). This conclusion MUST state an analytical verdict on which bank is superior across the timeline.
-4. Do NOT use bullet points, bold text (**), or emojis. Do NOT give stock investment advice.
+ATURAN MUTLAK (STRICT RULES):
+1. Anda adalah penerjemah tabel untuk Perbandingan Saham (Compare). DILARANG KERAS berhalusinasi.
+2. Tulis 1 Paragraf (maksimal 3 kalimat). Jelaskan persaingan antara emiten-emiten ini dengan menyebutkan skor awal, skor akhir, dan rata-rata skor mereka. (TIDAK BOLEH pakai format list/poin).
+3. Tulis 1 kalimat kesimpulan di paragraf baru (dimulai dengan "Kesimpulannya, ...") menyatakan siapa yang secara keseluruhan lebih superior dan stabil secara historis.
+4. FORMAT ANGKA: Skor WSM hanya angka (contoh: Skor 75.2). 
+5. JANGAN gunakan kata ganti (ini, itu, tersebut). Sebut nama Ticker secara spesifik.
+6. Output harus dalam bahasa {language}.
 
 Data:
-{json.dumps(scorecard_data, indent=2)}
+{json.dumps(comparison_data, indent=2)}
 """
 
     def call():
@@ -215,15 +225,16 @@ def generate_historical_interpretation(data: dict, language: str = "English") ->
         data["significant_changes"] = {"top_improving": top_3, "top_declining": bottom_3}
 
     prompt = f"""
-You are a senior banking data analyst. Analyze the Historical Comparison data.
-STRICT RULES:
-1. Output MUST be purely in {language}.
-2. First part: Write EXACTLY 1 paragraph (maximum 3 sentences) summarizing the data using the 5W1H framework (Who, What, Where, When, Why, How). DO NOT explicitly write "Who:", "What:", etc. Make it a seamless narrative.
-3. Second part: Write EXACTLY 1 standalone concluding sentence on a new line (e.g. "Kesimpulan: ..."). This conclusion MUST state an analytical verdict on whether the bank's historical trajectory makes it superior or declining.
-4. Do NOT use bullet points, bold text (**), or emojis. Do NOT give stock investment advice.
+ATURAN MUTLAK (STRICT RULES):
+1. Anda adalah penerjemah tabel untuk Analisis Historis. DILARANG KERAS berhalusinasi.
+2. Tulis 1 Paragraf (maksimal 3 kalimat). Jelaskan metrik mana yang mengalami lonjakan (peningkatan) tertinggi dan metrik mana yang mengalami kejatuhan (penurunan) terburuk. (TIDAK BOLEH pakai format list/poin).
+3. Tulis 1 kalimat kesimpulan di paragraf baru (dimulai dengan "Kesimpulannya, ...") menyimpulkan kekuatan atau kelemahan fundamental emiten pada periode tersebut.
+4. FORMAT ANGKA: WAJIB memformat semua angka dengan titik ribuan. WAJIB sertakan satuan unit di belakang SETIAP angka (contoh: 120.000 IDR bn atau 2.5%).
+5. JANGAN gunakan kata ganti (ini, itu, tersebut). Sebut nama Ticker dan nama Metrik secara spesifik.
+6. Output harus dalam bahasa {language}.
 
 Data:
-{json.dumps(scorecard_data, indent=2)}
+{json.dumps(history_data, indent=2)}
 """
 
     def call():
