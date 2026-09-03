@@ -157,7 +157,7 @@ Data:
 """
 
     def call():
-        response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+        response = client.models.generate_content(model='gemini-3.6-flash', contents=prompt)
         return response.text.strip().replace('**', '')
     return handle_ai_retry(call)
 
@@ -180,7 +180,7 @@ Data:
 """
 
     def call():
-        response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+        response = client.models.generate_content(model='gemini-3.6-flash', contents=prompt)
         return response.text.strip().replace('**', '')
     return handle_ai_retry(call)
 
@@ -217,7 +217,7 @@ Data:
 """
 
     def call():
-        response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+        response = client.models.generate_content(model='gemini-3.6-flash', contents=prompt)
         return response.text.strip().replace('**', '')
     return handle_ai_retry(call)
 
@@ -248,7 +248,7 @@ Data:
 """
 
     def call():
-        response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+        response = client.models.generate_content(model='gemini-3.6-flash', contents=prompt)
         return response.text.strip().replace('**', '')
     return handle_ai_retry(call)
 
