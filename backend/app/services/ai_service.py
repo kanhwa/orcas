@@ -195,15 +195,24 @@ def generate_compare_interpretation(data: dict, language: str = "English") -> st
     data["series"] = optimized_series
 
     prompt = f"""
-ATURAN MUTLAK (STRICT RULES):
-1. Anda adalah penerjemah tabel untuk Perbandingan Saham (Compare). DILARANG KERAS berhalusinasi.
-2. Tulis 1 Paragraf (maksimal 3 kalimat). Jelaskan persaingan antara emiten-emiten ini dengan menyebutkan skor awal, skor akhir, dan rata-rata skor mereka. (TIDAK BOLEH pakai format list/poin).
-3. Tulis 1 kalimat kesimpulan di paragraf baru (dimulai dengan "Kesimpulannya, ...") menyatakan siapa yang secara keseluruhan lebih superior dan stabil secara historis.
-4. FORMAT ANGKA: Skor WSM hanya angka (contoh: Skor 75.2). 
-5. JANGAN gunakan kata ganti (ini, itu, tersebut). Sebut nama Ticker secara spesifik.
-6. Output harus dalam bahasa {language}.
+Anda adalah analis finansial spesialis pembanding emiten. DILARANG KERAS berhalusinasi.
+Anda WAJIB meniru gaya dan format CONTOH OUTPUT di bawah ini. JANGAN berkreasi di luar struktur ini.
 
-Data:
+ATURAN WAJIB:
+- Skor WSM (Overall Score atau Section Score) tidak memiliki satuan uang. Cukup tampilkan angka bulat dengan 2 digit di belakang koma (contoh: 0.71, 0.51). 
+- Jika ada 2 bank, bandingkan keduanya terhadap skor rata-rata (Average). Jika ada >2 bank, sebutkan bank pemimpin, bank posisi menengah, dan bank tertinggal.
+- Tulis 1 Paragraf atas (Naratif) dan 1 Paragraf Kesimpulan.
+
+CONTOH OUTPUT YANG HARUS DITIRU (Jika 2 Bank):
+Pada perbandingan nilai Overall Score periode 2023-2024, BBRI menunjukkan performa yang solid dan konsisten berada di atas rata-rata dengan skor akhir 0.71. Sebaliknya, BBNI terus tertekan di bawah batas rata-rata dan mengalami penurunan hingga menyentuh skor akhir 0.51 pada tahun evaluasi terakhir.
+
+Kesimpulannya, BBRI menunjukkan dominasi stabilitas fundamental yang jauh lebih superior, berlawanan dengan BBNI yang kehilangan momentum performa selama dua tahun berturut-turut.
+
+(Catatan: Jika emiten yang dipilih lebih dari 2, sesuaikan penyebutannya dengan menyebutkan "Posisi Menengah", namun tetap gunakan batasan 2 digit desimal dan tanpa satuan).
+
+Output harus dalam bahasa {language}.
+
+Data Compare:
 {json.dumps(comparison_data, indent=2)}
 """
 
@@ -224,15 +233,25 @@ def generate_historical_interpretation(data: dict, language: str = "English") ->
         data["significant_changes"] = {"top_improving": top_3, "top_declining": bottom_3}
 
     prompt = f"""
-ATURAN MUTLAK (STRICT RULES):
-1. Anda adalah penerjemah tabel untuk Analisis Historis. DILARANG KERAS berhalusinasi.
-2. Tulis 1 Paragraf (maksimal 3 kalimat). Jelaskan metrik mana yang mengalami lonjakan (peningkatan) tertinggi dan metrik mana yang mengalami kejatuhan (penurunan) terburuk. (TIDAK BOLEH pakai format list/poin).
-3. Tulis 1 kalimat kesimpulan di paragraf baru (dimulai dengan "Kesimpulannya, ...") menyimpulkan kekuatan atau kelemahan fundamental emiten pada periode tersebut.
-4. FORMAT ANGKA: WAJIB memformat semua angka dengan titik ribuan. WAJIB sertakan satuan unit di belakang SETIAP angka (contoh: 120.000 IDR bn atau 2.5%).
-5. JANGAN gunakan kata ganti (ini, itu, tersebut). Sebut nama Ticker dan nama Metrik secara spesifik.
-6. Output harus dalam bahasa {language}.
+Anda adalah analis historis pergerakan metrik. DILARANG KERAS berhalusinasi.
+Anda WAJIB meniru gaya dan format CONTOH OUTPUT di bawah ini. JANGAN berkreasi di luar struktur ini.
 
-Data:
+ATURAN WAJIB:
+- Anda hanya boleh menyoroti MAKSIMAL 2 METRIK SAJA (entah itu 1 paling membaik & 1 paling memburuk, atau 2-duanya paling membaik/memburuk). Jangan sebut lebih dari 2 metrik agar teks tetap singkat.
+- Wajib sebutkan nama Ticker (contoh: BBCA), periode (contoh: 2022-2024), dan angka filter ambang batas (contoh: 70%).
+- FORMAT ANGKA KEUANGAN: Bulatkan ke "Triliun" tanpa koma (contoh: -38457 IDR bn atau 2243 IDR bn dibulatkan dan ditulis menjadi Rp 38 Triliun atau Rp 2 Triliun). Abaikan tanda minus jika Anda menggunakan kata "minus" atau "anjlok".
+- FORMAT PERSENTASE: Biarkan persentase tetap menggunakan tanda % aslinya.
+
+CONTOH OUTPUT YANG HARUS DITIRU:
+Pada analisis historis BBCA periode 2022-2024 (dengan penyaringan perubahan ekstrem di atas 70%), tercatat ada metrik yang mengalami perbaikan dan penurunan. Perbaikan paling positif terjadi pada metrik Pinjaman yang Diterima yang melonjak 70% menjadi Rp 2 Triliun, sementara penurunan paling parah dialami metrik Kenaikan Bersih Kas yang anjlok tajam 117% menjadi minus Rp 38 Triliun.
+
+Kesimpulannya, perbaikan yang terjadi di sektor pendanaan BBCA tampaknya gagal mengimbangi tekanan masif yang terjadi pada arus kas investasi dan kas bersihnya selama dua tahun terakhir.
+
+(Catatan: Sesuaikan kalimat jika kedua metrik sama-sama membaik atau sama-sama memburuk).
+
+Output harus dalam bahasa {language}.
+
+Data Historical:
 {json.dumps(history_data, indent=2)}
 """
 
