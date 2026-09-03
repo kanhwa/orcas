@@ -51,6 +51,11 @@ def generate_scorecard_interpretation(payload: dict) -> str:
         metrics_sorted = sorted(metrics, key=lambda x: x.get("contribution", 0), reverse=True)
         top_3 = metrics_sorted[:3]
         bottom_3 = metrics_sorted[-3:] if len(metrics_sorted) > 3 else []
+        # Format contribution to exactly 6 decimals to avoid scientific notation and overly long floats
+        for m in top_3 + bottom_3:
+            if "contribution" in m and isinstance(m["contribution"], (float, int)):
+                m["contribution"] = f"{m['contribution']:.6f}"
+                
         scorecard_data["metrics"] = {"top_contributors": top_3, "bottom_contributors": bottom_3}
 
     prompt = f"""
@@ -62,7 +67,7 @@ ATURAN MUTLAK:
 - Gunakan istilah "bagian" (bukan "seksi").
 - Sebutkan HANYA 2 metrik spesifik: (1) Metrik dengan "Contribution" tertinggi/terbesar (Sumbangsih positif terbesar). (2) Metrik dengan "Contribution" terendah/terburuk (Sumbangsih paling minim atau negatif).
 - Nama metrik WAJIB IDENTIK 100% dengan "metric_name" yang ada di JSON. Jangan diterjemahkan.
-- WAJIB menyebutkan angka nominal "contribution" secara FULL/UTUH tanpa memotong desimalnya (tulis persis seperti angka utuh yang ada di JSON).
+- WAJIB menyebutkan angka nominal "contribution" secara persis/identik seperti string angka yang tertera di JSON (maksimal 6 digit desimal).
 - Sebutkan skor total (total_score) DENGAN 2 DIGIT DESIMAL saja. 
 - Aturan Persentase (Coverage dan Bagian): Jika angkanya memiliki desimal .0 (misal 100.0% atau 41.0%), WAJIB buang desimalnya menjadi bulat (100% atau 41%). Jika desimalnya bukan .0 (misal 97.4%), biarkan 1 desimal.
 
@@ -72,7 +77,7 @@ Tulis 1 kalimat kesimpulan (dimulai dengan "Kesimpulannya, ..."). Anda WAJIB MEM
 - Gaya B (Efek Tarik-Tambang): Menyoroti efek "tarik-tambang" di mana performa metrik pahlawan penyumbang skor tertinggi harus beradu dengan beban dari metrik penyumbang skor terburuk.
 
 CONTOH OUTPUT YANG HARUS DITIRU:
-Pada evaluasi Scorecard BBCA tahun 2024, emiten sukses meraih skor total 0.59 (Peringkat 3) dengan tingkat coverage data yang sangat prima sebesar 97.4%. Secara struktur, bagian Income menjadi tulang punggung utama dengan porsi kontribusi tertinggi mencapai 41%. Secara spesifik, fondasi fundamental ini paling banyak ditopang oleh metrik "Laba Bersih Tahun Berjalan" yang memberikan sumbangsih skor individu terbesar yaitu 0.000018, sedangkan metrik "Beban Usaha" tercatat memberikan sumbangsih terburuk sebesar -0.000005 dibandingkan keseluruhan metrik lainnya.
+Pada evaluasi Scorecard BBCA tahun 2024, emiten sukses meraih skor total 0.59 (Peringkat 3) dengan tingkat coverage data yang sangat prima sebesar 97.4%. Secara struktur, bagian Income menjadi tulang punggung utama dengan porsi kontribusi tertinggi mencapai 41%. Secara spesifik, fondasi fundamental ini paling banyak ditopang oleh metrik "Laba Bersih Tahun Berjalan" yang memberikan sumbangsih skor individu terbesar yaitu 0.025604, sedangkan metrik "Beban Usaha" tercatat memberikan sumbangsih terburuk sebesar 0.000018 dibandingkan keseluruhan metrik lainnya.
 
 Kesimpulannya, dominasi bagian Income dan kokohnya metrik Laba Bersih Tahun Berjalan terbukti menjadi pendorong utama skor positif emiten ini, meskipun tertahan sedikit oleh tingginya Beban Usaha.
 
