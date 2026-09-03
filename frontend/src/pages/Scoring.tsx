@@ -1118,11 +1118,15 @@ const Scoring = () => {
     setRankingAiAnalysis("");
     
     // Max 4 emitens to mention as requested by user
-    const emitensToMention = displayedRanking.slice(0, 4).map(r => ({
-      ticker: r.ticker,
-      score: parseFloat((r.score ?? r.average_score ?? 0).toFixed(4)).toString(),
-      rank: r.rank
-    }));
+    const baseRanking = scoringMode === "multi" ? multiRanking : ranking;
+    const emitensToMention = displayedRanking.map(r => {
+      const originalRank = baseRanking.findIndex(b => b.ticker === r.ticker) + 1;
+      return {
+        ticker: r.ticker,
+        score: parseFloat((r.score ?? r.average_score ?? 0).toFixed(4)).toString(),
+        rank: r.rank ?? originalRank
+      };
+    });
 
     const period = scoringMode === 'multi' ? `${startYear}-${endYear}` : String(selectedYear);
 
@@ -1930,8 +1934,7 @@ const Scoring = () => {
           <Button onClick={handleRun} disabled={!canRun || loading || aiAnalysisLoading || rankingAiLoading}>
             {loading ? "Running..." : "Run Scoring"}
           </Button>
-        </div>
-        <p className="text-xs text-[rgb(var(--color-text-subtle))]">
+        </div>        <p className="text-xs text-[rgb(var(--color-text-subtle))]">
           Scoring uses the selected weight profile; missing metrics follow the
           selected policy.
         </p>
@@ -1950,8 +1953,8 @@ const Scoring = () => {
       )}
       {!loading && (ranking.length > 0 || multiRanking.length > 0) && (
         <>
-          <div className="rounded border border-[rgb(var(--color-border))] bg-[rgb(var(--color-surface))] p-4 mb-4">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 bg-[rgb(var(--color-surface))] p-3 rounded border border-[rgb(var(--color-border))]">
+            <div className="flex items-center gap-4">
               <div className="font-semibold text-sm">Ranking Filter:</div>
               <div className="flex items-center gap-3">
                 <label className="flex items-center gap-1 text-sm cursor-pointer">
@@ -1978,8 +1981,9 @@ const Scoring = () => {
                 />
               </div>
             </div>
-
           </div>
+
+
 
           <div className="flex flex-wrap items-center gap-3">
             <Button
@@ -2060,9 +2064,18 @@ const Scoring = () => {
                 </tr>
               </thead>
               <tbody>
-                {multiRanking.map((item, idx) => (
+                {(rankFilterType === 'all' ? multiRanking : 
+                  rankFilterType === 'top' ? multiRanking.slice(0, rankFilterCount) : 
+                  multiRanking.slice(-rankFilterCount)
+                ).map((item, idx) => {
+                  const originalRank = multiRanking.findIndex(m => m.ticker === item.ticker) + 1;
+                  return (
                   <tr key={`${item.ticker}-${idx}`}>
-                    <td>{idx + 1}</td>
+                    <td>
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-base">{originalRank}</span>
+                      </div>
+                    </td>
                     <td className="font-mono">{item.ticker}</td>
                     <td className="font-semibold">{formatDecimal(item.average_score, 6)}</td>
                     <td>
@@ -2079,7 +2092,7 @@ const Scoring = () => {
                       </Button>
                     </td>
                   </tr>
-                ))}
+                )})}
               </tbody>
             </Table>
           ) : (
