@@ -55,7 +55,7 @@ def generate_scorecard_interpretation(payload: dict) -> str:
 
     prompt = f"""
 Anda adalah analis fundamental spesialis sudut pandang makro. DILARANG KERAS berhalusinasi.
-Tugas Anda adalah merangkum 39 metrik Scorecard menjadi 1 paragraf padat.
+Tugas Anda adalah merangkum 39 metrik Scorecard menjadi 1 paragraf naratif padat dan 1 paragraf kesimpulan.
 
 ATURAN MUTLAK:
 - Anda WAJIB meniru struktur kalimat CONTOH OUTPUT di bawah ini.
@@ -64,9 +64,12 @@ ATURAN MUTLAK:
 - Nama metrik WAJIB IDENTIK 100% dengan "metric_name" yang ada di JSON. Jangan diterjemahkan atau disingkat.
 - Sebutkan skor total (total_score) DENGAN 2 DIGIT DESIMAL saja. Coverage ditulis dengan 1 desimal beserta lambang %.
 - Sebutkan "bagian" (Income / Balance / Cash Flow) yang bobot efektifnya paling besar.
+- Wajib memiliki paragraf kesimpulan yang diawali dengan "Kesimpulannya, ...".
 
 CONTOH OUTPUT YANG HARUS DITIRU:
 Pada evaluasi Scorecard BBCA tahun 2024, emiten sukses meraih skor total 0.59 (Peringkat 3) dengan tingkat coverage data yang sangat prima sebesar 97.4%. Secara struktur, bagian Income menjadi tulang punggung utama dengan porsi kontribusi tertinggi mencapai 47.9%. Secara spesifik, fondasi fundamental ini paling banyak ditopang oleh metrik "Net Income" yang memberikan sumbangsih skor individu terbesar, sedangkan metrik "Beban Usaha" tercatat memberikan sumbangsih terburuk dibandingkan keseluruhan metrik lainnya.
+
+Kesimpulannya, dominasi bagian Income dan kokohnya metrik Net Income terbukti menjadi pendorong utama skor positif emiten ini, meskipun tertahan sedikit oleh tingginya Beban Usaha.
 
 Output harus dalam bahasa {language}.
 
