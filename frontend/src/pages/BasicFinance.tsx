@@ -88,10 +88,10 @@ export default function BasicFinance({ user }: BasicFinanceProps) {
         { term: "Pinjaman yang Diterima", definition: "Dana yang dipinjam bank dari institusi lain untuk mendukung aktivitas pinjamannya." },
         { term: "Penempatan pada Bank Indonesia", definition: "Dana yang sangat likuid dan aman yang diparkir di bank sentral untuk tujuan regulasi dan likuiditas." },
         { term: "Giro pada Bank Indonesia", definition: "Dana cadangan minimum wajib yang disimpan di bank sentral untuk memastikan likuiditas." },
-        { term: "Perputaran Aset (Asset Turnover)", definition: "Rasio yang mengukur seberapa efisien bank menggunakan asetnya untuk menghasilkan pendapatan operasional." },
-        { term: "Price to Book Value (PBV)", definition: "Rasio penilaian pasar yang membandingkan harga saham bank dengan nilai buku akuntansinya." },
-        { term: "Book Value Per Share (BVPS)", definition: "Nilai matematis dari satu saham jika bank melikuidasi semua aset dan membayar semua utangnya." },
-        { term: "Tangible Book Value Per Share", definition: "Nilai buku per saham setelah mengurangi aset tak berwujud, menunjukkan nilai aset berwujud." }
+        { term: "Perputaran Aset", definition: "Rasio yang mengukur seberapa efisien bank menggunakan asetnya untuk menghasilkan pendapatan operasional." },
+        { term: "Rasio Harga terhadap Nilai Buku (PBV)", definition: "Rasio penilaian pasar yang membandingkan harga saham bank dengan nilai buku akuntansinya." },
+        { term: "Nilai Buku per Saham (BVPS)", definition: "Nilai matematis dari satu saham jika bank melikuidasi semua aset dan membayar semua utangnya." },
+        { term: "Nilai Buku Aset Berwujud per Saham (TBVPS)", definition: "Nilai buku per saham setelah mengurangi aset tak berwujud, menunjukkan nilai aset berwujud." }
       ]
     },
     {
@@ -105,12 +105,12 @@ export default function BasicFinance({ user }: BasicFinanceProps) {
         { term: "Pendapatan Bunga Bersih (NII)", definition: "Selisih antara bunga yang diperoleh dari peminjam dan bunga yang dibayarkan kepada nasabah penyimpan." },
         { term: "Penyisihan Kerugian Penurunan Nilai (CKPN)", definition: "Dana cadangan yang disiapkan sebagai bantalan jika peminjam gagal bayar (kredit macet)." },
         { term: "Laba per Saham (EPS)", definition: "Porsi laba bank yang dialokasikan untuk setiap lembar saham yang beredar." },
-        { term: "Return on Assets (ROA)", definition: "Rasio profitabilitas yang menunjukkan seberapa banyak laba yang dihasilkan dari setiap rupiah aset yang dimiliki." },
-        { term: "Return on Equity (ROE)", definition: "Rasio profitabilitas yang menunjukkan seberapa efisien bank menggunakan uang pemegang saham untuk mencetak laba." },
-        { term: "Net Profit Margin (NPM)", definition: "Persentase sisa pendapatan yang menjadi laba bersih setelah semua biaya operasional dibayar." },
-        { term: "Gross Profit Margin (GPM)", definition: "Persentase pendapatan kotor yang tersisa setelah mengurangi beban operasional langsung." },
+        { term: "Tingkat Pengembalian Aset (ROA)", definition: "Rasio profitabilitas yang menunjukkan seberapa banyak laba yang dihasilkan dari setiap rupiah aset yang dimiliki." },
+        { term: "Tingkat Pengembalian Ekuitas (ROE)", definition: "Rasio profitabilitas yang menunjukkan seberapa efisien bank menggunakan uang pemegang saham untuk mencetak laba." },
+        { term: "Margin Laba Bersih (NPM)", definition: "Persentase sisa pendapatan yang menjadi laba bersih setelah semua biaya operasional dibayar." },
+        { term: "Margin Laba Kotor (GPM)", definition: "Persentase pendapatan kotor yang tersisa setelah mengurangi beban operasional langsung." },
         { term: "Rasio Beban Operasional terhadap Pendapatan Operasional (BOPO)", definition: "Rasio krusial yang mengukur seberapa efisien pengeluaran bank dibandingkan dengan pendapatannya." },
-        { term: "Cost to Income Ratio (CIR)", definition: "Serupa dengan BOPO, rasio ini mengukur efisiensi operasional dengan membandingkan biaya dengan pendapatan operasional inti." }
+        { term: "Rasio Biaya terhadap Pendapatan (CIR)", definition: "Serupa dengan BOPO, rasio ini mengukur efisiensi operasional dengan membandingkan biaya dengan pendapatan operasional inti." }
       ]
     },
     {
