@@ -51,10 +51,33 @@ def generate_scorecard_interpretation(payload: dict) -> str:
         metrics_sorted = sorted(metrics, key=lambda x: x.get("contribution", 0), reverse=True)
         top_3 = metrics_sorted[:3]
         bottom_3 = metrics_sorted[-3:] if len(metrics_sorted) > 3 else []
-        # Format contribution to exactly 6 decimals to avoid scientific notation and overly long floats
+        def smart_format_contribution(val: float) -> str:
+            if val == 0:
+                return "0"
+            is_neg = val < 0
+            val_abs = abs(val)
+            s = f"{val_abs:.15f}".rstrip('0')
+            if "." not in s:
+                return f"-{s}" if is_neg else s
+            int_part, dec_part = s.split(".")
+            if int(int_part) > 0:
+                target_decimals = 2
+            else:
+                leading_zeros = 0
+                for char in dec_part:
+                    if char == '0':
+                        leading_zeros += 1
+                    else:
+                        break
+                target_decimals = leading_zeros + 2
+            
+            rounded_val = round(val_abs, target_decimals)
+            formatted = f"{rounded_val:.{target_decimals}f}"
+            return f"-{formatted}" if is_neg else formatted
+
         for m in top_3 + bottom_3:
             if "contribution" in m and isinstance(m["contribution"], (float, int)):
-                m["contribution"] = f"{m['contribution']:.6f}"
+                m["contribution"] = smart_format_contribution(m["contribution"])
                 
         scorecard_data["metrics"] = {"top_contributors": top_3, "bottom_contributors": bottom_3}
 
@@ -67,7 +90,7 @@ ATURAN MUTLAK:
 - Gunakan istilah "bagian" (bukan "seksi").
 - Sebutkan HANYA 2 metrik spesifik: (1) Metrik dengan "Contribution" tertinggi/terbesar (Sumbangsih positif terbesar). (2) Metrik dengan "Contribution" terendah/terburuk (Sumbangsih paling minim atau negatif).
 - Nama metrik WAJIB IDENTIK 100% dengan "metric_name" yang ada di JSON. Jangan diterjemahkan.
-- WAJIB menyebutkan angka nominal "contribution" secara persis/identik seperti string angka yang tertera di JSON (maksimal 6 digit desimal).
+- WAJIB menyebutkan angka nominal "contribution" secara persis/identik seperti string angka yang tertera di JSON.
 - Sebutkan skor total (total_score) DENGAN 2 DIGIT DESIMAL saja. 
 - Aturan Persentase (Coverage dan Bagian): Jika angkanya memiliki desimal .0 (misal 100.0% atau 41.0%), WAJIB buang desimalnya menjadi bulat (100% atau 41%). Jika desimalnya bukan .0 (misal 97.4%), biarkan 1 desimal.
 
