@@ -866,7 +866,7 @@ function CompareTab() {
             
             {aiAnalysis && (
               <div className="bg-purple-50 border border-purple-100 rounded p-4 mb-6 mt-4 text-sm text-purple-900 leading-relaxed shadow-sm whitespace-pre-wrap">
-                <strong className="block mb-2 text-purple-950">AI Analysis:</strong>
+                <strong className="block mb-2 text-purple-950">Compare Stocks Analysis:</strong>
                 {aiAnalysis}
               </div>
             )}

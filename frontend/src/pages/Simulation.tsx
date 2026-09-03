@@ -1391,7 +1391,7 @@ const Simulation: React.FC = () => {
             
             {aiAnalysis && (
               <div className="mx-6 bg-purple-50 border border-purple-100 rounded p-4 mb-4 text-sm text-purple-900 leading-relaxed shadow-sm whitespace-pre-wrap">
-                <strong className="block mb-2 text-purple-950">AI Analysis:</strong>
+                <strong className="block mb-2 text-purple-950">Simulation Analysis:</strong>
                 {aiAnalysis}
               </div>
             )}

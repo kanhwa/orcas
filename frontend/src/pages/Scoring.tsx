@@ -2816,11 +2816,11 @@ const Scoring = () => {
             </div>
           </div>
           {aiAnalysisText && (
-            <div className="rounded border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 shadow-sm whitespace-pre-wrap">
-              <strong className="block mb-2 text-blue-950">Financial Interpretation:</strong>
+            <div className="bg-purple-50 border border-purple-100 rounded p-4 mt-2 text-sm text-purple-900 leading-relaxed shadow-sm whitespace-pre-wrap">
+              <strong className="block mb-2 text-purple-950">Scorecard Analysis:</strong>
               {aiAnalysisText}
               
-              <div className="mt-4 pt-4 border-t border-blue-200">
+              <div className="mt-4 pt-4 border-t border-purple-200">
                 {!showAiChart ? (
                   <Button 
                     variant="primary" 
