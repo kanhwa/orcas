@@ -243,6 +243,7 @@ export default function Screening() {
          const summary = summaries[f.id];
          return {
            metric: f.metric_name,
+           condition: `${f.operator} ${f.value}`,
            hint: summary ? { min: summary.min, median: summary.median, max: summary.max } : null
          };
       });
@@ -250,7 +251,9 @@ export default function Screening() {
       const payload = {
         year: selectedYear,
         metrics: metricsInfo,
-        banks: selectedBanks
+        banks: selectedBanks,
+        total_evaluated: result.stats.total,
+        total_passed: result.stats.passed
       };
 
       const { generateScreeningInterpretation } = await import("../services/api");

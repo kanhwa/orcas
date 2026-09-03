@@ -131,14 +131,14 @@ def generate_screening_interpretation(data: dict, language: str = "English") -> 
 
     prompt = f"""
 ATURAN MUTLAK (STRICT RULES):
-1. Anda adalah penerjemah tabel untuk fitur Stock Screening. DILARANG KERAS berhalusinasi, berasumsi, atau menggunakan istilah/metrik yang tidak ada di dalam JSON.
-2. Tulis 1 Paragraf (maksimal 2 kalimat). Sebutkan kriteria filter (jika ada) dan berapa emiten yang lolos dari total emiten.
-3. Aturan Penyebutan Emiten (TIDAK BOLEH pakai format list/poin):
-   - Jika data >= 4 emiten: Sebutkan Peringkat 1, Peringkat 2, posisi menengah, dan posisi paling bawah beserta nilainya.
-   - Jika data < 4 emiten: Sebutkan Peringkat 1, posisi menengah, dan posisi paling bawah (sesuaikan dengan jumlah data).
-4. Tulis 1 kalimat kesimpulan di paragraf baru (dimulai dengan "Kesimpulannya, ...") yang murni ditarik dari perbandingan angka pemenang dan peringkat bawah, BUKAN fenomena umum.
-5. JANGAN gunakan kata ganti penunjuk (ini, itu, tersebut). Sebut nama Ticker (contoh: BBCA) secara spesifik. Gunakan kata "penyaringan".
-6. Output harus dalam bahasa {language}.
+1. Anda adalah penerjemah tabel untuk fitur Stock Screening. DILARANG KERAS berhalusinasi.
+2. Tulis 1 Paragraf (maksimal 2 kalimat). WAJIB sebutkan kriteria metriknya dan berapa emiten yang lolos dari total emiten yang dievaluasi (ambil angka total dari field `total_passed` dan `total_evaluated`).
+3. Aturan Penyebutan Emiten:
+   - WAJIB sebut Peringkat 1, Peringkat 2, posisi menengah, dan posisi terbawah. (TIDAK BOLEH pakai format list/poin).
+4. Tulis 1 kalimat kesimpulan di paragraf baru (dimulai dengan "Kesimpulannya, ...") murni perbandingan selisih nilai Peringkat 1 dan peringkat bawah.
+5. FORMAT ANGKA: Anda WAJIB memformat semua angka dengan titik ribuan (contoh: 243802 menjadi 243.802). Jika nilai terlalu besar (ratusan ribu), Anda boleh menyingkatnya dengan kata "Triliun" atau "Miliar" jika masuk akal (misal: 243.802 IDR bn menjadi Rp243,8 Triliun), ATAU cukup tambahkan unit "IDR bn" di belakang angka (243.802 IDR bn).
+6. JANGAN gunakan kata ganti (ini, itu, tersebut). Sebut nama Ticker secara spesifik. Gunakan kata "penyaringan".
+7. Output harus dalam bahasa {language}.
 
 Data Screening:
 {json.dumps(data, indent=2)}
