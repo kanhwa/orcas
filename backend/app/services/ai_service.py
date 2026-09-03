@@ -65,12 +65,16 @@ ATURAN MUTLAK:
 - WAJIB menyebutkan angka nominal "contribution" untuk kedua metrik tersebut menggunakan 3 atau 4 digit desimal (misal: 0.0512).
 - Sebutkan skor total (total_score) DENGAN 2 DIGIT DESIMAL saja. 
 - Aturan Persentase (Coverage dan Bagian): Jika angkanya memiliki desimal .0 (misal 100.0% atau 41.0%), WAJIB buang desimalnya menjadi bulat (100% atau 41%). Jika desimalnya bukan .0 (misal 97.4%), biarkan 1 desimal.
-- Wajib memiliki paragraf kesimpulan.
+
+ATURAN PARAGRAF KESIMPULAN:
+Tulis 1 kalimat kesimpulan (dimulai dengan "Kesimpulannya, ..."). Anda WAJIB MEMILIH SALAH SATU dari 2 gaya kesimpulan berikut secara dinamis sesuai insting analis Anda terhadap kondisi data:
+- Gaya A (Kekuatan Bagian): Menyoroti dan memuji dominasi bagian (Income/Balance/Cashflow) tertentu yang sukses menjadi tulang punggung mutlak penopang skor emiten tersebut.
+- Gaya B (Efek Tarik-Tambang): Menyoroti efek "tarik-tambang" di mana performa metrik pahlawan penyumbang skor tertinggi harus beradu dengan beban dari metrik penyumbang skor terburuk.
 
 CONTOH OUTPUT YANG HARUS DITIRU:
 Pada evaluasi Scorecard BBCA tahun 2024, emiten sukses meraih skor total 0.59 (Peringkat 3) dengan tingkat coverage data yang sangat prima sebesar 97.4%. Secara struktur, bagian Income menjadi tulang punggung utama dengan porsi kontribusi tertinggi mencapai 41%. Secara spesifik, fondasi fundamental ini paling banyak ditopang oleh metrik "Laba Bersih Tahun Berjalan" yang memberikan sumbangsih skor individu terbesar yaitu 0.0512, sedangkan metrik "Beban Usaha" tercatat memberikan sumbangsih terburuk sebesar -0.0123 dibandingkan keseluruhan metrik lainnya.
 
-Kesimpulannya, dominasi bagian Income dan kokohnya metrik Laba Bersih Tahun Berjalan terbukti menjadi pendorong utama skor positif emiten ini, meskipun tertahan sedikit oleh Beban Usaha.
+Kesimpulannya, dominasi bagian Income dan kokohnya metrik Laba Bersih Tahun Berjalan terbukti menjadi pendorong utama skor positif emiten ini, meskipun tertahan sedikit oleh tingginya Beban Usaha.
 
 Output harus dalam bahasa {language}.
 
