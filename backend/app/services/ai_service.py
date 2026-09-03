@@ -1,10 +1,25 @@
 import os
 import json
 import time
+import itertools
 from google import genai
 
 ERROR_MSG_BUSY = "Sorry, Orcas is currently sleeping because the servers are busy. Please try again in a moment!"
 ERROR_MSG_FAIL = "Sorry, Orcas failed to process the request. A system error occurred."
+
+# --- API KEY LOAD BALANCER ---
+# Load multiple API keys from GEMINI_API_KEYS (comma separated) or fallback to GEMINI_API_KEY
+keys_str = os.getenv("GEMINI_API_KEYS") or os.getenv("GEMINI_API_KEY", "")
+api_keys_list = [k.strip() for k in keys_str.split(",") if k.strip()]
+if not api_keys_list:
+    api_keys_list = [""]  # Placeholder if no keys found
+
+# Create an infinite iterator that cycles through the available keys
+api_key_cycle = itertools.cycle(api_keys_list)
+
+def get_next_api_key():
+    return next(api_key_cycle)
+# -----------------------------
 
 def handle_ai_retry(client_call, max_retries=3):
     for attempt in range(max_retries):
@@ -18,99 +33,228 @@ def handle_ai_retry(client_call, max_retries=3):
             return ERROR_MSG_BUSY
     return ERROR_MSG_BUSY
 
-def generate_scorecard_interpretation(scorecard_data: dict) -> str:
-    api_key = os.getenv("GEMINI_API_KEY")
+def get_client():
+    api_key = get_next_api_key()
     if not api_key:
-        return "API Key Gemini tidak ditemukan."
+        raise ValueError("API Key Gemini tidak ditemukan.")
+    return genai.Client(api_key=api_key)
 
-    client = genai.Client(api_key=api_key)
+def generate_scorecard_interpretation(payload: dict) -> str:
+    try:
+        client = get_client()
+    except Exception:
+        return "API Key Gemini tidak ditemukan."
+        
+    scorecard_data = payload.get("scorecard", payload)
+    language = payload.get("language", "Indonesian")
+    
+    # Slicing: Only Top 3 and Bottom 3 metrics
+    metrics = scorecard_data.get("metrics", [])
+    if metrics:
+        metrics_sorted = sorted(metrics, key=lambda x: x.get("contribution", 0), reverse=True)
+        top_3 = metrics_sorted[:3]
+        bottom_3 = metrics_sorted[-3:] if len(metrics_sorted) > 3 else []
+        scorecard_data["metrics"] = {"top_contributors": top_3, "bottom_contributors": bottom_3}
 
     prompt = f"""
-Anda adalah seorang analis keuangan senior. Tugas Anda adalah memberikan interpretasi analitis (maksimal 2 paragraf) terhadap hasil pemeringkatan kesehatan finansial bank menggunakan format 5W+1H (Who, What, Where, When, Why, How). Jangan sebutkan secara eksplisit "Who:", "What:", dll, tetapi mengalirlah menjadi paragraf narasi profesional berbahasa Indonesia.
+You are a senior banking data analyst. Analyze the Scorecard data.
+STRICT RULES:
+1. Output MUST be purely in {language}.
+2. First part: Write EXACTLY 1 paragraph (maximum 6 sentences) summarizing the data using the 5W1H framework (Who, What, Where, When, Why, How). DO NOT explicitly write "Who:", "What:", etc. Make it a seamless narrative.
+3. Second part: Write EXACTLY 1 standalone concluding sentence on a new line (e.g. "Kesimpulan: ..."). This conclusion MUST state an analytical verdict on why the bank won or lost, rather than just repeating visible scores.
+4. Do NOT use bullet points, bold text (**), or emojis. Do NOT give stock investment advice.
 
-Data Hasil Analisis:
+Data:
 {json.dumps(scorecard_data, indent=2)}
-
-Struktur Narasi yang Diharapkan:
-- Paragraf 1: Bahas Siapa (Who), Apa peringkat/skornya (What), Di mana (Where: Bursa Efek Indonesia), dan Kapan (When).
-- Paragraf 2: Bahas Mengapa (Why) skornya bisa demikian berdasarkan metrik dengan kontribusi positif/negatif terbesar, dan Bagaimana (How) implikasi operasional efisiensi/kinerjanya secara faktual.
-
-Gunakan gaya bahasa akademik namun lugas. Jangan berikan rekomendasi beli/jual saham. DILARANG KERAS menggunakan emoji, emotikon, atau simbol dekoratif apa pun.
 """
     
     def call():
-        response = client.models.generate_content(model='gemini-3.6-flash', contents=prompt)
-        return response.text.strip()
-        
+        response = client.models.generate_content(model='gemini-1.5-flash', contents=prompt)
+        return response.text.strip().replace('**', '')
     return handle_ai_retry(call)
 
 def generate_ranking_interpretation(ranking_data: list, period: str, language: str = "Indonesian") -> str:
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
+    try:
+        client = get_client()
+    except Exception:
         return "API Key Gemini tidak ditemukan."
 
-    client = genai.Client(api_key=api_key)
-    
-    data_str = json.dumps(ranking_data, indent=2)
-
     prompt = f"""
-Anda adalah analis data perbankan ORCAS.
-Tugas Anda adalah merangkum hasil perankingan (ranking) bank ke dalam TEPAT SATU PARAGRAF PENDEK (maksimal 4-5 kalimat).
-ATURAN SANGAT KETAT:
-1. JANGAN PERNAH gunakan poin-poin, list, bullet, cetak tebal (markdown **), atau emoji.
-2. Harus ditulis dalam paragraf murni naratif bergaya profesional.
-3. Sebutkan periode yang dianalisis: {period}.
-4. Jangan memberikan rekomendasi saham atau kalimat pembuka/penutup basa-basi (seperti "Berikut adalah analisis..."). Langsung ke intinya.
+You are a senior banking data analyst. Analyze the Ranking data for the period {period}.
+STRICT RULES:
+1. Output MUST be purely in {language}.
+2. First part: Write EXACTLY 1 paragraph (maximum 6 sentences) summarizing the data using the 5W1H framework (Who, What, Where, When, Why, How). DO NOT explicitly write "Who:", "What:", etc. Make it a seamless narrative.
+3. Second part: Write EXACTLY 1 standalone concluding sentence on a new line (e.g. "Kesimpulan: ..."). This conclusion MUST state an analytical verdict on why the top bank won and the bottom bank lost.
+4. Do NOT use bullet points, bold text (**), or emojis. Do NOT give stock investment advice.
 
-Contoh format kalimat yang diharapkan:
-"Dari tahun 2020 sampai 2024, BANK A memimpin di peringkat satu dengan skor 0.85 karena kinerjanya yang efisien. Di sisi lain, BANK B berada di peringkat terbawah..."
-
-Data yang dianalisis:
-{data_str}
+Data:
+{json.dumps(ranking_data, indent=2)}
 """
     
     def call():
-        response = client.models.generate_content(model='gemini-3.6-flash', contents=prompt)
+        response = client.models.generate_content(model='gemini-1.5-flash', contents=prompt)
         return response.text.strip().replace('**', '')
-        
     return handle_ai_retry(call)
 
 def generate_metric_ranking_interpretation(data: dict, language: str = "English") -> str:
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
+    try:
+        client = get_client()
+    except Exception:
         return "API Key Gemini tidak ditemukan."
 
-    client = genai.Client(api_key=api_key)
-    
-    data_str = json.dumps(data, indent=2)
+    # Slicing: List 4 (Top 2, Mid 1, Last 1) or List 3 (Top 1, Mid 1, Last 1)
+    ranking = data.get("ranking", [])
+    n = len(ranking)
+    if n > 4:
+        sliced_ranking = [ranking[0], ranking[1], ranking[n//2], ranking[-1]]
+        data["ranking"] = sliced_ranking
+    elif n == 4:
+        data["ranking"] = [ranking[0], ranking[1], ranking[2], ranking[3]]
+    elif n == 3:
+        data["ranking"] = [ranking[0], ranking[1], ranking[2]]
 
     prompt = f"""
-You are an ORCAS banking data analyst.
-Your task is to analyze the following Metric Ranking data in EXACTLY 1 to 3 SHORT PARAGRAPHS.
+You are a senior banking data analyst. Analyze the Metric Ranking data.
 STRICT RULES:
-1. ALL OUTPUT MUST BE IN {language}.
-2. NEVER use bullet points, lists, bold text (markdown **), or emojis. Write in pure narrative paragraphs.
-3. First paragraph: Explain the metric ({data.get('metric_name')}), its type (Cost or Benefit), and its unit ({data.get('unit')}). Explain what this metric means briefly in the context of banking.
-4. Second paragraph: Explain the ranking information from the data. If the data spans a range of years, explicitly state the period as "from year {data.get('start_year')} to {data.get('end_year')}". Mention exactly the banks provided in the data (which are up to 4 banks representing top, middle, and worst) and their scores/values.
-5. Third paragraph (Optional): A very brief concluding sentence if necessary, but keep it concise.
-6. Do NOT give stock investment advice or polite opening/closing phrases.
+1. Output MUST be purely in {language}.
+2. First part: Write EXACTLY 1 paragraph (maximum 6 sentences) summarizing the data using the 5W1H framework (Who, What, Where, When, Why, How). DO NOT explicitly write "Who:", "What:", etc. Make it a seamless narrative.
+3. Second part: Write EXACTLY 1 standalone concluding sentence on a new line (e.g. "Kesimpulan: ..."). This conclusion MUST state an analytical verdict on the performance gap between the top and bottom banks.
+4. Do NOT use bullet points, bold text (**), or emojis. Do NOT give stock investment advice.
 
-Data to analyze:
-{data_str}
+Data:
+{json.dumps(data, indent=2)}
 """
     
     def call():
-        response = client.models.generate_content(model='gemini-3.6-flash', contents=prompt)
+        response = client.models.generate_content(model='gemini-1.5-flash', contents=prompt)
         return response.text.strip().replace('**', '')
-        
+    return handle_ai_retry(call)
+
+def generate_screening_interpretation(data: dict, language: str = "English") -> str:
+    try:
+        client = get_client()
+    except Exception:
+        return "API Key Gemini tidak ditemukan."
+
+    passing_banks = data.get("passing_banks", [])
+    n = len(passing_banks)
+    if n > 4:
+        sliced = [passing_banks[0], passing_banks[1], passing_banks[n//2], passing_banks[-1]]
+        data["passing_banks"] = sliced
+
+    prompt = f"""
+You are a senior banking data analyst. Analyze the Screening data.
+STRICT RULES:
+1. Output MUST be purely in {language}.
+2. First part: Write EXACTLY 1 paragraph (maximum 6 sentences) summarizing the data using the 5W1H framework (Who, What, Where, When, Why, How). DO NOT explicitly write "Who:", "What:", etc. Make it a seamless narrative.
+3. Second part: Write EXACTLY 1 standalone concluding sentence on a new line (e.g. "Kesimpulan: ..."). This conclusion MUST state an analytical verdict on the overall quality of the banks that passed.
+4. Do NOT use bullet points, bold text (**), or emojis. Do NOT give stock investment advice.
+
+Data:
+{json.dumps(data, indent=2)}
+"""
+
+    def call():
+        response = client.models.generate_content(model='gemini-1.5-flash', contents=prompt)
+        return response.text.strip().replace('**', '')
+    return handle_ai_retry(call)
+
+def generate_simulation_interpretation(data: dict, language: str = "English") -> str:
+    try:
+        client = get_client()
+    except Exception:
+        return "API Key Gemini tidak ditemukan."
+
+    prompt = f"""
+You are a senior banking data analyst. Analyze the What-If Simulation data.
+STRICT RULES:
+1. Output MUST be purely in {language}.
+2. First part: Write EXACTLY 1 paragraph (maximum 6 sentences) summarizing the data using the 5W1H framework (Who, What, Where, When, Why, How). DO NOT explicitly write "Who:", "What:", etc. Make it a seamless narrative.
+3. Second part: Write EXACTLY 1 standalone concluding sentence on a new line (e.g. "Kesimpulan: ..."). This conclusion MUST state an analytical verdict on whether the simulated changes significantly improve or harm the bank.
+4. Do NOT use bullet points, bold text (**), or emojis. Do NOT give stock investment advice.
+
+Data:
+{json.dumps(data, indent=2)}
+"""
+
+    def call():
+        response = client.models.generate_content(model='gemini-1.5-flash', contents=prompt)
+        return response.text.strip().replace('**', '')
+    return handle_ai_retry(call)
+
+def generate_compare_interpretation(data: dict, language: str = "English") -> str:
+    try:
+        client = get_client()
+    except Exception:
+        return "API Key Gemini tidak ditemukan."
+
+    # Slicing: Only keep start score, end score, and average for each bank
+    series = data.get("series", [])
+    optimized_series = []
+    for s in series:
+        scores = [v for v in s.get("scores", []) if v is not None]
+        if scores:
+            optimized_series.append({
+                "ticker": s["ticker"],
+                "start_score": scores[0],
+                "end_score": scores[-1],
+                "avg_score": sum(scores) / len(scores)
+            })
+    data["series"] = optimized_series
+
+    prompt = f"""
+You are a senior banking data analyst. Analyze the Compare Stocks data.
+STRICT RULES:
+1. Output MUST be purely in {language}.
+2. First part: Write EXACTLY 1 paragraph (maximum 6 sentences) summarizing the data using the 5W1H framework (Who, What, Where, When, Why, How). DO NOT explicitly write "Who:", "What:", etc. Make it a seamless narrative.
+3. Second part: Write EXACTLY 1 standalone concluding sentence on a new line (e.g. "Kesimpulan: ..."). This conclusion MUST state an analytical verdict on which bank is superior across the timeline.
+4. Do NOT use bullet points, bold text (**), or emojis. Do NOT give stock investment advice.
+
+Data:
+{json.dumps(data, indent=2)}
+"""
+
+    def call():
+        response = client.models.generate_content(model='gemini-1.5-flash', contents=prompt)
+        return response.text.strip().replace('**', '')
+    return handle_ai_retry(call)
+
+def generate_historical_interpretation(data: dict, language: str = "English") -> str:
+    try:
+        client = get_client()
+    except Exception:
+        return "API Key Gemini tidak ditemukan."
+
+    # Slicing: Top 3 positive and Top 3 negative changes
+    changes = data.get("significant_changes", [])
+    if changes:
+        changes_sorted = sorted(changes, key=lambda x: x.get("growth_pct", 0), reverse=True)
+        top_3 = changes_sorted[:3]
+        bottom_3 = changes_sorted[-3:] if len(changes_sorted) > 3 else []
+        data["significant_changes"] = {"top_improving": top_3, "top_declining": bottom_3}
+
+    prompt = f"""
+You are a senior banking data analyst. Analyze the Historical Comparison data.
+STRICT RULES:
+1. Output MUST be purely in {language}.
+2. First part: Write EXACTLY 1 paragraph (maximum 6 sentences) summarizing the data using the 5W1H framework (Who, What, Where, When, Why, How). DO NOT explicitly write "Who:", "What:", etc. Make it a seamless narrative.
+3. Second part: Write EXACTLY 1 standalone concluding sentence on a new line (e.g. "Kesimpulan: ..."). This conclusion MUST state an analytical verdict on whether the bank's historical trajectory makes it superior or declining.
+4. Do NOT use bullet points, bold text (**), or emojis. Do NOT give stock investment advice.
+
+Data:
+{json.dumps(data, indent=2)}
+"""
+
+    def call():
+        response = client.models.generate_content(model='gemini-1.5-flash', contents=prompt)
+        return response.text.strip().replace('**', '')
     return handle_ai_retry(call)
 
 def generate_glossary_chat(question: str, history: list, language: str = "English") -> str:
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
+    try:
+        client = get_client()
+    except Exception:
         return "API Key Gemini tidak ditemukan."
-
-    client = genai.Client(api_key=api_key)
 
     context = f"""
 Kamu adalah "Orcas", asisten edukasi finansial untuk aplikasi ORCAS.
@@ -123,139 +267,14 @@ ATURAN SANGAT KETAT:
 5. JANGAN memberikan saran investasi saham.
 6. JANGAN PERNAH mengawali jawabanmu dengan sapaan (seperti "Halo", "Hai", "Salam"). Langsung jawab intinya saja.
 """
-    
     messages = [{"role": "user", "parts": [{"text": context}]}]
     messages.append({"role": "model", "parts": [{"text": f"Understood. I will answer purely in {language} with no emojis and no bold markdown."}]})
-    
     for i, msg in enumerate(history):
         role = "user" if i % 2 == 0 else "model"
         messages.append({"role": role, "parts": [{"text": msg}]})
-        
     messages.append({"role": "user", "parts": [{"text": question}]})
-
+    
     def call():
-        response = client.models.generate_content(model='gemini-3.6-flash', contents=messages)
+        response = client.models.generate_content(model='gemini-1.5-flash', contents=messages)
         return response.text.strip().replace('**', '')
-        
     return handle_ai_retry(call)
-
-def generate_screening_interpretation(data: dict, language: str = "English") -> str:
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        return "API Key Gemini tidak ditemukan."
-
-    client = genai.Client(api_key=api_key)
-    
-    prompt = f"""
-You are an ORCAS banking data analyst.
-Your task is to analyze the following Screening data in EXACTLY 1 to 2 SHORT PARAGRAPHS.
-STRICT RULES:
-1. ALL OUTPUT MUST BE IN {language}.
-2. NEVER use bullet points, lists, bold text (markdown **), or emojis. Write in pure narrative paragraphs.
-3. First paragraph: Explain the chosen metrics (their definitions and what they describe). Also, briefly mention the Data Hint for each metric provided in the data (median, min, max).
-4. Second paragraph: Explain the banks that passed the screening. If there are more than 4 banks, ONLY mention exactly 4 banks (the top 2 best, 1 in the middle, and the 1 worst) and their scores. If there are 4 or fewer banks, mention all of them.
-5. If the data spans a range of years, explicitly state the period as "from year X to Y".
-6. Do NOT give stock investment advice or polite opening/closing phrases.
-
-Data to analyze:
-{json.dumps(data, indent=2)}
-"""
-
-    def call_ai():
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=prompt,
-        )
-        return response.text
-
-    return handle_ai_retry(call_ai)
-
-def generate_simulation_interpretation(data: dict, language: str = "English") -> str:
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        return "API Key Gemini tidak ditemukan."
-
-    client = genai.Client(api_key=api_key)
-    
-    prompt = f"""
-You are an ORCAS banking data analyst.
-Your task is to analyze the following What-If Simulation data in EXACTLY 1 to 2 SHORT PARAGRAPHS.
-STRICT RULES:
-1. ALL OUTPUT MUST BE IN {language}.
-2. NEVER use bullet points, lists, bold text (markdown **), or emojis. Write in pure narrative paragraphs.
-3. First paragraph: Summarize the simulation result. State the evaluated bank, the weight profile used, and how the overall score changed (from baseline to simulated, including the delta). Mention the adjustments that were simulated.
-4. Second paragraph: Analyze *why* the score changed. Discuss whether the adjusted metrics play a key role based on the chosen weight profile, and whether the direction of change (plus or minus) had a logical positive or negative impact on the final score. 
-5. Do NOT give stock investment advice or polite opening/closing phrases.
-
-Data to analyze:
-{json.dumps(data, indent=2)}
-"""
-
-    def call_ai():
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=prompt,
-        )
-        return response.text
-
-    return handle_ai_retry(call_ai)
-
-def generate_compare_interpretation(data: dict, language: str = "English") -> str:
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        return "API Key Gemini tidak ditemukan."
-
-    client = genai.Client(api_key=api_key)
-    
-    prompt = f"""
-You are an ORCAS banking data analyst.
-Your task is to analyze the following Compare Stocks data in EXACTLY 1 to 2 SHORT PARAGRAPHS.
-STRICT RULES:
-1. ALL OUTPUT MUST BE IN {language}.
-2. NEVER use bullet points, lists, bold text (markdown **), or emojis. Write in pure narrative paragraphs.
-3. First paragraph: Introduce the comparison. Mention the banks being compared and explicitly state the year range (from year X to year Y). Mention the Mode (Overall or Section). If it's a specific section (e.g., Income Statement), explain what that section evaluates (e.g., profitability and operational efficiency). If it's Overall, explain that it evaluates the holistic financial health aggregating balance sheet, income, and cash flow. Also, mention the chosen Weight Profile and Missing Data Policy, and state whether the Industry Average benchmark is included.
-4. Second paragraph: Analyze the performance results. Identify which bank achieved the highest score in which year, and which bank recorded the lowest score. Briefly summarize the overall performance trend or gap between the banks.
-5. Do NOT give stock investment advice or polite opening/closing phrases.
-
-Data to analyze:
-{json.dumps(data, indent=2)}
-"""
-
-    def call_ai():
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=prompt,
-        )
-        return response.text
-
-    return handle_ai_retry(call_ai)
-
-def generate_historical_interpretation(data: dict, language: str = "English") -> str:
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        return "API Key Gemini tidak ditemukan."
-
-    client = genai.Client(api_key=api_key)
-    
-    prompt = f"""
-You are an ORCAS banking data analyst.
-Your task is to analyze the following Historical Comparison data in EXACTLY 1 to 2 SHORT PARAGRAPHS.
-STRICT RULES:
-1. ALL OUTPUT MUST BE IN {language}.
-2. NEVER use bullet points, lists, bold text (markdown **), or emojis. Write in pure narrative paragraphs.
-3. First paragraph: Introduce the comparison. Mention the evaluated bank and explicitly state the year range being compared (from year X to year Y). Mention the scope (e.g., across all financial sections or a specific section), explicitly state the significance threshold applied to filter changes (e.g., 20%), and summarize the overall trend (e.g., how many metrics improved vs declined).
-4. Second paragraph: Highlight the most significant changes. Identify the metrics with the largest positive growth and the most concerning declines. Briefly explain the potential business impact of these key changes on the bank's overall health.
-5. Do NOT give stock investment advice or polite opening/closing phrases.
-
-Data to analyze:
-{json.dumps(data, indent=2)}
-"""
-
-    def call_ai():
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=prompt,
-        )
-        return response.text
-
-    return handle_ai_retry(call_ai)
