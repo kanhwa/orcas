@@ -83,7 +83,7 @@ Data Scorecard:
         return response.text.strip().replace('**', '')
     return handle_ai_retry(call)
 
-def generate_ranking_interpretation(ranking_data: list, period: str, language: str = "Indonesian") -> str:
+def generate_ranking_interpretation(ranking_data: list, period: str, filter_type: str = "top", filter_count: int = 10, language: str = "Indonesian") -> str:
 
     
     n = len(ranking_data)
@@ -91,21 +91,24 @@ def generate_ranking_interpretation(ranking_data: list, period: str, language: s
         sliced_ranking = [ranking_data[0], ranking_data[1], ranking_data[n//2], ranking_data[-1]]
     else:
         sliced_ranking = ranking_data
+        
+    filter_label = "terbaik" if filter_type == "top" else "terburuk"
 
     prompt = f"""
 Anda adalah analis pemeringkat emiten perbankan. DILARANG KERAS berhalusinasi.
 Anda WAJIB MENIRU PERSIS struktur naratif dari CONTOH OUTPUT di bawah ini. JANGAN berkreasi sendiri.
 
 ATURAN MUTLAK:
-- Data yang Anda terima adalah data yang sudah disaring oleh pengguna (bisa jadi urutannya dibalik dari yang terburuk ke terbaik).
+- Data yang Anda terima adalah data yang sudah disaring ({filter_count} emiten {filter_label}).
+- WAJIB menyebutkan jenis saringan (misal: "daftar 15 emiten terbaik" atau "daftar 32 emiten terburuk") pada kalimat pengantar, sesuai dengan variabel filter yang dikirimkan.
 - Jika data <= 4 emiten: Sebutkan SEMUANYA berurutan.
 - Jika data > 4 emiten: HANYA sebutkan 4 entitas ini secara berurutan: (1) Urutan pertama di data, (2) Urutan kedua di data, (3) Urutan di posisi tengah, dan (4) Urutan paling terakhir di data.
-- WAJIB menyebutkan Peringkat asli (rank) dari masing-masing emiten berdasarkan data JSON. Jangan bilang "puncak" atau "dasar", sebutkan saja urutan di tabel/data.
+- WAJIB menyebutkan Peringkat asli (rank) dari masing-masing emiten.
 - Skor WSM tidak memiliki satuan. Tulis skor HANYA DENGAN 2 DIGIT DESIMAL (misal 0.71).
 - Tulis 1 Paragraf Naratif dan 1 Paragraf Kesimpulan.
 
 CONTOH OUTPUT YANG HARUS DITIRU:
-Pada evaluasi Scoring periode {period}, berikut adalah daftar emiten yang ditampilkan pada tabel. Emiten pertama di tabel ini adalah BBRI (Peringkat 1) dengan skor 0.71, disusul BMRI (Peringkat 2) dengan skor 0.71. Pada posisi menengah tabel, terdapat MEGA (Peringkat 11) dengan skor 0.39, sementara urutan paling terakhir di tabel ditutup oleh MAYA (Peringkat 17) dengan skor 0.35.
+Pada evaluasi Scoring periode {period}, berikut adalah daftar {filter_count} emiten {filter_label}. Emiten pertama di tabel ini adalah BBRI (Peringkat 1) dengan skor 0.71, disusul BMRI (Peringkat 2) dengan skor 0.71. Pada posisi menengah tabel, terdapat MEGA (Peringkat 11) dengan skor 0.39, sementara urutan paling terakhir di tabel ditutup oleh MAYA (Peringkat 17) dengan skor 0.35.
 
 Kesimpulannya, jarak fundamental yang terlihat antara emiten di urutan teratas tabel dan emiten di urutan terbawah tabel menunjukkan disparitas performa yang signifikan pada kelompok ini.
 

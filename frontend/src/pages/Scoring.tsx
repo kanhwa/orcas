@@ -1132,7 +1132,7 @@ const Scoring = () => {
 
     try {
       const { generateRankingInterpretation } = await import("../services/api");
-      const result = await generateRankingInterpretation(emitensToMention, period, "Indonesian");
+      const result = await generateRankingInterpretation(emitensToMention, period, rankFilterType, rankFilterCount, "Indonesian");
       setRankingAiAnalysis(result.analysis);
     } catch (err: any) {
       setRankingAiError(err.message || "Failed to generate AI analysis");

@@ -24,12 +24,20 @@ def interpret_scorecard(payload: Dict[str, Any]):
 class RankingPayload(BaseModel):
     ranking_data: list
     period: str
+    rank_filter_type: str = "top"
+    rank_filter_count: int = 10
     language: str = "Indonesian"
 
 @router.post("/interpret-ranking")
 def interpret_ranking(payload: RankingPayload):
     try:
-        analysis = generate_ranking_interpretation(payload.ranking_data, payload.period, payload.language)
+        analysis = generate_ranking_interpretation(
+            ranking_data=payload.ranking_data, 
+            period=payload.period, 
+            filter_type=payload.rank_filter_type, 
+            filter_count=payload.rank_filter_count, 
+            language=payload.language
+        )
         return {"analysis": analysis}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

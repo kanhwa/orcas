@@ -1292,11 +1292,13 @@ export async function historicalCompare(
 export async function generateRankingInterpretation(
   ranking_data: any[],
   period: string,
+  rank_filter_type: string,
+  rank_filter_count: number,
   language: string = "Indonesian"
 ): Promise<{ analysis: string }> {
   return request<{ analysis: string }>("/api/ai/interpret-ranking", {
     method: "POST",
-    body: JSON.stringify({ ranking_data, period, language }),
+    body: JSON.stringify({ ranking_data, period, rank_filter_type, rank_filter_count, language }),
   });
 }
 
