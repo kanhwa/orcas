@@ -1124,7 +1124,8 @@ const Scoring = () => {
       return {
         ticker: r.ticker,
         score: parseFloat((r.score ?? r.average_score ?? 0).toFixed(4)).toString(),
-        rank: r.rank ?? originalRank
+        rank: r.rank ?? originalRank,
+        ...(r.yearly_breakdown ? { yearly_breakdown: r.yearly_breakdown } : {})
       };
     });
 

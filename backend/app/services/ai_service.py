@@ -55,21 +55,22 @@ def generate_scorecard_interpretation(payload: dict) -> str:
 
     prompt = f"""
 Anda adalah analis fundamental spesialis sudut pandang makro. DILARANG KERAS berhalusinasi.
-Tugas Anda adalah merangkum 39 metrik Scorecard menjadi 1 paragraf naratif padat dan 1 paragraf kesimpulan.
+Tugas Anda adalah merangkum Scorecard menjadi 1 paragraf naratif padat dan 1 paragraf kesimpulan.
 
 ATURAN MUTLAK:
-- Anda WAJIB meniru struktur kalimat CONTOH OUTPUT di bawah ini.
+- JANGAN menuliskan judul di awal teks (seperti 'Financial Interpretation:', 'Scorecard Analysis:', dll). Langsung ke isi paragraf.
 - Gunakan istilah "bagian" (bukan "seksi").
 - Sebutkan HANYA 2 metrik spesifik: (1) Metrik dengan "Contribution" tertinggi/terbesar (Sumbangsih positif terbesar). (2) Metrik dengan "Contribution" terendah/terburuk (Sumbangsih paling minim atau negatif).
-- Nama metrik WAJIB IDENTIK 100% dengan "metric_name" yang ada di JSON. Jangan diterjemahkan atau disingkat.
-- Sebutkan skor total (total_score) DENGAN 2 DIGIT DESIMAL saja. Coverage ditulis dengan 1 desimal beserta lambang %.
-- Sebutkan "bagian" (Income / Balance / Cash Flow) yang bobot efektifnya paling besar.
-- Wajib memiliki paragraf kesimpulan yang diawali dengan "Kesimpulannya, ...".
+- Nama metrik WAJIB IDENTIK 100% dengan "metric_name" yang ada di JSON. Jangan diterjemahkan.
+- WAJIB menyebutkan angka nominal "contribution" untuk kedua metrik tersebut menggunakan 3 atau 4 digit desimal (misal: 0.0512).
+- Sebutkan skor total (total_score) DENGAN 2 DIGIT DESIMAL saja. 
+- Aturan Persentase (Coverage dan Bagian): Jika angkanya memiliki desimal .0 (misal 100.0% atau 41.0%), WAJIB buang desimalnya menjadi bulat (100% atau 41%). Jika desimalnya bukan .0 (misal 97.4%), biarkan 1 desimal.
+- Wajib memiliki paragraf kesimpulan.
 
 CONTOH OUTPUT YANG HARUS DITIRU:
-Pada evaluasi Scorecard BBCA tahun 2024, emiten sukses meraih skor total 0.59 (Peringkat 3) dengan tingkat coverage data yang sangat prima sebesar 97.4%. Secara struktur, bagian Income menjadi tulang punggung utama dengan porsi kontribusi tertinggi mencapai 47.9%. Secara spesifik, fondasi fundamental ini paling banyak ditopang oleh metrik "Net Income" yang memberikan sumbangsih skor individu terbesar, sedangkan metrik "Beban Usaha" tercatat memberikan sumbangsih terburuk dibandingkan keseluruhan metrik lainnya.
+Pada evaluasi Scorecard BBCA tahun 2024, emiten sukses meraih skor total 0.59 (Peringkat 3) dengan tingkat coverage data yang sangat prima sebesar 97.4%. Secara struktur, bagian Income menjadi tulang punggung utama dengan porsi kontribusi tertinggi mencapai 41%. Secara spesifik, fondasi fundamental ini paling banyak ditopang oleh metrik "Laba Bersih Tahun Berjalan" yang memberikan sumbangsih skor individu terbesar yaitu 0.0512, sedangkan metrik "Beban Usaha" tercatat memberikan sumbangsih terburuk sebesar -0.0123 dibandingkan keseluruhan metrik lainnya.
 
-Kesimpulannya, dominasi bagian Income dan kokohnya metrik Net Income terbukti menjadi pendorong utama skor positif emiten ini, meskipun tertahan sedikit oleh tingginya Beban Usaha.
+Kesimpulannya, dominasi bagian Income dan kokohnya metrik Laba Bersih Tahun Berjalan terbukti menjadi pendorong utama skor positif emiten ini, meskipun tertahan sedikit oleh Beban Usaha.
 
 Output harus dalam bahasa {language}.
 
@@ -96,16 +97,22 @@ def generate_ranking_interpretation(ranking_data: list, period: str, filter_type
 
     prompt = f"""
 Anda adalah analis pemeringkat emiten perbankan. DILARANG KERAS berhalusinasi.
-Anda WAJIB MENIRU PERSIS struktur naratif dari CONTOH OUTPUT di bawah ini. JANGAN berkreasi sendiri.
 
 ATURAN MUTLAK:
+- JANGAN menuliskan judul di awal teks (seperti 'Ranking Analysis:', 'Interpretasi:', dll). Langsung ke isi paragraf.
 - Data yang Anda terima adalah data yang sudah disaring ({filter_count} emiten {filter_label}).
-- WAJIB menyebutkan jenis saringan (misal: "daftar 15 emiten terbaik" atau "daftar 32 emiten terburuk") pada kalimat pengantar, sesuai dengan variabel filter yang dikirimkan.
+- WAJIB menyebutkan jenis saringan (misal: "daftar 15 emiten terbaik" atau "daftar 32 emiten terburuk") pada kalimat pengantar.
 - Jika data <= 4 emiten: Sebutkan SEMUANYA berurutan.
 - Jika data > 4 emiten: HANYA sebutkan 4 entitas ini secara berurutan: (1) Urutan pertama di data, (2) Urutan kedua di data, (3) Urutan di posisi tengah, dan (4) Urutan paling terakhir di data.
 - WAJIB menyebutkan Peringkat asli (rank) dari masing-masing emiten.
-- Skor WSM tidak memiliki satuan. Tulis skor HANYA DENGAN 2 DIGIT DESIMAL (misal 0.71).
+- Skor WSM ditulis HANYA DENGAN 2 DIGIT DESIMAL (misal 0.71).
 - Tulis 1 Paragraf Naratif dan 1 Paragraf Kesimpulan.
+
+ATURAN PARAGRAF KESIMPULAN:
+Tulis 1 kalimat kesimpulan (dimulai dengan "Kesimpulannya, ..."). Anda WAJIB MEMILIH SALAH SATU dari 3 gaya kesimpulan berikut secara dinamis sesuai kondisi data:
+- Gaya 1 (Selisih/Jarak): Menyoroti jarak fundamental/selisih nilai antara emiten urutan teratas di tabel dan emiten urutan terbawah di tabel.
+- Gaya 2 (Dominasi/Keketatan): Menyoroti apakah emiten urutan pertama mendominasi dengan jarak poin sangat jauh, ATAU justru persaingannya sangat ketat.
+- Gaya 3 (Tren Historis): KHUSUS jika periode analisis adalah multi-tahun (contoh: 2022-2024) dan data json memiliki properti "yearly_breakdown", soroti tren konsistensi pertumbuhan skor dari emiten yang berada di urutan pertama dari tahun ke tahun.
 
 CONTOH OUTPUT YANG HARUS DITIRU:
 Pada evaluasi Scoring periode {period}, berikut adalah daftar {filter_count} emiten {filter_label}. Emiten pertama di tabel ini adalah BBRI (Peringkat 1) dengan skor 0.71, disusul BMRI (Peringkat 2) dengan skor 0.71. Pada posisi menengah tabel, terdapat MEGA (Peringkat 11) dengan skor 0.39, sementara urutan paling terakhir di tabel ditutup oleh MAYA (Peringkat 17) dengan skor 0.35.
@@ -198,6 +205,7 @@ Anda adalah analis finansial spesialis What-If Simulation. DILARANG KERAS berhal
 Anda WAJIB meniru gaya dan format CONTOH OUTPUT di bawah ini. JANGAN berkreasi di luar struktur ini.
 
 ATURAN WAJIB:
+- JANGAN menuliskan judul di awal teks (seperti 'Analysis:', dll). Langsung ke isi paragraf.
 - KHUSUS UNTUK SKOR WSM (baseline_score & simulated_score): Tulis skor menggunakan 4 digit desimal (contoh: 0.5911 menjadi 0.5935). JANGAN dipotong jadi 2 digit.
 - FORMAT ANGKA METRIK: 
   > Jika unitnya "IDR bn", bulatkan ke "Triliun" tanpa koma (contoh: 35228.60 IDR bn menjadi Rp 35 Triliun). Abaikan tanda minus jika ada.
@@ -247,6 +255,7 @@ Anda adalah analis finansial spesialis pembanding emiten. DILARANG KERAS berhalu
 Anda WAJIB meniru gaya dan format CONTOH OUTPUT di bawah ini. JANGAN berkreasi di luar struktur ini.
 
 ATURAN WAJIB:
+- JANGAN menuliskan judul di awal teks (seperti 'Analysis:', dll). Langsung ke isi paragraf.
 - Skor WSM (Overall Score atau Section Score) tidak memiliki satuan uang. Cukup tampilkan angka bulat dengan 2 digit di belakang koma (contoh: 0.71, 0.51). 
 - Jika ada 2 bank, bandingkan keduanya terhadap skor rata-rata (Average). Jika ada >2 bank, sebutkan bank pemimpin, bank posisi menengah, dan bank tertinggal.
 - Tulis 1 Paragraf atas (Naratif) dan 1 Paragraf Kesimpulan.
@@ -285,6 +294,7 @@ Anda adalah analis historis pergerakan metrik. DILARANG KERAS berhalusinasi.
 Anda WAJIB meniru gaya dan format CONTOH OUTPUT di bawah ini. JANGAN berkreasi di luar struktur ini.
 
 ATURAN WAJIB:
+- JANGAN menuliskan judul di awal teks (seperti 'Analysis:', dll). Langsung ke isi paragraf.
 - Anda hanya boleh menyoroti MAKSIMAL 2 METRIK SAJA (entah itu 1 paling membaik & 1 paling memburuk, atau 2-duanya paling membaik/memburuk). Jangan sebut lebih dari 2 metrik agar teks tetap singkat.
 - Wajib sebutkan nama Ticker (contoh: BBCA), periode (contoh: 2022-2024), dan angka filter ambang batas (contoh: 70%).
 - FORMAT ANGKA KEUANGAN: Bulatkan ke "Triliun" tanpa koma (contoh: -38457 IDR bn atau 2243 IDR bn dibulatkan dan ditulis menjadi Rp 38 Triliun atau Rp 2 Triliun). Abaikan tanda minus jika Anda menggunakan kata "minus" atau "anjlok".
