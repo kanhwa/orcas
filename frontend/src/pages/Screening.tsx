@@ -706,7 +706,7 @@ export default function Screening() {
                 <div className="ml-auto">
                   <div className="flex rounded-md shadow-sm relative">
                 <Button
-                  className="bg-purple-600 hover:bg-purple-700 text-white rounded-r-none pr-3"
+                  className="bg-purple-600 hover:bg-purple-700 text-white rounded-r-none border-r border-purple-500 pr-3 focus:ring-0"
                   onClick={handleGenerateScreeningAi}
                   disabled={aiLoading}
                 >
@@ -716,7 +716,7 @@ export default function Screening() {
                   <select
                     value={aiLanguage}
                     onChange={(e) => setAiLanguage(e.target.value as "Indonesian" | "English")}
-                    className="appearance-none bg-purple-700 hover:bg-purple-800 text-white rounded-r-md pl-3 pr-8 py-2 text-sm focus:outline-none cursor-pointer border-l border-purple-500 font-medium"
+                    className="appearance-none bg-purple-600 hover:bg-purple-700 text-white rounded-l-none rounded-r-md pl-3 pr-8 py-2 text-sm focus:outline-none cursor-pointer border-l-0 font-medium h-full min-h-[36px]"
                     disabled={aiLoading}
                   >
                     <option value="Indonesian">Indonesian</option>

@@ -409,9 +409,9 @@ export default function SyncData({ user: _ }: SyncDataProps) {
         <div className="flex flex-col gap-2">
           <Button 
             onClick={handleDownloadTemplate} 
-            className="w-fit text-sm bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-300"
+            className="w-fit text-sm bg-transparent hover:bg-orange-50 text-orange-600 border border-orange-500 font-semibold shadow-sm"
           >
-            ⬇️ Download Template
+            Download Template
           </Button>
           <div className="text-sm text-gray-500 font-medium">
             {lastRefreshed && `Dataset synchronized as of: ${lastRefreshed.toLocaleString('en-US')}`}

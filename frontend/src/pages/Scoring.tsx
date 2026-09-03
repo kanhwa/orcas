@@ -1919,6 +1919,8 @@ const Scoring = () => {
         </p>
       </div>
 
+      {weightProfile === "custom" && renderCustomWeightsPanel()}
+
       {loading && <p className="text-gray-500">Loading ranking...</p>}
       {!loading && rankingError && (
         <p className="text-red-500">{rankingError}</p>
@@ -2746,7 +2748,7 @@ const Scoring = () => {
             )}
             <div className="ml-auto flex rounded-md shadow-sm">
               <Button
-                className="bg-purple-600 hover:bg-purple-700 text-white rounded-r-none pr-3"
+                className="bg-purple-600 hover:bg-purple-700 text-white rounded-r-none border-r border-purple-500 pr-3 focus:ring-0"
                 onClick={handleGenerateAiAnalysis}
                 disabled={aiAnalysisLoading}
               >
