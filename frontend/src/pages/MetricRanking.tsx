@@ -136,6 +136,9 @@ export default function MetricRanking() {
           unit: unit || "n/a",
           start_year: panelResult.from_year,
           end_year: panelResult.to_year,
+          total_banks: datasetSize,
+          top_n: topN,
+          rank_type: rankType,
           selected_banks: selectedRows.map((r) => ({
             rank: rows.findIndex(x => x.ticker === r.ticker) + 1,
             ticker: r.ticker,
@@ -157,6 +160,9 @@ export default function MetricRanking() {
           unit: unit || "n/a",
           start_year: yearResult.year,
           end_year: yearResult.year,
+          total_banks: datasetSize,
+          top_n: topN,
+          rank_type: rankType,
           selected_banks: selectedRows.map((r) => ({
             rank: r.rank,
             ticker: r.ticker,

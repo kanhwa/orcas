@@ -95,33 +95,29 @@ Data:
 
 def generate_metric_ranking_interpretation(data: dict, language: str = "English") -> str:
 
-    # Slicing: List 4 (Top 2, Mid 1, Last 1) or List 3 (Top 1, Mid 1, Last 1)
-    ranking = data.get("ranking", [])
-    n = len(ranking)
-    if n > 4:
-        sliced_ranking = [ranking[0], ranking[1], ranking[n//2], ranking[-1]]
-        data["ranking"] = sliced_ranking
-    elif n == 4:
-        data["ranking"] = [ranking[0], ranking[1], ranking[2], ranking[3]]
-    elif n == 3:
-        data["ranking"] = [ranking[0], ranking[1], ranking[2]]
-
     prompt = f"""
-ATURAN MUTLAK (STRICT RULES):
-1. Anda adalah penerjemah tabel untuk Peringkat Metrik. DILARANG KERAS berhalusinasi.
-2. Tulis 1 Paragraf (maksimal 2 kalimat). 
-3. Aturan Penyebutan Emiten (TIDAK BOLEH pakai format list/poin):
-   - Jika data >= 4 emiten: Sebutkan Peringkat 1, Peringkat 2, posisi menengah (Median), dan posisi paling bawah (Bottom).
-   - Jika data < 4 emiten: Sebutkan Peringkat 1, posisi menengah, dan posisi paling bawah.
-4. Tulis 1 kalimat kesimpulan di paragraf baru (dimulai dengan "Kesimpulannya, ...") murni merangkum ketimpangan atau selisih antara pemenang dan posisi bawah.
-5. FORMAT ANGKA: WAJIB memformat semua angka dengan titik ribuan (contoh: 243.802). WAJIB sertakan satuan unit di belakang SETIAP angka (contoh: 120.000 IDR bn atau 2.5%). Jangan gunakan angka telanjang.
-6. JANGAN gunakan kata ganti (ini, itu, tersebut). Sebut nama Ticker secara spesifik.
-7. Output harus dalam bahasa {language}.
+Anda adalah penerjemah tabel untuk fitur Metric Ranking. DILARANG KERAS berhalusinasi.
 
-Data:
+ATURAN KONVERSI ANGKA & UNIT:
+- Anda WAJIB membulatkan angka ke "Triliun". Jika angkanya ribuan (contoh: 243802 IDR bn atau 1033 IDR bn), buang tiga angka di belakang dan bulatkan menjadi Triliun (contoh: Rp 243 Triliun, atau Rp 1 Triliun).
+- BILA nilai asli adalah 1205 IDR bn, bulatkan saja menjadi Rp 1 Triliun.
+
+ATURAN PARAGRAF 1 (Naratif):
+Tulis 1 Paragraf (maks 2 kalimat). Gunakan gaya bahasa seperti ini:
+"Pada evaluasi metrik [Nama Metrik] periode [Tahun], berikut adalah [Top N] bank [terbaik/terburuk] dari total [Total Banks] bank yang dievaluasi. Pada tahun akhir [Tahun Akhir], [Ticker 1] menempati Peringkat 1 dengan nilai [Nilai 1], disusul [Ticker 2] di Peringkat 2 dengan [Nilai 2] dan [Ticker 3] di Peringkat 3 dengan [Nilai 3], sementara [Ticker Terbawah] menempati posisi terbawah dalam kelompok ini dengan nilai [Nilai Terbawah]."
+*Catatan: Sesuaikan rank (terbaik/terburuk) dan angka sesuai JSON (lihat rank_type, top_n, total_banks).*
+
+ATURAN PARAGRAF 2 (Kesimpulan):
+Tulis 1 kalimat kesimpulan (dimulai dengan "Kesimpulannya, ..."). PILIH SALAH SATU dari 3 gaya kesimpulan berikut, mana yang paling cocok dengan data:
+- Gaya 1 (Selisih): Menyoroti jarak/selisih nilai antara Peringkat 1 dan Peringkat terbawah di kelompok tersebut.
+- Gaya 2 (Dominasi): Menyoroti jika Peringkat 1 & 2 mendominasi sangat jauh dari sisa bank lainnya (ketimpangan besar).
+- Gaya 3 (Tren): (Khusus jika start_year dan end_year berbeda) Menyoroti tren pertumbuhan/konsistensi bank juara dari tahun ke tahun.
+
+Output harus dalam bahasa {language}.
+
+Data JSON:
 {json.dumps(data, indent=2)}
 """
-    
     def call():
         client = get_client()
         response = client.models.generate_content(model='gemini-3.5-flash-lite', contents=prompt)
