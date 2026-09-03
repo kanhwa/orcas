@@ -2018,7 +2018,7 @@ const Scoring = () => {
                     const baseRanking = scoringMode === "multi" ? multiRanking : ranking;
                     if (rankFilterType === 'all') return baseRanking;
                     if (rankFilterType === 'top') return baseRanking.slice(0, rankFilterCount);
-                    if (rankFilterType === 'worst') return baseRanking.slice(-rankFilterCount);
+                    if (rankFilterType === 'worst') return [...baseRanking].slice(-rankFilterCount).reverse();
                     return baseRanking;
                   })()
                 )}
@@ -2066,7 +2066,7 @@ const Scoring = () => {
               <tbody>
                 {(rankFilterType === 'all' ? multiRanking : 
                   rankFilterType === 'top' ? multiRanking.slice(0, rankFilterCount) : 
-                  multiRanking.slice(-rankFilterCount)
+                  [...multiRanking].slice(-rankFilterCount).reverse()
                 ).map((item, idx) => {
                   const originalRank = multiRanking.findIndex(m => m.ticker === item.ticker) + 1;
                   return (
@@ -2110,7 +2110,7 @@ const Scoring = () => {
               <tbody>
                 {(rankFilterType === 'all' ? ranking : 
                   rankFilterType === 'top' ? ranking.slice(0, rankFilterCount) : 
-                  ranking.slice(-rankFilterCount)
+                  [...ranking].slice(-rankFilterCount).reverse()
                 ).map((item, idx) => {
                   const coveragePct = asPercent(item.coverage?.pct ?? null);
                   const coverageLabel =
