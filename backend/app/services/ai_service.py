@@ -137,19 +137,22 @@ def generate_screening_interpretation(data: dict, language: str = "English") -> 
         data["passing_banks"] = sliced
 
     prompt = f"""
-ATURAN MUTLAK (STRICT RULES):
-1. Anda adalah penerjemah tabel untuk fitur Stock Screening. DILARANG KERAS berhalusinasi.
-2. Tulis 1 Paragraf (maksimal 2 kalimat). WAJIB sebutkan kriteria metriknya dan berapa emiten yang lolos dari total emiten yang dievaluasi (ambil angka total dari field `total_passed` dan `total_evaluated`).
-   - PENTING: Terjemahkan simbol matematika pada kriteria filter menjadi kata verbal (contoh: ">" menjadi "di atas", "<" menjadi "di bawah", "<=" menjadi "kurang dari atau sama dengan").
-   - PENTING: Pastikan angka kriteria filter juga DIBERI SATUAN UNIT (contoh: di atas 120.000 IDR bn).
-3. Aturan Penyebutan Emiten:
-   - WAJIB sebut Peringkat 1, Peringkat 2, posisi menengah, dan posisi terbawah. (TIDAK BOLEH pakai format list/poin).
-4. Tulis 1 kalimat kesimpulan di paragraf baru (dimulai dengan "Kesimpulannya, ...") murni perbandingan selisih nilai Peringkat 1 dan peringkat bawah.
-5. FORMAT ANGKA: Anda WAJIB memformat semua angka dengan titik ribuan (contoh: 243802 menjadi 243.802). Selalu sertakan unit di belakang setiap angka.
-6. JANGAN gunakan kata ganti (ini, itu, tersebut). Sebut nama Ticker secara spesifik. Gunakan kata "penyaringan".
-7. Output harus dalam bahasa {language}.
+Anda adalah mesin penerjemah tabel Stock Screening. DILARANG KERAS berhalusinasi. 
+Anda WAJIB MENIRU PERSIS gaya bahasa dan struktur dari CONTOH OUTPUT di bawah ini. JANGAN berkreasi sendiri!
 
-Data Screening:
+ATURAN KONVERSI ANGKA & UNIT:
+- Terjemahkan "IDR bn" menjadi "Triliun". Jika angkanya ribuan (contoh: 243802 IDR bn), hilangkan tiga angka di belakang dan jadikan Triliun (contoh: Rp 243 Triliun).
+- Jika nilai filter adalah 120000 IDR bn, tulis menjadi Rp 120 Triliun. 
+- Terjemahkan simbol (seperti >) menjadi kata verbal (contoh: "di atas").
+
+CONTOH OUTPUT YANG HARUS ANDA TIRU PERSIS:
+Pada penyaringan tahun 2024 dengan kriteria Kas Dan Setara Kas Awal Periode di atas Rp 120 Triliun, terdapat 4 dari 32 emiten yang berhasil lolos. BMRI menempati Peringkat 1 dengan nilai Rp 243 Triliun dan disusul BBRI di Peringkat 2 dengan nilai Rp 218 Triliun, sementara BBNI menempati posisi menengah Rp 154 Triliun dan BBCA berada di peringkat paling bawah Rp 124 Triliun.
+
+Kesimpulannya, BMRI memimpin kriteria kas awal periode ini dengan jarak yang signifikan, hampir dua kali lipat lebih besar dibandingkan BBCA yang hanya lolos tipis di atas batas kriteria filter.
+
+(Catatan: Jika jumlah emiten yang lolos BUKAN 4, sesuaikan penyebutannya namun TETAP gunakan gaya bahasa di atas).
+
+Data Screening Saat Ini:
 {json.dumps(data, indent=2)}
 """
 
