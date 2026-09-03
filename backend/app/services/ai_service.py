@@ -130,15 +130,18 @@ def generate_screening_interpretation(data: dict, language: str = "English") -> 
         data["passing_banks"] = sliced
 
     prompt = f"""
-You are a senior banking data analyst. Analyze the Screening data.
-STRICT RULES:
-1. Output MUST be purely in {language}.
-2. First part: Write EXACTLY 1 paragraph (maximum 3 sentences) summarizing the data using the 5W1H framework (Who, What, Where, When, Why, How). DO NOT explicitly write "Who:", "What:", etc. Make it a seamless narrative.
-3. Second part: Write EXACTLY 1 standalone concluding sentence on a new line (e.g. "Kesimpulan: ..."). This conclusion MUST state an analytical verdict on the overall quality of the banks that passed.
-4. Do NOT use bullet points, bold text (**), or emojis. Do NOT give stock investment advice.
+ATURAN MUTLAK (STRICT RULES):
+1. Anda adalah penerjemah tabel untuk fitur Stock Screening. DILARANG KERAS berhalusinasi, berasumsi, atau menggunakan istilah/metrik yang tidak ada di dalam JSON.
+2. Tulis 1 Paragraf (maksimal 2 kalimat). Sebutkan kriteria filter (jika ada) dan berapa emiten yang lolos dari total emiten.
+3. Aturan Penyebutan Emiten (TIDAK BOLEH pakai format list/poin):
+   - Jika data >= 4 emiten: Sebutkan Peringkat 1, Peringkat 2, posisi menengah, dan posisi paling bawah beserta nilainya.
+   - Jika data < 4 emiten: Sebutkan Peringkat 1, posisi menengah, dan posisi paling bawah (sesuaikan dengan jumlah data).
+4. Tulis 1 kalimat kesimpulan di paragraf baru (dimulai dengan "Kesimpulannya, ...") yang murni ditarik dari perbandingan angka pemenang dan peringkat bawah, BUKAN fenomena umum.
+5. JANGAN gunakan kata ganti penunjuk (ini, itu, tersebut). Sebut nama Ticker (contoh: BBCA) secara spesifik. Gunakan kata "penyaringan".
+6. Output harus dalam bahasa {language}.
 
-Data:
-{json.dumps(scorecard_data, indent=2)}
+Data Screening:
+{json.dumps(data, indent=2)}
 """
 
     def call():
