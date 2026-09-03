@@ -62,7 +62,7 @@ ATURAN MUTLAK:
 - Gunakan istilah "bagian" (bukan "seksi").
 - Sebutkan HANYA 2 metrik spesifik: (1) Metrik dengan "Contribution" tertinggi/terbesar (Sumbangsih positif terbesar). (2) Metrik dengan "Contribution" terendah/terburuk (Sumbangsih paling minim atau negatif).
 - Nama metrik WAJIB IDENTIK 100% dengan "metric_name" yang ada di JSON. Jangan diterjemahkan.
-- WAJIB menyebutkan angka nominal "contribution" untuk kedua metrik tersebut menggunakan 3 atau 4 digit desimal (misal: 0.0512).
+- WAJIB menyebutkan angka nominal "contribution" secara FULL/UTUH tanpa memotong desimalnya (tulis persis seperti angka utuh yang ada di JSON).
 - Sebutkan skor total (total_score) DENGAN 2 DIGIT DESIMAL saja. 
 - Aturan Persentase (Coverage dan Bagian): Jika angkanya memiliki desimal .0 (misal 100.0% atau 41.0%), WAJIB buang desimalnya menjadi bulat (100% atau 41%). Jika desimalnya bukan .0 (misal 97.4%), biarkan 1 desimal.
 
@@ -72,7 +72,7 @@ Tulis 1 kalimat kesimpulan (dimulai dengan "Kesimpulannya, ..."). Anda WAJIB MEM
 - Gaya B (Efek Tarik-Tambang): Menyoroti efek "tarik-tambang" di mana performa metrik pahlawan penyumbang skor tertinggi harus beradu dengan beban dari metrik penyumbang skor terburuk.
 
 CONTOH OUTPUT YANG HARUS DITIRU:
-Pada evaluasi Scorecard BBCA tahun 2024, emiten sukses meraih skor total 0.59 (Peringkat 3) dengan tingkat coverage data yang sangat prima sebesar 97.4%. Secara struktur, bagian Income menjadi tulang punggung utama dengan porsi kontribusi tertinggi mencapai 41%. Secara spesifik, fondasi fundamental ini paling banyak ditopang oleh metrik "Laba Bersih Tahun Berjalan" yang memberikan sumbangsih skor individu terbesar yaitu 0.0512, sedangkan metrik "Beban Usaha" tercatat memberikan sumbangsih terburuk sebesar -0.0123 dibandingkan keseluruhan metrik lainnya.
+Pada evaluasi Scorecard BBCA tahun 2024, emiten sukses meraih skor total 0.59 (Peringkat 3) dengan tingkat coverage data yang sangat prima sebesar 97.4%. Secara struktur, bagian Income menjadi tulang punggung utama dengan porsi kontribusi tertinggi mencapai 41%. Secara spesifik, fondasi fundamental ini paling banyak ditopang oleh metrik "Laba Bersih Tahun Berjalan" yang memberikan sumbangsih skor individu terbesar yaitu 0.000018, sedangkan metrik "Beban Usaha" tercatat memberikan sumbangsih terburuk sebesar -0.000005 dibandingkan keseluruhan metrik lainnya.
 
 Kesimpulannya, dominasi bagian Income dan kokohnya metrik Laba Bersih Tahun Berjalan terbukti menjadi pendorong utama skor positif emiten ini, meskipun tertahan sedikit oleh tingginya Beban Usaha.
 
