@@ -738,17 +738,27 @@ const Simulation: React.FC = () => {
     try {
       const payload = {
         emiten: result.ticker,
+        baseline_year: result.baseline_year,
+        simulated_year: result.simulation_year,
         weight_profile: resultWeightLabel,
         baseline_score: result.baseline_score,
         simulated_score: result.simulated_score,
         delta: result.delta,
         delta_percent: result.delta_percent,
-        adjustments: result.adjustments_detail.map(adj => ({
-          metric: adj.metric_name,
-          adjustment_percent: adj.adjustment_percent > 0 ? `+${adj.adjustment_percent}%` : `${adj.adjustment_percent}%`,
-          baseline_value: adj.baseline_value,
-          simulated_value: adj.simulated_value
-        }))
+        adjustments: result.adjustments_detail.map(adj => {
+          const unitResolution = resolveUnitConfig([
+            adj.metric_key,
+            adj.metric_name,
+          ]);
+          return {
+            metric: adj.metric_name,
+            type: adj.type,
+            unit: unitResolution.cfg?.displayUnit ?? null,
+            adjustment_percent: adj.adjustment_percent > 0 ? `+${adj.adjustment_percent}%` : `${adj.adjustment_percent}%`,
+            baseline_value: adj.baseline_value,
+            simulated_value: adj.simulated_value
+          };
+        })
       };
 
       const { generateSimulationInterpretation } = await import("../services/api");

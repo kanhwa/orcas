@@ -161,14 +161,28 @@ Data Screening Saat Ini:
 def generate_simulation_interpretation(data: dict, language: str = "English") -> str:
 
     prompt = f"""
-You are a senior banking data analyst. Analyze the What-If Simulation data.
-STRICT RULES:
-1. Output MUST be purely in {language}.
-2. First part: Write EXACTLY 1 paragraph (maximum 3 sentences) summarizing the data using the 5W1H framework (Who, What, Where, When, Why, How). DO NOT explicitly write "Who:", "What:", etc. Make it a seamless narrative.
-3. Second part: Write EXACTLY 1 standalone concluding sentence on a new line (e.g. "Kesimpulan: ..."). This conclusion MUST state an analytical verdict on whether the simulated changes significantly improve or harm the bank.
-4. Do NOT use bullet points, bold text (**), or emojis. Do NOT give stock investment advice.
+Anda adalah analis finansial spesialis What-If Simulation. DILARANG KERAS berhalusinasi.
+Anda WAJIB meniru gaya dan format CONTOH OUTPUT di bawah ini. JANGAN berkreasi di luar struktur ini.
 
-Data:
+ATURAN WAJIB:
+- KHUSUS UNTUK SKOR WSM (baseline_score & simulated_score): Tulis skor menggunakan 4 digit desimal (contoh: 0.5911 menjadi 0.5935). JANGAN dipotong jadi 2 digit.
+- FORMAT ANGKA METRIK: 
+  > Jika unitnya "IDR bn", bulatkan ke "Triliun" tanpa koma (contoh: 35228.60 IDR bn menjadi Rp 35 Triliun). Abaikan tanda minus jika ada.
+  > Jika unitnya BUKAN "IDR bn" (contoh: IDR/share, %), biarkan angka aslinya (boleh sertakan maksimal 2 desimal) beserta unitnya (contoh: 533.80 IDR/share).
+- PENYEBUTAN METRIK: 
+  > Jika total metrik yang diubah <= 4: Sebutkan SEMUANYA.
+  > Jika total metrik yang diubah > 4: HANYA sebutkan 2 metrik dengan persentase perubahan yang paling ekstrem (entah itu naik paling tajam atau turun paling tajam).
+- Wajib sebutkan sifat metrik tersebut: (bersifat Benefit) atau (bersifat Cost).
+- Tulis 1 Paragraf atas (Naratif) dan 1 Paragraf Kesimpulan.
+
+CONTOH OUTPUT YANG HARUS DITIRU (Misal ada 2 metrik):
+Pada simulasi emiten BBCA (proyeksi tahun {data.get("baseline_year", "")} ke {data.get("simulated_year", "")}), skor keseluruhan diproyeksikan mengalami kenaikan dari 0.5911 menjadi 0.5935 (naik 0.4%). Perubahan ini didorong oleh skenario kenaikan pada metrik EPS (bersifat Benefit) sebesar +20% menjadi 533.80 IDR/share, yang beradu dengan pembengkakan pada metrik Beban Usaha (bersifat Cost) sebesar +10% menjadi minus Rp 35 Triliun.
+
+Kesimpulannya, meskipun beban usaha mengalami pembengkakan, dampak positif dari lonjakan profitabilitas (EPS) masih lebih dominan sehingga mampu menarik skor akhir BBCA tetap naik di zona positif.
+
+Output harus dalam bahasa {language}.
+
+Data Simulasi:
 {json.dumps(data, indent=2)}
 """
 
