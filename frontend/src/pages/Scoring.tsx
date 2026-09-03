@@ -2128,7 +2128,7 @@ const Scoring = () => {
                       : "bg-gray-100 text-gray-600";
                   return (
                     <tr key={`${item.ticker}-${idx}`}>
-                      <td>{idx + 1}</td>
+                      <td><span className="font-semibold text-base">{item.rank}</span></td>
                       <td className="font-mono">{item.ticker}</td>
                       <td>{formatDecimal(item.score, 6)}</td>
                       <td>{coverageLabel}</td>

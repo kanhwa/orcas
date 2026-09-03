@@ -54,17 +54,19 @@ def generate_scorecard_interpretation(payload: dict) -> str:
         scorecard_data["metrics"] = {"top_contributors": top_3, "bottom_contributors": bottom_3}
 
     prompt = f"""
-Anda adalah analis fundamental spesialis sudut pandang makro (Helicopter View). DILARANG KERAS berhalusinasi.
-Tugas Anda adalah merangkum 39 metrik Scorecard menjadi 1 paragraf padat tanpa membuat pusing pembaca.
+Anda adalah analis fundamental spesialis sudut pandang makro. DILARANG KERAS berhalusinasi.
+Tugas Anda adalah merangkum 39 metrik Scorecard menjadi 1 paragraf padat.
 
 ATURAN MUTLAK:
 - Anda WAJIB meniru struktur kalimat CONTOH OUTPUT di bawah ini.
-- Jangan sebutkan puluhan metrik. HANYA sebutkan 1 metrik spesifik yang memiliki nilai "Contribution" paling tinggi atau paling dominan di antara semua metrik.
-- Sebutkan skor total (total_score), persentase kelengkapan data (coverage_pct), dan Seksi (Income / Balance / Cash Flow) yang bobot efektifnya paling besar.
-- Skor total ditulis dengan 4 desimal. Coverage ditulis dengan 1 desimal beserta lambang %.
+- Gunakan istilah "bagian" (bukan "seksi").
+- Sebutkan HANYA 2 metrik spesifik: (1) Metrik dengan "Contribution" tertinggi/terbesar (Sumbangsih positif terbesar). (2) Metrik dengan "Contribution" terendah/terburuk (Sumbangsih paling minim atau negatif).
+- Nama metrik WAJIB IDENTIK 100% dengan "metric_name" yang ada di JSON. Jangan diterjemahkan atau disingkat.
+- Sebutkan skor total (total_score) DENGAN 2 DIGIT DESIMAL saja. Coverage ditulis dengan 1 desimal beserta lambang %.
+- Sebutkan "bagian" (Income / Balance / Cash Flow) yang bobot efektifnya paling besar.
 
 CONTOH OUTPUT YANG HARUS DITIRU:
-Pada evaluasi Scorecard BBCA tahun 2024, emiten sukses meraih skor total 0.5911 (Peringkat 3) dengan tingkat coverage data yang sangat prima sebesar 97.4%. Secara struktur, seksi Income menjadi tulang punggung utama dengan porsi kontribusi tertinggi mencapai 47.9%. Secara spesifik, fondasi fundamental ini paling banyak ditopang oleh metrik Net Income yang memberikan sumbangsih skor individu terbesar dibandingkan puluhan metrik lainnya.
+Pada evaluasi Scorecard BBCA tahun 2024, emiten sukses meraih skor total 0.59 (Peringkat 3) dengan tingkat coverage data yang sangat prima sebesar 97.4%. Secara struktur, bagian Income menjadi tulang punggung utama dengan porsi kontribusi tertinggi mencapai 47.9%. Secara spesifik, fondasi fundamental ini paling banyak ditopang oleh metrik "Net Income" yang memberikan sumbangsih skor individu terbesar, sedangkan metrik "Beban Usaha" tercatat memberikan sumbangsih terburuk dibandingkan keseluruhan metrik lainnya.
 
 Output harus dalam bahasa {language}.
 
@@ -92,17 +94,17 @@ Anda adalah analis pemeringkat emiten perbankan. DILARANG KERAS berhalusinasi.
 Anda WAJIB MENIRU PERSIS struktur naratif dari CONTOH OUTPUT di bawah ini. JANGAN berkreasi sendiri.
 
 ATURAN MUTLAK:
-- Data yang Anda terima adalah data yang sudah disaring oleh pengguna (bisa jadi ini tabel Top N, bisa jadi tabel Worst N). Anggap item urutan pertama di JSON adalah posisi puncak di tabel tersebut.
+- Data yang Anda terima adalah data yang sudah disaring oleh pengguna (bisa jadi urutannya dibalik dari yang terburuk ke terbaik).
 - Jika data <= 4 emiten: Sebutkan SEMUANYA berurutan.
-- Jika data > 4 emiten: HANYA sebutkan 4 entitas ini: (1) Urutan pertama, (2) Urutan kedua, (3) Urutan di posisi tengah, dan (4) Urutan paling terakhir di tabel.
-- WAJIB menyebutkan Peringkat asli (rank) dari masing-masing emiten berdasarkan data JSON.
-- Skor WSM tidak memiliki satuan. Tulis skor dengan membulatkan ke 2 atau 4 digit desimal sesuai data.
+- Jika data > 4 emiten: HANYA sebutkan 4 entitas ini secara berurutan: (1) Urutan pertama di data, (2) Urutan kedua di data, (3) Urutan di posisi tengah, dan (4) Urutan paling terakhir di data.
+- WAJIB menyebutkan Peringkat asli (rank) dari masing-masing emiten berdasarkan data JSON. Jangan bilang "puncak" atau "dasar", sebutkan saja urutan di tabel/data.
+- Skor WSM tidak memiliki satuan. Tulis skor HANYA DENGAN 2 DIGIT DESIMAL (misal 0.71).
 - Tulis 1 Paragraf Naratif dan 1 Paragraf Kesimpulan.
 
 CONTOH OUTPUT YANG HARUS DITIRU:
-Pada evaluasi Scoring periode {period}, berikut adalah daftar emiten yang disaring. BBRI menempati posisi puncak pada tabel ini (Peringkat 1) dengan skor 0.71, disusul BMRI di Peringkat 2 dengan skor 0.71. Pada posisi menengah, MEGA berada di Peringkat 11 dengan skor 0.39, sementara MAYA menempati posisi paling dasar pada tabel ini (Peringkat 17) dengan skor terendah 0.35.
+Pada evaluasi Scoring periode {period}, berikut adalah daftar emiten yang ditampilkan pada tabel. Emiten pertama di tabel ini adalah BBRI (Peringkat 1) dengan skor 0.71, disusul BMRI (Peringkat 2) dengan skor 0.71. Pada posisi menengah tabel, terdapat MEGA (Peringkat 11) dengan skor 0.39, sementara urutan paling terakhir di tabel ditutup oleh MAYA (Peringkat 17) dengan skor 0.35.
 
-Kesimpulannya, selisih skor yang signifikan antara pemuncak tabel dan emiten di posisi paling bawah menunjukkan adanya disparitas fundamental yang cukup lebar pada periode evaluasi ini.
+Kesimpulannya, jarak fundamental yang terlihat antara emiten di urutan teratas tabel dan emiten di urutan terbawah tabel menunjukkan disparitas performa yang signifikan pada kelompok ini.
 
 Output harus dalam bahasa {language}.
 
