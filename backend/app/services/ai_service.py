@@ -61,7 +61,7 @@ ATURAN MUTLAK (STRICT RULES):
 4. JANGAN gunakan kata ganti (ini, itu, tersebut). Sebut nama Ticker (contoh: BBCA) dan nama metrik secara spesifik.
 
 Data Scorecard:
-{json.dumps(scorecard_data, indent=2)}
+{json.dumps(payload, indent=2)}
 """
     
     def call():
@@ -169,7 +169,7 @@ STRICT RULES:
 4. Do NOT use bullet points, bold text (**), or emojis. Do NOT give stock investment advice.
 
 Data:
-{json.dumps(scorecard_data, indent=2)}
+{json.dumps(data, indent=2)}
 """
 
     def call():
@@ -213,7 +213,7 @@ Kesimpulannya, BBRI menunjukkan dominasi stabilitas fundamental yang jauh lebih 
 Output harus dalam bahasa {language}.
 
 Data Compare:
-{json.dumps(comparison_data, indent=2)}
+{json.dumps(data, indent=2)}
 """
 
     def call():
@@ -252,7 +252,7 @@ Kesimpulannya, perbaikan yang terjadi di sektor pendanaan BBCA tampaknya gagal m
 Output harus dalam bahasa {language}.
 
 Data Historical:
-{json.dumps(history_data, indent=2)}
+{json.dumps(data, indent=2)}
 """
 
     def call():
