@@ -416,6 +416,11 @@ export default function Screening() {
       type: "analysis_screening",
       metadata: [],
       sections: [
+        ...(aiAnalysis ? [{
+          title: "Screening Analysis",
+          columns: ["Analisis"],
+          rows: [[aiAnalysis]],
+        }] : []),
         appliedFiltersTable,
         {
           title: "Screening Results",

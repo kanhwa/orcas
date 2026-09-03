@@ -1296,6 +1296,11 @@ const Scoring = () => {
           typeLabelOverride: "Scoring — Multi-Year Avg Ranking",
           metadata: multiRankingMetadataLines,
           sections: [
+            ...(rankingAiAnalysis ? [{
+              title: "Ranking Analysis",
+              columns: ["Analisis"],
+              rows: [[rankingAiAnalysis]],
+            }] : []),
             {
               title: "WSM Multi-Year Average Ranking",
               columns: ["Rank", "Ticker", "Average Score"],
@@ -1440,7 +1445,7 @@ const Scoring = () => {
             ...(aiAnalysisText
               ? [
                   {
-                    title: "Interpretasi Finansial",
+                    title: "Scorecard Analysis",
                     columns: ["Analisis"],
                     rows: [[aiAnalysisText]],
                   },
@@ -1458,6 +1463,7 @@ const Scoring = () => {
             },
             {
               title: "Scorecard Detail",
+              pageBreakBefore: true,
               columns: [
                 "Metric",
                 "Section",

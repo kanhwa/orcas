@@ -373,6 +373,11 @@ function CompareTab() {
       legendItems,
       chartImage: chartImage || undefined,
       sections: [
+        ...(aiAnalysis ? [{
+          title: "Compare Stocks Analysis",
+          columns: ["Analisis"],
+          rows: [[aiAnalysis]],
+        }] : []),
         {
           title: "Compare Stocks Summary",
           columns,

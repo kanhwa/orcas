@@ -374,6 +374,11 @@ export default function MetricRanking() {
       type: "analysis_metric_ranking",
       metadata: metadataLines,
       sections: [
+        ...(aiAnalysis ? [{
+          title: "Metric Ranking Analysis",
+          columns: ["Analisis"],
+          rows: [[aiAnalysis]],
+        }] : []),
         {
           title: "Metric Ranking",
           columns,

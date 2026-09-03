@@ -33,6 +33,7 @@ export type ReportPdfInput = {
     columns: string[];
     rows: (string | number | null | undefined)[][];
     notes?: string[];
+    pageBreakBefore?: boolean;
   }>;
 };
 
@@ -236,7 +237,7 @@ function addSection(
   const pageHeight = pdf.internal.pageSize.getHeight();
   let cursorY = startY;
   const minSpace = 18;
-  if (cursorY + minSpace > pageHeight - MARGINS.bottom) {
+  if (section.pageBreakBefore || cursorY + minSpace > pageHeight - MARGINS.bottom) {
     pdf.addPage();
     cursorY = MARGINS.top + HEADER_HEIGHT;
   }

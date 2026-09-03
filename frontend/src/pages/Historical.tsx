@@ -452,6 +452,11 @@ export default function Historical() {
       type: "compare_historical",
       metadata: pdfMetadata,
       sections: [
+        ...(aiAnalysis ? [{
+          title: "Historical Analysis",
+          columns: ["Analisis"],
+          rows: [[aiAnalysis]],
+        }] : []),
         {
           title: "Historical Comparison",
           columns: [

@@ -865,6 +865,11 @@ const Simulation: React.FC = () => {
         type: "simulation_scenario",
         metadata: pdfMetadata,
         sections: [
+          ...(aiAnalysis ? [{
+            title: "Simulation Analysis",
+            columns: ["Analisis"],
+            rows: [[aiAnalysis]],
+          }] : []),
           {
             title: "Simulation Summary",
             columns: [
