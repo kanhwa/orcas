@@ -54,11 +54,19 @@ def generate_scorecard_interpretation(payload: dict) -> str:
         scorecard_data["metrics"] = {"top_contributors": top_3, "bottom_contributors": bottom_3}
 
     prompt = f"""
-ATURAN MUTLAK (STRICT RULES):
-1. Anda adalah penerjemah tabel. DILARANG KERAS berhalusinasi, berasumsi, atau menggunakan istilah yang tidak ada di dalam JSON.
-2. Tulis 1 Paragraf (maksimal 3 kalimat) menggunakan prinsip 5W1H. Jelaskan bank mana yang di posisi Top, Median, dan Bottom (TIDAK BOLEH pakai format list/poin).
-3. Tulis 1 kalimat kesimpulan yang murni ditarik dari perbandingan angka di tabel, BUKAN fenomena umum.
-4. JANGAN gunakan kata ganti (ini, itu, tersebut). Sebut nama Ticker (contoh: BBCA) dan nama metrik secara spesifik.
+Anda adalah analis fundamental spesialis sudut pandang makro (Helicopter View). DILARANG KERAS berhalusinasi.
+Tugas Anda adalah merangkum 39 metrik Scorecard menjadi 1 paragraf padat tanpa membuat pusing pembaca.
+
+ATURAN MUTLAK:
+- Anda WAJIB meniru struktur kalimat CONTOH OUTPUT di bawah ini.
+- Jangan sebutkan puluhan metrik. HANYA sebutkan 1 metrik spesifik yang memiliki nilai "Contribution" paling tinggi atau paling dominan di antara semua metrik.
+- Sebutkan skor total (total_score), persentase kelengkapan data (coverage_pct), dan Seksi (Income / Balance / Cash Flow) yang bobot efektifnya paling besar.
+- Skor total ditulis dengan 4 desimal. Coverage ditulis dengan 1 desimal beserta lambang %.
+
+CONTOH OUTPUT YANG HARUS DITIRU:
+Pada evaluasi Scorecard BBCA tahun 2024, emiten sukses meraih skor total 0.5911 (Peringkat 3) dengan tingkat coverage data yang sangat prima sebesar 97.4%. Secara struktur, seksi Income menjadi tulang punggung utama dengan porsi kontribusi tertinggi mencapai 47.9%. Secara spesifik, fondasi fundamental ini paling banyak ditopang oleh metrik Net Income yang memberikan sumbangsih skor individu terbesar dibandingkan puluhan metrik lainnya.
+
+Output harus dalam bahasa {language}.
 
 Data Scorecard:
 {json.dumps(payload, indent=2)}
@@ -72,19 +80,34 @@ Data Scorecard:
 
 def generate_ranking_interpretation(ranking_data: list, period: str, language: str = "Indonesian") -> str:
 
+    
+    n = len(ranking_data)
+    if n > 4:
+        sliced_ranking = [ranking_data[0], ranking_data[1], ranking_data[n//2], ranking_data[-1]]
+    else:
+        sliced_ranking = ranking_data
+
     prompt = f"""
-ATURAN MUTLAK (STRICT RULES):
-1. Anda adalah penerjemah tabel untuk Peringkat Bank (Ranking). DILARANG KERAS berhalusinasi.
-2. Tulis 1 Paragraf (maksimal 2 kalimat) merangkum hasil pemeringkatan periode {period}.
-3. Aturan Penyebutan Emiten (TIDAK BOLEH pakai format list/poin):
-   - Sebutkan Peringkat 1, Peringkat 2, posisi menengah (Median), dan posisi paling bawah (Bottom).
-4. Tulis 1 kalimat kesimpulan di paragraf baru (dimulai dengan "Kesimpulannya, ...") murni merangkum performa pemenang utama dibandingkan yang terbawah.
-5. FORMAT ANGKA: KHUSUS unit 'IDR/share' ubah menjadi 'Rp [Angka] per lembar'. WAJIB memformat skor dengan titik desimal yang benar. Skor WSM tidak memiliki unit uang (contoh: Skor 85.4).
-6. JANGAN gunakan kata ganti (ini, itu, tersebut). Sebut nama Ticker secara spesifik.
-7. Output harus dalam bahasa {language}.
+Anda adalah analis pemeringkat emiten perbankan. DILARANG KERAS berhalusinasi.
+Anda WAJIB MENIRU PERSIS struktur naratif dari CONTOH OUTPUT di bawah ini. JANGAN berkreasi sendiri.
+
+ATURAN MUTLAK:
+- Data yang Anda terima adalah data yang sudah disaring oleh pengguna (bisa jadi ini tabel Top N, bisa jadi tabel Worst N). Anggap item urutan pertama di JSON adalah posisi puncak di tabel tersebut.
+- Jika data <= 4 emiten: Sebutkan SEMUANYA berurutan.
+- Jika data > 4 emiten: HANYA sebutkan 4 entitas ini: (1) Urutan pertama, (2) Urutan kedua, (3) Urutan di posisi tengah, dan (4) Urutan paling terakhir di tabel.
+- WAJIB menyebutkan Peringkat asli (rank) dari masing-masing emiten berdasarkan data JSON.
+- Skor WSM tidak memiliki satuan. Tulis skor dengan membulatkan ke 2 atau 4 digit desimal sesuai data.
+- Tulis 1 Paragraf Naratif dan 1 Paragraf Kesimpulan.
+
+CONTOH OUTPUT YANG HARUS DITIRU:
+Pada evaluasi Scoring periode {period}, berikut adalah daftar emiten yang disaring. BBRI menempati posisi puncak pada tabel ini (Peringkat 1) dengan skor 0.71, disusul BMRI di Peringkat 2 dengan skor 0.71. Pada posisi menengah, MEGA berada di Peringkat 11 dengan skor 0.39, sementara MAYA menempati posisi paling dasar pada tabel ini (Peringkat 17) dengan skor terendah 0.35.
+
+Kesimpulannya, selisih skor yang signifikan antara pemuncak tabel dan emiten di posisi paling bawah menunjukkan adanya disparitas fundamental yang cukup lebar pada periode evaluasi ini.
+
+Output harus dalam bahasa {language}.
 
 Data:
-{json.dumps(ranking_data, indent=2)}
+{json.dumps(sliced_ranking, indent=2)}
 """
     
     def call():
