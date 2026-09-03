@@ -1,0 +1,499 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36">
+  <diagram name="DFD lv 1 Orcas" id="DyPQeG27fSq3v77ULsKi">
+    <mxGraphModel dx="3300" dy="2263" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="4YmdeafgKbSbvpD1iZZg-0" />
+        <mxCell id="4YmdeafgKbSbvpD1iZZg-1" parent="4YmdeafgKbSbvpD1iZZg-0" />
+        <UserObject label="" mermaidData="{&#xa;  &quot;data&quot;: &quot;graph LR\n    %% Pengaturan Warna, Bentuk, dan Font Times New Roman\n    classDef aktor fill:#d5e8d4,stroke:#82b366,stroke-width:2px,color:#000,font-family:Times New Roman;\n    classDef gemini fill:#e1d5e7,stroke:#9673a6,stroke-width:2px,color:#000,font-family:Times New Roman;\n    classDef process fill:#dae8fc,stroke:#6c8ebf,stroke-width:2px,color:#000,font-family:Times New Roman;\n    classDef db fill:#fff2cc,stroke:#d6b656,stroke-width:2px,color:#000,font-family:Times New Roman;\n\n    %% Aktor Eksternal\n    Admin[\&quot;Admin\&quot;]:::aktor\n    Employee[\&quot;Employee\&quot;]:::aktor\n    Gemini[\&quot;Gemini LLM API\&quot;]:::gemini\n\n    %% Proses Utama \n    P1(\&quot;1.0&lt;br&gt;Manajemen Akun &amp;&lt;br&gt;Autentikasi\&quot;):::process\n    P2(\&quot;2.0&lt;br&gt;Sinkronisasi &amp;&lt;br&gt;Pemrosesan Dataset\&quot;):::process\n    P3(\&quot;3.0&lt;br&gt;Kalkulasi WSM,&lt;br&gt;Komparasi &amp; Simulasi\&quot;):::process\n    P4(\&quot;4.0&lt;br&gt;Pemrosesan AI &amp;&lt;br&gt;Edukasi Finansial\&quot;):::process\n    P5(\&quot;5.0&lt;br&gt;Cetak Laporan &amp;&lt;br&gt;Tinjauan Audit\&quot;):::process\n\n    %% Database\n    D1[(USERS)]:::db\n    D2[(IMPORT_HISTORY)]:::db\n    D3[(EMITENS)]:::db\n    D4[(METRIC_DEFINITIONS)]:::db\n    D5[(FINANCIAL_DATA)]:::db\n    D6[(WEIGHT_TEMPLATES)]:::db\n    D7[(SCORING_TEMPLATES)]:::db\n    D8[(SCORING_RUNS)]:::db\n    D9[(SCORING_RUN_ITEMS)]:::db\n    D10[(SCORING_RESULTS)]:::db\n    D11[(COMPARISONS)]:::db\n    D12[(SIMULATION_LOGS)]:::db\n    D13[(REPORTS)]:::db\n    D14[(AUDIT_LOGS)]:::db\n\n    %% --- A. ALIRAN ENTITAS KE PROSES ---\n    Admin --&gt;|Kredensial| P1\n    Employee --&gt;|Kredensial| P1\n    P1 --&gt;|Status Profil| Admin\n    P1 --&gt;|Status Profil| Employee\n\n    Admin --&gt;|Dataset CSV &amp; Trash Bin| P2\n    P2 --&gt;|Notifikasi Sinkronisasi| Admin\n\n    Admin --&gt;|Parameter Analisis| P3\n    Employee --&gt;|Parameter Analisis| P3\n    P3 --&gt;|Hasil Numerik WSM| Admin\n    P3 --&gt;|Hasil Numerik WSM| Employee\n\n    Admin --&gt;|Kueri Chatbot / Scorecard| P4\n    Employee --&gt;|Kueri Chatbot / Scorecard| P4\n    P4 --&gt;|Teks Naratif 5W+1H &amp; Chat| Admin\n    P4 --&gt;|Teks Naratif 5W+1H &amp; Chat| Employee\n\n    Admin --&gt;|Instruksi Cetak / Cek Log| P5\n    Employee --&gt;|Instruksi Cetak| P5\n    P5 --&gt;|Dokumen PDF &amp; Log Sistem| Admin\n    P5 --&gt;|Dokumen PDF| Employee\n\n    %% --- B. ALIRAN PROSES KE API EKSTERNAL ---\n    P4 &lt;--&gt;|JSON Payload| Gemini\n\n    %% --- C. ALIRAN PROSES KE DATABASE ---\n    P1 &lt;--&gt;|Read/Write| D1\n    P1 --&gt;|Write Log| D14\n\n    P2 --&gt;|Write| D2\n    P2 &lt;--&gt;|Read/Write| D3\n    P2 &lt;--&gt;|Read/Write| D4\n    P2 --&gt;|Write| D5\n    P2 --&gt;|Write Log| D14\n\n    P3 --&gt;|Read| D3\n    P3 --&gt;|Read| D4\n    P3 --&gt;|Read| D5\n    P3 &lt;--&gt;|Read/Write| D6\n    P3 &lt;--&gt;|Read/Write| D7\n    P3 --&gt;|Write| D8\n    P3 --&gt;|Write| D9\n    P3 --&gt;|Write| D10\n    P3 --&gt;|Write| D11\n    P3 --&gt;|Write| D12\n\n    P4 --&gt;|Read| D10\n\n    P5 --&gt;|Write| D13\n    P5 --&gt;|Read| D14\n&quot;,&#xa;  &quot;config&quot;: null&#xa;}" id="d731jJKIRMvOwH9ngx2G-248">
+          <mxCell connectable="0" parent="4YmdeafgKbSbvpD1iZZg-1" style="group;transparentBounds=1;editIcon=1;lockedGroup=0;groupPadding=10;" vertex="1">
+            <mxGeometry as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Admin" mermaidId="n:Admin" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="Admin" id="d731jJKIRMvOwH9ngx2G-249">
+          <mxCell parent="d731jJKIRMvOwH9ngx2G-248" style="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="54" width="105" x="30" y="1013" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Employee" mermaidId="n:Employee" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="Employee" id="d731jJKIRMvOwH9ngx2G-250">
+          <mxCell parent="d731jJKIRMvOwH9ngx2G-248" style="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="54" width="129" x="686" y="1223" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Gemini LLM API" mermaidId="n:Gemini" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="Gemini LLM API" id="d731jJKIRMvOwH9ngx2G-251">
+          <mxCell parent="d731jJKIRMvOwH9ngx2G-248" style="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="54" width="171" x="1388" y="1317" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="1.0&#xa;Manajemen Akun &amp;&#xa;Autentikasi" mermaidId="n:P1" mermaidBaseStyle="rounded=1;absoluteArcSize=1;arcSize=10;html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="1.0&#xa;Manajemen Akun &amp;&#xa;Autentikasi" id="d731jJKIRMvOwH9ngx2G-252">
+          <mxCell parent="d731jJKIRMvOwH9ngx2G-248" style="rounded=1;absoluteArcSize=1;arcSize=10;html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="93" width="168" x="272" y="1203" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="2.0&#xa;Sinkronisasi &amp;&#xa;Pemrosesan Dataset" mermaidId="n:P2" mermaidBaseStyle="rounded=1;absoluteArcSize=1;arcSize=10;html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="2.0&#xa;Sinkronisasi &amp;&#xa;Pemrosesan Dataset" id="d731jJKIRMvOwH9ngx2G-253">
+          <mxCell parent="d731jJKIRMvOwH9ngx2G-248" style="rounded=1;absoluteArcSize=1;arcSize=10;html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="93" width="173" x="1064" y="758" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="3.0&#xa;Kalkulasi WSM,&#xa;Komparasi &amp; Simulasi" mermaidId="n:P3" mermaidBaseStyle="rounded=1;absoluteArcSize=1;arcSize=10;html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="3.0&#xa;Kalkulasi WSM,&#xa;Komparasi &amp; Simulasi" id="d731jJKIRMvOwH9ngx2G-254">
+          <mxCell parent="d731jJKIRMvOwH9ngx2G-248" style="rounded=1;absoluteArcSize=1;arcSize=10;html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="93" width="183" x="1059" y="524" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="4.0&#xa;Pemrosesan AI &amp;&#xa;Edukasi Finansial" mermaidId="n:P4" mermaidBaseStyle="rounded=1;absoluteArcSize=1;arcSize=10;html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="4.0&#xa;Pemrosesan AI &amp;&#xa;Edukasi Finansial" id="d731jJKIRMvOwH9ngx2G-255">
+          <mxCell parent="d731jJKIRMvOwH9ngx2G-248" style="rounded=1;absoluteArcSize=1;arcSize=10;html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="93" width="152" x="1075" y="1257" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="5.0&#xa;Cetak Laporan &amp;&#xa;Tinjauan Audit" mermaidId="n:P5" mermaidBaseStyle="rounded=1;absoluteArcSize=1;arcSize=10;html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="5.0&#xa;Cetak Laporan &amp;&#xa;Tinjauan Audit" id="d731jJKIRMvOwH9ngx2G-256">
+          <mxCell parent="d731jJKIRMvOwH9ngx2G-248" style="rounded=1;absoluteArcSize=1;arcSize=10;html=1;whiteSpace=wrap;strokeWidth=2;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="93" width="149" x="1076" y="1446" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="USERS" mermaidId="n:D1" mermaidBaseStyle="html=1;shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=10;strokeWidth=2;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="USERS" id="d731jJKIRMvOwH9ngx2G-257">
+          <mxCell parent="d731jJKIRMvOwH9ngx2G-248" style="html=1;shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=10;strokeWidth=2;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="67" width="59" x="721" y="605" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="IMPORT_HISTORY" mermaidId="n:D2" mermaidBaseStyle="html=1;shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=10;strokeWidth=2;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="IMPORT_HISTORY" id="d731jJKIRMvOwH9ngx2G-258">
+          <mxCell parent="d731jJKIRMvOwH9ngx2G-248" style="html=1;shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=10;strokeWidth=2;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="67" width="136" x="1406" y="1083" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="EMITENS" mermaidId="n:D3" mermaidBaseStyle="html=1;shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=10;strokeWidth=2;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="EMITENS" id="d731jJKIRMvOwH9ngx2G-259">
+          <mxCell parent="d731jJKIRMvOwH9ngx2G-248" style="html=1;shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=10;strokeWidth=2;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="67" width="75" x="1436" y="381" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="METRIC_DEFINITIONS" mermaidId="n:D4" mermaidBaseStyle="html=1;shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=10;strokeWidth=2;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="METRIC_DEFINITIONS" id="d731jJKIRMvOwH9ngx2G-260">
+          <mxCell parent="d731jJKIRMvOwH9ngx2G-248" style="html=1;shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=10;strokeWidth=2;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="67" width="164" x="1392" y="615" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="FINANCIAL_DATA" mermaidId="n:D5" mermaidBaseStyle="html=1;shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=10;strokeWidth=2;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="FINANCIAL_DATA" id="d731jJKIRMvOwH9ngx2G-261">
+          <mxCell parent="d731jJKIRMvOwH9ngx2G-248" style="html=1;shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=10;strokeWidth=2;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="67" width="133" x="1407" y="732" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="WEIGHT_TEMPLATES" mermaidId="n:D6" mermaidBaseStyle="html=1;shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=10;strokeWidth=2;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="WEIGHT_TEMPLATES" id="d731jJKIRMvOwH9ngx2G-262">
+          <mxCell parent="d731jJKIRMvOwH9ngx2G-248" style="html=1;shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=10;strokeWidth=2;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="67" width="160" x="1394" y="30" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="SCORING_TEMPLATES" mermaidId="n:D7" mermaidBaseStyle="html=1;shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=10;strokeWidth=2;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="SCORING_TEMPLATES" id="d731jJKIRMvOwH9ngx2G-263">
+          <mxCell parent="d731jJKIRMvOwH9ngx2G-248" style="html=1;shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=10;strokeWidth=2;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="67" width="166" x="1391" y="147" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="SCORING_RUNS" mermaidId="n:D8" mermaidBaseStyle="html=1;shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=10;strokeWidth=2;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="SCORING_RUNS" id="d731jJKIRMvOwH9ngx2G-264">
+          <mxCell parent="d731jJKIRMvOwH9ngx2G-248" style="html=1;shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=10;strokeWidth=2;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="67" width="124" x="1412" y="264" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="SCORING_RUN_ITEMS" mermaidId="n:D9" mermaidBaseStyle="html=1;shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=10;strokeWidth=2;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="SCORING_RUN_ITEMS" id="d731jJKIRMvOwH9ngx2G-265">
+          <mxCell parent="d731jJKIRMvOwH9ngx2G-248" style="html=1;shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=10;strokeWidth=2;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="67" width="166" x="1391" y="498" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="SCORING_RESULTS" mermaidId="n:D10" mermaidBaseStyle="html=1;shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=10;strokeWidth=2;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="SCORING_RESULTS" id="d731jJKIRMvOwH9ngx2G-266">
+          <mxCell parent="d731jJKIRMvOwH9ngx2G-248" style="html=1;shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=10;strokeWidth=2;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="67" width="146" x="1401" y="1200" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="COMPARISONS" mermaidId="n:D11" mermaidBaseStyle="html=1;shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=10;strokeWidth=2;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="COMPARISONS" id="d731jJKIRMvOwH9ngx2G-267">
+          <mxCell parent="d731jJKIRMvOwH9ngx2G-248" style="html=1;shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=10;strokeWidth=2;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="67" width="113" x="1417" y="849" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="SIMULATION_LOGS" mermaidId="n:D12" mermaidBaseStyle="html=1;shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=10;strokeWidth=2;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="SIMULATION_LOGS" id="d731jJKIRMvOwH9ngx2G-268">
+          <mxCell parent="d731jJKIRMvOwH9ngx2G-248" style="html=1;shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=10;strokeWidth=2;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="67" width="145" x="1401" y="966" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="REPORTS" mermaidId="n:D13" mermaidBaseStyle="html=1;shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=10;strokeWidth=2;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="REPORTS" id="d731jJKIRMvOwH9ngx2G-269">
+          <mxCell parent="d731jJKIRMvOwH9ngx2G-248" style="html=1;shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=10;strokeWidth=2;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="67" width="78" x="1435" y="1610" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="AUDIT_LOGS" mermaidId="n:D14" mermaidBaseStyle="html=1;shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=10;strokeWidth=2;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="AUDIT_LOGS" id="d731jJKIRMvOwH9ngx2G-270">
+          <mxCell parent="d731jJKIRMvOwH9ngx2G-248" style="html=1;shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=10;strokeWidth=2;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="67" width="104" x="1422" y="1478" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Kredensial" mermaidId="e:Admin-&gt;P1#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=1;exitY=0.7407407407407407;entryX=0;entryY=0.6397849462365591;curved=1;exitX=1;exitY=0.74;entryX=0;entryY=0.64;" mermaidBaseValue="Kredensial" id="d731jJKIRMvOwH9ngx2G-271">
+          <mxCell edge="1" parent="d731jJKIRMvOwH9ngx2G-248" source="d731jJKIRMvOwH9ngx2G-249" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=1;exitY=0.74;entryX=0;entryY=0.64;rounded=0;" target="d731jJKIRMvOwH9ngx2G-252">
+            <mxGeometry relative="1" as="geometry">
+              <mxPoint as="offset" />
+              <Array as="points">
+                <mxPoint x="204" y="1194" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Kredensial" mermaidId="e:Employee-&gt;P1#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0;exitY=0.7407407407407407;entryX=1;entryY=0.6397849462365591;curved=1;exitX=0;exitY=0.74;entryX=1;entryY=0.64;" mermaidBaseValue="Kredensial" id="d731jJKIRMvOwH9ngx2G-272">
+          <mxCell edge="1" parent="d731jJKIRMvOwH9ngx2G-248" source="d731jJKIRMvOwH9ngx2G-250" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0;exitY=0.74;entryX=1;entryY=0.64;rounded=0;" target="d731jJKIRMvOwH9ngx2G-252">
+            <mxGeometry relative="1" as="geometry">
+              <mxPoint as="offset" />
+              <Array as="points">
+                <mxPoint x="563" y="1299" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Status Profil" mermaidId="e:P1-&gt;Admin#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0;exitY=0.3602150537634409;entryX=1;entryY=0.2592592592592593;curved=1;exitX=0;exitY=0.36;entryX=1;entryY=0.26;" mermaidBaseValue="Status Profil" id="d731jJKIRMvOwH9ngx2G-273">
+          <mxCell edge="1" parent="d731jJKIRMvOwH9ngx2G-248" source="d731jJKIRMvOwH9ngx2G-252" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0;exitY=0.36;entryX=1;entryY=0.26;rounded=0;" target="d731jJKIRMvOwH9ngx2G-249">
+            <mxGeometry relative="1" as="geometry">
+              <mxPoint as="offset" />
+              <Array as="points">
+                <mxPoint x="204" y="1089" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Status Profil" mermaidId="e:P1-&gt;Employee#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=1;exitY=0.3602150537634409;entryX=0;entryY=0.2592592592592593;curved=1;exitX=1;exitY=0.36;entryX=0;entryY=0.26;" mermaidBaseValue="Status Profil" id="d731jJKIRMvOwH9ngx2G-274">
+          <mxCell edge="1" parent="d731jJKIRMvOwH9ngx2G-248" source="d731jJKIRMvOwH9ngx2G-252" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=1;exitY=0.36;entryX=0;entryY=0.26;rounded=0;" target="d731jJKIRMvOwH9ngx2G-250">
+            <mxGeometry relative="1" as="geometry">
+              <mxPoint as="offset" />
+              <Array as="points">
+                <mxPoint x="563" y="1194" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Dataset CSV &amp; Trash Bin" mermaidId="e:Admin-&gt;P2#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=1;exitY=0.7407407407407407;entryX=0;entryY=0.6397849462365591;curved=1;exitX=1;exitY=0.74;entryX=0;entryY=0.64;" mermaidBaseValue="Dataset CSV &amp; Trash Bin" id="d731jJKIRMvOwH9ngx2G-275">
+          <mxCell edge="1" parent="d731jJKIRMvOwH9ngx2G-248" source="d731jJKIRMvOwH9ngx2G-249" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=1;exitY=0.74;entryX=0;entryY=0.64;rounded=0;" target="d731jJKIRMvOwH9ngx2G-253">
+            <mxGeometry relative="1" as="geometry">
+              <mxPoint as="offset" />
+              <Array as="points">
+                <mxPoint x="600" y="1020" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Notifikasi Sinkronisasi" mermaidId="e:P2-&gt;Admin#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0;exitY=0.3602150537634409;entryX=1;entryY=0.2592592592592593;curved=1;exitX=0;exitY=0.36;entryX=1;entryY=0.26;" mermaidBaseValue="Notifikasi Sinkronisasi" id="d731jJKIRMvOwH9ngx2G-276">
+          <mxCell edge="1" parent="d731jJKIRMvOwH9ngx2G-248" source="d731jJKIRMvOwH9ngx2G-253" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0;exitY=0.36;entryX=1;entryY=0.26;rounded=0;" target="d731jJKIRMvOwH9ngx2G-249">
+            <mxGeometry relative="1" as="geometry">
+              <mxPoint as="offset" />
+              <Array as="points">
+                <mxPoint x="600" y="832" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Parameter Analisis" mermaidId="e:Admin-&gt;P3#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=1;exitY=0.7407407407407407;entryX=0;entryY=0.6397849462365591;curved=1;exitX=1;exitY=0.74;entryX=0;entryY=0.64;" mermaidBaseValue="Parameter Analisis" id="d731jJKIRMvOwH9ngx2G-277">
+          <mxCell edge="1" parent="d731jJKIRMvOwH9ngx2G-248" source="d731jJKIRMvOwH9ngx2G-249" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=1;exitY=0.74;entryX=0;entryY=0.64;rounded=0;" target="d731jJKIRMvOwH9ngx2G-254">
+            <mxGeometry relative="1" as="geometry">
+              <mxPoint as="offset" />
+              <Array as="points">
+                <mxPoint x="597" y="884" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Parameter Analisis" mermaidId="e:Employee-&gt;P3#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.6007751937984496;exitY=0;entryX=0.5710382513661202;entryY=1;curved=1;exitX=0.6;exitY=0;entryX=0.57;entryY=1;" mermaidBaseValue="Parameter Analisis" id="d731jJKIRMvOwH9ngx2G-278">
+          <mxCell edge="1" parent="d731jJKIRMvOwH9ngx2G-248" source="d731jJKIRMvOwH9ngx2G-250" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.6;exitY=0;entryX=0.57;entryY=1;rounded=0;" target="d731jJKIRMvOwH9ngx2G-254">
+            <mxGeometry relative="1" as="geometry">
+              <mxPoint as="offset" />
+              <Array as="points">
+                <mxPoint x="1029" y="920" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Hasil Numerik WSM" mermaidId="e:P3-&gt;Admin#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0;exitY=0.3602150537634409;entryX=1;entryY=0.2592592592592593;curved=1;exitX=0;exitY=0.36;entryX=1;entryY=0.26;" mermaidBaseValue="Hasil Numerik WSM" id="d731jJKIRMvOwH9ngx2G-279">
+          <mxCell edge="1" parent="d731jJKIRMvOwH9ngx2G-248" source="d731jJKIRMvOwH9ngx2G-254" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0;exitY=0.36;entryX=1;entryY=0.26;rounded=0;" target="d731jJKIRMvOwH9ngx2G-249">
+            <mxGeometry relative="1" as="geometry">
+              <mxPoint as="offset" />
+              <Array as="points">
+                <mxPoint x="597" y="725" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Hasil Numerik WSM" mermaidId="e:P3-&gt;Employee#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.4289617486338798;exitY=1;entryX=0.3992248062015504;entryY=0;curved=1;exitX=0.43;exitY=1;entryX=0.4;entryY=0;" mermaidBaseValue="Hasil Numerik WSM" id="d731jJKIRMvOwH9ngx2G-280">
+          <mxCell edge="1" parent="d731jJKIRMvOwH9ngx2G-248" source="d731jJKIRMvOwH9ngx2G-254" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.43;exitY=1;entryX=0.4;entryY=0;rounded=0;" target="d731jJKIRMvOwH9ngx2G-250">
+            <mxGeometry relative="1" as="geometry">
+              <mxPoint as="offset" />
+              <Array as="points">
+                <mxPoint x="870" y="920" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Kueri Chatbot / Scorecard" mermaidId="e:Admin-&gt;P4#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=1;exitY=0.7407407407407407;entryX=0;entryY=0.6397849462365591;curved=1;exitX=1;exitY=0.74;entryX=0;entryY=0.64;" mermaidBaseValue="Kueri Chatbot / Scorecard" id="d731jJKIRMvOwH9ngx2G-281">
+          <mxCell edge="1" parent="d731jJKIRMvOwH9ngx2G-248" source="d731jJKIRMvOwH9ngx2G-249" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=1;exitY=0.74;entryX=0;entryY=0.64;rounded=0;" target="d731jJKIRMvOwH9ngx2G-255">
+            <mxGeometry relative="1" as="geometry">
+              <mxPoint as="offset" />
+              <Array as="points">
+                <mxPoint x="605" y="1277" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Kueri Chatbot / Scorecard" mermaidId="e:Employee-&gt;P4#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=1;exitY=0.7407407407407407;entryX=0;entryY=0.6397849462365591;curved=1;exitX=1;exitY=0.74;entryX=0;entryY=0.64;" mermaidBaseValue="Kueri Chatbot / Scorecard" id="d731jJKIRMvOwH9ngx2G-282">
+          <mxCell edge="1" parent="d731jJKIRMvOwH9ngx2G-248" source="d731jJKIRMvOwH9ngx2G-250" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=1;exitY=0.74;entryX=0;entryY=0.64;rounded=0;" target="d731jJKIRMvOwH9ngx2G-255">
+            <mxGeometry relative="1" as="geometry">
+              <mxPoint as="offset" />
+              <Array as="points">
+                <mxPoint x="945" y="1382" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Teks Naratif 5W+1H &amp; Chat" mermaidId="e:P4-&gt;Admin#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0;exitY=0.3602150537634409;entryX=1;entryY=0.2592592592592593;curved=1;exitX=0;exitY=0.36;entryX=1;entryY=0.26;" mermaidBaseValue="Teks Naratif 5W+1H &amp; Chat" id="d731jJKIRMvOwH9ngx2G-283">
+          <mxCell edge="1" parent="d731jJKIRMvOwH9ngx2G-248" source="d731jJKIRMvOwH9ngx2G-255" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0;exitY=0.36;entryX=1;entryY=0.26;rounded=0;" target="d731jJKIRMvOwH9ngx2G-249">
+            <mxGeometry relative="1" as="geometry">
+              <mxPoint as="offset" />
+              <Array as="points">
+                <mxPoint x="605" y="1063" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Teks Naratif 5W+1H &amp; Chat" mermaidId="e:P4-&gt;Employee#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0;exitY=0.3602150537634409;entryX=1;entryY=0.2592592592592593;curved=1;exitX=0;exitY=0.36;entryX=1;entryY=0.26;" mermaidBaseValue="Teks Naratif 5W+1H &amp; Chat" id="d731jJKIRMvOwH9ngx2G-284">
+          <mxCell edge="1" parent="d731jJKIRMvOwH9ngx2G-248" source="d731jJKIRMvOwH9ngx2G-255" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0;exitY=0.36;entryX=1;entryY=0.26;rounded=0;" target="d731jJKIRMvOwH9ngx2G-250">
+            <mxGeometry relative="1" as="geometry">
+              <mxPoint as="offset" />
+              <Array as="points">
+                <mxPoint x="945" y="1168" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Instruksi Cetak / Cek Log" mermaidId="e:Admin-&gt;P5#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=1;exitY=0.7407407407407407;entryX=0;entryY=0.6397849462365591;curved=1;exitX=1;exitY=0.74;entryX=0;entryY=0.64;" mermaidBaseValue="Instruksi Cetak / Cek Log" id="d731jJKIRMvOwH9ngx2G-285">
+          <mxCell edge="1" parent="d731jJKIRMvOwH9ngx2G-248" source="d731jJKIRMvOwH9ngx2G-249" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=1;exitY=0.74;entryX=0;entryY=0.64;rounded=0;" target="d731jJKIRMvOwH9ngx2G-256">
+            <mxGeometry relative="1" as="geometry">
+              <mxPoint as="offset" />
+              <Array as="points">
+                <mxPoint x="606" y="1368" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Instruksi Cetak" mermaidId="e:Employee-&gt;P5#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=1;exitY=0.7407407407407407;entryX=0;entryY=0.6397849462365591;curved=1;exitX=1;exitY=0.74;entryX=0;entryY=0.64;" mermaidBaseValue="Instruksi Cetak" id="d731jJKIRMvOwH9ngx2G-286">
+          <mxCell edge="1" parent="d731jJKIRMvOwH9ngx2G-248" source="d731jJKIRMvOwH9ngx2G-250" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=1;exitY=0.74;entryX=0;entryY=0.64;rounded=0;" target="d731jJKIRMvOwH9ngx2G-256">
+            <mxGeometry relative="1" as="geometry">
+              <mxPoint as="offset" />
+              <Array as="points">
+                <mxPoint x="946" y="1436" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Dokumen PDF &amp; Log Sistem" mermaidId="e:P5-&gt;Admin#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0;exitY=0.3602150537634409;entryX=1;entryY=0.2592592592592593;curved=1;exitX=0;exitY=0.36;entryX=1;entryY=0.26;" mermaidBaseValue="Dokumen PDF &amp; Log Sistem" id="d731jJKIRMvOwH9ngx2G-287">
+          <mxCell edge="1" parent="d731jJKIRMvOwH9ngx2G-248" source="d731jJKIRMvOwH9ngx2G-256" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0;exitY=0.36;entryX=1;entryY=0.26;rounded=0;" target="d731jJKIRMvOwH9ngx2G-249">
+            <mxGeometry relative="1" as="geometry">
+              <mxPoint as="offset" />
+              <Array as="points">
+                <mxPoint x="606" y="1156" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Dokumen PDF" mermaidId="e:P5-&gt;Employee#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0;exitY=0.3602150537634409;entryX=1;entryY=0.2592592592592593;curved=1;exitX=0;exitY=0.36;entryX=1;entryY=0.26;" mermaidBaseValue="Dokumen PDF" id="d731jJKIRMvOwH9ngx2G-288">
+          <mxCell edge="1" parent="d731jJKIRMvOwH9ngx2G-248" source="d731jJKIRMvOwH9ngx2G-256" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0;exitY=0.36;entryX=1;entryY=0.26;rounded=0;" target="d731jJKIRMvOwH9ngx2G-250">
+            <mxGeometry relative="1" as="geometry">
+              <mxPoint as="offset" />
+              <Array as="points">
+                <mxPoint x="946" y="1310" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="JSON Payload" mermaidId="e:P4-&gt;Gemini#0" mermaidBaseStyle="curved=1;startArrow=block;startSize=7;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=1;exitY=0.7;entryX=0;entryY=0.5;" mermaidBaseValue="JSON Payload" id="d731jJKIRMvOwH9ngx2G-289">
+          <mxCell edge="1" parent="d731jJKIRMvOwH9ngx2G-248" source="d731jJKIRMvOwH9ngx2G-255" style="curved=1;startArrow=block;startSize=7;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=1;exitY=0.7;entryX=0;entryY=0.5;rounded=0;" target="d731jJKIRMvOwH9ngx2G-251">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="1315" y="1344" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Read/Write" mermaidId="e:P1-&gt;D1#0" mermaidBaseStyle="curved=1;startArrow=block;startSize=7;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.6;exitY=0;entryX=0;entryY=0.51;" mermaidBaseValue="Read/Write" id="d731jJKIRMvOwH9ngx2G-290">
+          <mxCell edge="1" parent="d731jJKIRMvOwH9ngx2G-248" source="d731jJKIRMvOwH9ngx2G-252" style="curved=1;startArrow=block;startSize=7;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.6;exitY=0;entryX=0;entryY=0.51;rounded=0;" target="d731jJKIRMvOwH9ngx2G-257">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="563" y="639" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Write Log" mermaidId="e:P1-&gt;D14#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.65;exitY=1;entryX=0;entryY=1;" mermaidBaseValue="Write Log" id="d731jJKIRMvOwH9ngx2G-291">
+          <mxCell edge="1" parent="d731jJKIRMvOwH9ngx2G-248" source="d731jJKIRMvOwH9ngx2G-252" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.65;exitY=1;entryX=0;entryY=1;rounded=0;" target="d731jJKIRMvOwH9ngx2G-270">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="563" y="1614" />
+                <mxPoint x="751" y="1614" />
+                <mxPoint x="937" y="1614" />
+                <mxPoint x="1151" y="1614" />
+                <mxPoint x="1315" y="1614" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Write" mermaidId="e:P2-&gt;D2#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.64;exitY=1;entryX=0;entryY=0.51;" mermaidBaseValue="Write" id="d731jJKIRMvOwH9ngx2G-292">
+          <mxCell edge="1" parent="d731jJKIRMvOwH9ngx2G-248" source="d731jJKIRMvOwH9ngx2G-253" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.64;exitY=1;entryX=0;entryY=0.51;rounded=0;" target="d731jJKIRMvOwH9ngx2G-258">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="1315" y="1117" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Read/Write" mermaidId="e:P2-&gt;D3#0" mermaidBaseStyle="curved=1;startArrow=block;startSize=7;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.62;exitY=0;entryX=0;entryY=0.64;" mermaidBaseValue="Read/Write" id="d731jJKIRMvOwH9ngx2G-293">
+          <mxCell edge="1" parent="d731jJKIRMvOwH9ngx2G-248" source="d731jJKIRMvOwH9ngx2G-253" style="curved=1;startArrow=block;startSize=7;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.62;exitY=0;entryX=0;entryY=0.64;rounded=0;" target="d731jJKIRMvOwH9ngx2G-259">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="1315" y="454" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Read/Write" mermaidId="e:P2-&gt;D4#0" mermaidBaseStyle="curved=1;startArrow=block;startSize=7;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.88;exitY=0;entryX=0;entryY=0.81;" mermaidBaseValue="Read/Write" id="d731jJKIRMvOwH9ngx2G-294">
+          <mxCell edge="1" parent="d731jJKIRMvOwH9ngx2G-248" source="d731jJKIRMvOwH9ngx2G-253" style="curved=1;startArrow=block;startSize=7;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.88;exitY=0;entryX=0;entryY=0.81;rounded=0;" target="d731jJKIRMvOwH9ngx2G-260">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="1315" y="688" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Write" mermaidId="e:P2-&gt;D5#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=1;exitY=0.51;entryX=0;entryY=0.75;" mermaidBaseValue="Write" id="d731jJKIRMvOwH9ngx2G-295">
+          <mxCell edge="1" parent="d731jJKIRMvOwH9ngx2G-248" source="d731jJKIRMvOwH9ngx2G-253" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=1;exitY=0.51;entryX=0;entryY=0.75;rounded=0;" target="d731jJKIRMvOwH9ngx2G-261">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="1315" y="805" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Write Log" mermaidId="e:P2-&gt;D14#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.56;exitY=1;entryX=0;entryY=0.46;" mermaidBaseValue="Write Log" id="d731jJKIRMvOwH9ngx2G-296">
+          <mxCell edge="1" parent="d731jJKIRMvOwH9ngx2G-248" source="d731jJKIRMvOwH9ngx2G-253" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.56;exitY=1;entryX=0;entryY=0.46;rounded=0;" target="d731jJKIRMvOwH9ngx2G-270">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="1315" y="1505" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Read" mermaidId="e:P3-&gt;D3#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.72;exitY=0;entryX=0;entryY=0.36;" mermaidBaseValue="Read" id="d731jJKIRMvOwH9ngx2G-297">
+          <mxCell edge="1" parent="d731jJKIRMvOwH9ngx2G-248" source="d731jJKIRMvOwH9ngx2G-254" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.72;exitY=0;entryX=0;entryY=0.36;rounded=0;" target="d731jJKIRMvOwH9ngx2G-259">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="1315" y="376" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Read" mermaidId="e:P3-&gt;D4#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=1;exitY=0.85;entryX=0;entryY=0.34;" mermaidBaseValue="Read" id="d731jJKIRMvOwH9ngx2G-298">
+          <mxCell edge="1" parent="d731jJKIRMvOwH9ngx2G-248" source="d731jJKIRMvOwH9ngx2G-254" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=1;exitY=0.85;entryX=0;entryY=0.34;rounded=0;" target="d731jJKIRMvOwH9ngx2G-260">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="1315" y="629" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Read" mermaidId="e:P3-&gt;D5#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.77;exitY=1;entryX=0;entryY=0.25;" mermaidBaseValue="Read" id="d731jJKIRMvOwH9ngx2G-299">
+          <mxCell edge="1" parent="d731jJKIRMvOwH9ngx2G-248" source="d731jJKIRMvOwH9ngx2G-254" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.77;exitY=1;entryX=0;entryY=0.25;rounded=0;" target="d731jJKIRMvOwH9ngx2G-261">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="1315" y="727" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Read/Write" mermaidId="e:P3-&gt;D6#0" mermaidBaseStyle="curved=1;startArrow=block;startSize=7;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.58;exitY=0;entryX=0;entryY=0.51;" mermaidBaseValue="Read/Write" id="d731jJKIRMvOwH9ngx2G-300">
+          <mxCell edge="1" parent="d731jJKIRMvOwH9ngx2G-248" source="d731jJKIRMvOwH9ngx2G-254" style="curved=1;startArrow=block;startSize=7;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.58;exitY=0;entryX=0;entryY=0.51;rounded=0;" target="d731jJKIRMvOwH9ngx2G-262">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="1315" y="64" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Read/Write" mermaidId="e:P3-&gt;D7#0" mermaidBaseStyle="curved=1;startArrow=block;startSize=7;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.61;exitY=0;entryX=0;entryY=0.51;" mermaidBaseValue="Read/Write" id="d731jJKIRMvOwH9ngx2G-301">
+          <mxCell edge="1" parent="d731jJKIRMvOwH9ngx2G-248" source="d731jJKIRMvOwH9ngx2G-254" style="curved=1;startArrow=block;startSize=7;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.61;exitY=0;entryX=0;entryY=0.51;rounded=0;" target="d731jJKIRMvOwH9ngx2G-263">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="1315" y="181" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Write" mermaidId="e:P3-&gt;D8#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.66;exitY=0;entryX=0;entryY=0.51;" mermaidBaseValue="Write" id="d731jJKIRMvOwH9ngx2G-302">
+          <mxCell edge="1" parent="d731jJKIRMvOwH9ngx2G-248" source="d731jJKIRMvOwH9ngx2G-254" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.66;exitY=0;entryX=0;entryY=0.51;rounded=0;" target="d731jJKIRMvOwH9ngx2G-264">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="1315" y="298" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Write" mermaidId="e:P3-&gt;D9#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=1;exitY=0.27;entryX=0;entryY=0.51;" mermaidBaseValue="Write" id="d731jJKIRMvOwH9ngx2G-303">
+          <mxCell edge="1" parent="d731jJKIRMvOwH9ngx2G-248" source="d731jJKIRMvOwH9ngx2G-254" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=1;exitY=0.27;entryX=0;entryY=0.51;rounded=0;" target="d731jJKIRMvOwH9ngx2G-265">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="1315" y="532" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Write" mermaidId="e:P3-&gt;D10#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.56;exitY=1;entryX=0;entryY=0.75;" mermaidBaseValue="Write" id="d731jJKIRMvOwH9ngx2G-304">
+          <mxCell edge="1" parent="d731jJKIRMvOwH9ngx2G-248" source="d731jJKIRMvOwH9ngx2G-254" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.56;exitY=1;entryX=0;entryY=0.75;rounded=0;" target="d731jJKIRMvOwH9ngx2G-266">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="1315" y="1269" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Write" mermaidId="e:P3-&gt;D11#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.63;exitY=1;entryX=0;entryY=0.51;" mermaidBaseValue="Write" id="d731jJKIRMvOwH9ngx2G-305">
+          <mxCell edge="1" parent="d731jJKIRMvOwH9ngx2G-248" source="d731jJKIRMvOwH9ngx2G-254" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.63;exitY=1;entryX=0;entryY=0.51;rounded=0;" target="d731jJKIRMvOwH9ngx2G-267">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="1315" y="883" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Write" mermaidId="e:P3-&gt;D12#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.6;exitY=1;entryX=0;entryY=0.51;" mermaidBaseValue="Write" id="d731jJKIRMvOwH9ngx2G-306">
+          <mxCell edge="1" parent="d731jJKIRMvOwH9ngx2G-248" source="d731jJKIRMvOwH9ngx2G-254" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.6;exitY=1;entryX=0;entryY=0.51;rounded=0;" target="d731jJKIRMvOwH9ngx2G-268">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="1315" y="1000" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Read" mermaidId="e:P4-&gt;D10#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.96;exitY=0;entryX=0;entryY=0.24;" mermaidBaseValue="Read" id="d731jJKIRMvOwH9ngx2G-307">
+          <mxCell edge="1" parent="d731jJKIRMvOwH9ngx2G-248" source="d731jJKIRMvOwH9ngx2G-255" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.96;exitY=0;entryX=0;entryY=0.24;rounded=0;" target="d731jJKIRMvOwH9ngx2G-266">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="1315" y="1195" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Write" mermaidId="e:P5-&gt;D13#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.84;exitY=1;entryX=0;entryY=0.49;" mermaidBaseValue="Write" id="d731jJKIRMvOwH9ngx2G-308">
+          <mxCell edge="1" parent="d731jJKIRMvOwH9ngx2G-248" source="d731jJKIRMvOwH9ngx2G-256" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.84;exitY=1;entryX=0;entryY=0.49;rounded=0;" target="d731jJKIRMvOwH9ngx2G-269">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="1315" y="1643" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Read" mermaidId="e:P5-&gt;D14#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=1;exitY=0.37;entryX=0;entryY=0.28;" mermaidBaseValue="Read" id="d731jJKIRMvOwH9ngx2G-309">
+          <mxCell edge="1" parent="d731jJKIRMvOwH9ngx2G-248" source="d731jJKIRMvOwH9ngx2G-256" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=1;exitY=0.37;entryX=0;entryY=0.28;rounded=0;" target="d731jJKIRMvOwH9ngx2G-270">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="1315" y="1466" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

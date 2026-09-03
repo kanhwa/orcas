@@ -368,6 +368,7 @@ const Scoring = () => {
   const [scorecardError, setScorecardError] = useState("");
   const [aiAnalysisText, setAiAnalysisText] = useState("");
   const [aiAnalysisLoading, setAiAnalysisLoading] = useState(false);
+  const [aiLanguage, setAiLanguage] = useState<"Indonesian" | "English">("Indonesian");
   const [showAiChart, setShowAiChart] = useState(false);
   const [rankFilterType, setRankFilterType] = useState<"all" | "top" | "worst">("top");
   const [rankFilterCount, setRankFilterCount] = useState<number>(32);
@@ -1126,7 +1127,7 @@ const Scoring = () => {
     try {
       const response = await request<{ analysis: string }>("/api/ai/interpret-scorecard", {
         method: "POST",
-        body: JSON.stringify(scorecard),
+        body: JSON.stringify({ scorecard, language: aiLanguage }),
       });
       setAiAnalysisText(response.analysis || "Tidak ada hasil dari AI.");
     } catch (err) {
@@ -1675,7 +1676,7 @@ const Scoring = () => {
       >
         <option value="default">Default</option>
         <option value="template">Template</option>
-        {tab !== "ranking" && <option value="custom">Custom</option>}
+        <option value="custom">Custom</option>
       </Select>
       {weightProfile === "template" && (
         <div className="space-y-1">
@@ -1771,10 +1772,6 @@ const Scoring = () => {
 
   const handleTabChange = (next: Tab) => {
     setTab(next);
-    if (next === "ranking" && weightProfile === "custom") {
-      setWeightProfile("default");
-      setSelectedWeightTemplateId("");
-    }
   };
 
   const renderTabs = () => (
@@ -1972,6 +1969,18 @@ const Scoring = () => {
             >
               Save to Reports
             </Button>
+            {canSaveTemplate && (
+              <>
+                <Button variant="secondary" onClick={openSaveTemplateModal}>
+                  Save as Template
+                </Button>
+                {templateSaveSuccess && (
+                  <span className="text-xs text-green-700">
+                    {templateSaveSuccess}
+                  </span>
+                )}
+              </>
+            )}
             {saveMessage && (
               <span className="text-xs text-green-700">{saveMessage}</span>
             )}
@@ -2720,17 +2729,38 @@ const Scoring = () => {
             <Button variant="report" onClick={openScorecardSave} disabled={aiAnalysisLoading}>
               Save to Reports
             </Button>
+            {canSaveTemplate && (
+              <>
+                <Button variant="secondary" onClick={openSaveTemplateModal}>
+                  Save as Template
+                </Button>
+                {templateSaveSuccess && (
+                  <span className="text-xs text-green-700">
+                    {templateSaveSuccess}
+                  </span>
+                )}
+              </>
+            )}
             {saveMessage && (
               <span className="text-xs text-green-700">{saveMessage}</span>
             )}
-            <div className="ml-auto">
+            <div className="ml-auto flex rounded-md shadow-sm">
               <Button
-                className="bg-purple-600 hover:bg-purple-700 text-white"
+                className="bg-purple-600 hover:bg-purple-700 text-white rounded-r-none pr-3"
                 onClick={handleGenerateAiAnalysis}
                 disabled={aiAnalysisLoading}
               >
                 {aiAnalysisLoading ? <span className="animate-pulse">Orcas is thinking...</span> : "Explain with Orcas AI"}
               </Button>
+              <select
+                value={aiLanguage}
+                onChange={(e) => setAiLanguage(e.target.value as "Indonesian" | "English")}
+                className="appearance-none bg-purple-700 hover:bg-purple-800 text-white rounded-r-md pl-3 pr-4 py-2 text-sm focus:outline-none cursor-pointer border-l border-purple-500 font-medium"
+                disabled={aiAnalysisLoading}
+              >
+                <option value="Indonesian">Indonesian</option>
+                <option value="English">English</option>
+              </select>
             </div>
           </div>
           {aiAnalysisText && (
@@ -2783,18 +2813,7 @@ const Scoring = () => {
             </div>
           )}
           {renderScorecardSummary()}
-          {canSaveTemplate && (
-            <div className="flex flex-wrap items-center gap-3">
-              <Button variant="secondary" onClick={openSaveTemplateModal}>
-                Save as Template
-              </Button>
-              {templateSaveSuccess && (
-                <span className="text-xs text-green-700">
-                  {templateSaveSuccess}
-                </span>
-              )}
-            </div>
-          )}
+
           {renderSectionSubtotals()}
           {renderWeightsPanel()}
           {renderScorecardTable()}

@@ -104,6 +104,7 @@ export default function Screening() {
   const [saveError, setSaveError] = useState("");
   const [saveMessage, setSaveMessage] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
+  const [aiLanguage, setAiLanguage] = useState<"Indonesian" | "English">("Indonesian");
   const [aiError, setAiError] = useState("");
   const [aiAnalysis, setAiAnalysis] = useState("");
   const [saving, setSaving] = useState(false);
@@ -247,7 +248,7 @@ export default function Screening() {
       };
 
       const { generateScreeningInterpretation } = await import("../services/api");
-      const res = await generateScreeningInterpretation(payload, "English");
+      const res = await generateScreeningInterpretation(payload, aiLanguage);
       setAiAnalysis(res.analysis);
     } catch (err: any) {
       setAiError(err.message || "Failed to generate AI analysis");
@@ -703,13 +704,29 @@ export default function Screening() {
                   <span className="text-xs text-green-700">{saveMessage}</span>
                 )}
                 <div className="ml-auto">
-                  <Button 
-                    onClick={handleGenerateScreeningAi}
+                  <div className="flex rounded-md shadow-sm relative">
+                <Button
+                  className="bg-purple-600 hover:bg-purple-700 text-white rounded-r-none pr-3"
+                  onClick={handleGenerateScreeningAi}
+                  disabled={aiLoading}
+                >
+                  {aiLoading ? <span className="animate-pulse">Orcas is thinking...</span> : "Explain with Orcas AI"}
+                </Button>
+                <div className="relative flex items-stretch">
+                  <select
+                    value={aiLanguage}
+                    onChange={(e) => setAiLanguage(e.target.value as "Indonesian" | "English")}
+                    className="appearance-none bg-purple-700 hover:bg-purple-800 text-white rounded-r-md pl-3 pr-8 py-2 text-sm focus:outline-none cursor-pointer border-l border-purple-500 font-medium"
                     disabled={aiLoading}
-                    className="bg-purple-600 hover:bg-purple-700 text-white"
                   >
-                    {aiLoading ? <span className="animate-pulse">Orcas is thinking...</span> : "Explain with Orcas AI"}
-                  </Button>
+                    <option value="Indonesian">Indonesian</option>
+                    <option value="English">English</option>
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-white">
+                    <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                  </div>
+                </div>
+              </div>
                 </div>
               </div>
             )}

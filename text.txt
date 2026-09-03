@@ -1,0 +1,1222 @@
+Analisis Kesehatan Finansial Perusahaan Sektor Perbankan di Bursa Efek Indonesia Menggunakan Metode Exploratory Data Analysis (EDA) dan Weighted Sum Method (WSM)
+TUGAS AKHIR
+Diajukan guna memenuhi sebagian persyaratan dalam rangka menyelesaikan Pendidikan Sarjana Strata Satu (S1) Program Studi Teknologi Informasi
+I KOMANG SUYANTA
+NIM: 2105551114
+PROGRAM STUDI TEKNOLOGI INFORMASI
+FAKULTAS TEKNIK
+UNIVERSITAS UDAYANA
+2026
+PERNYATAAN
+Dengan ini saya menyatakan bahwa dalam Tugas Akhir ini tidak terdapat karya yang pernah diajukan untuk memperoleh gelar kesarjanaan di perguruan tinggi lain, dan sepanjang pengetahuan saya tidak terdapat karya atau pendapat yang pernah ditulis atau diterbitkan oleh orang lain, kecuali yang secara tertulis diacu dalam naskah ini dan disebutkan pada daftar pustaka.
+Bukit Jimbaran, 4 Februari 2026
+I Komang Suyanta
+LEMBAR PENGESAHAN TUGAS AKHIR
+BERITA ACARA TUGAS AKHIR
+KATA PENGANTAR
+Puji syukur penulis panjatkan kepada Tuhan Yang Maha Esa karena atas rahmat-Nya penulis dapat menyelesaikan Laporan Tugas Akhir dengan judul “Analisis Kesehatan Finansial Perusahaan Sektor Perbankan di Bursa Efek Indonesia Menggunakan Metode Exploratory Data Analysis (EDA) dan Weighted Sum Method (WSM)”. Penyusunan Laporan Tugas Akhir ini tidak terlepas dari bantuan, bimbingan, dan dukungan dari berbagai pihak. Oleh karena itu, pada kesempatan ini penulis menyampaikan rasa terima kasih dan penghargaan yang sebesar-besarnya kepada:
+Bapak Dwi Putra Githa, ST., MT. selaku Koordinator Program Studi Teknologi Informasi Fakultas Teknik Universitas Udayana. 
+Ibu Ni Wayan Emmy Rosiana Dewi, S.T., M.Kom. selaku Dosen Pembimbing I dan Bapak Dr. I Made Suwija Putra, S.T., M.T. selaku Dosen Pembimbing II yang telah memberikan bimbingan, masukan, dan dorongan selama proses penyusunan Laporan Tugas Akhir ini. 
+Orang tua, keluarga, dan teman-teman yang senantiasa memberikan doa, semangat, serta dukungan moral maupun material hingga penulis dapat menyelesaikan Laporan Tugas Akhir ini dengan baik. 
+Penulis menyadari bahwa Laporan Tugas Akhir ini masih jauh dari sempurna, baik dari segi isi maupun penyajiannya. Oleh karena itu, penulis dengan rendah hati memohon maaf atas segala kekurangan yang ada dan berharap semoga karya ini dapat memberikan manfaat bagi pengembangan ilmu pengetahuan, khususnya di bidang teknologi informasi dan Data Science.
+Denpasar, 3 Agustus 2026 
+I Komang Suyanta
+ABSTRAK
+Evaluasi kesehatan finansial perbankan krusial bagi stabilitas makroekonomi. Penelitian ini bertujuan menganalisis tingkat kesehatan 32 emiten perbankan di Bursa Efek Indonesia periode 2015–2024 menggunakan integrasi Exploratory Data Analysis (EDA) dan Weighted Sum Method (WSM). Instrumen Orcas dikembangkan untuk memproses matriks 39 metrik keuangan secara simultan. Penerapan EDA mengeksplorasi distribusi data, korelasi multivariat, dan mengidentifikasi anomali sebelum pemodelan dilakukan. Algoritma WSM kemudian mengeksekusi normalisasi dan pembobotan kriteria berbasis teori fungsi intermediasi untuk menghasilkan pemeringkatan emiten yang objektif. Kebaruan metodologis penelitian ini terletak pada pengujian reliabilitas hasil melalui Ground Truth Analysis dengan pendekatan Ex-Post Facto. Hasil pengujian membuktikan keandalan model yang sangat tangguh; koefisien korelasi Kendall’s Tau () untuk Simpanan Nasabah dan Return on Equity (ROE) konsisten pada rentang kuat (0,577–0,710) dengan signifikansi mutlak (). Fase pengujian ini turut menyingkap anomali timing mismatch pada metrik Arus Kas Operasi pascapandemi, sebagai bukti empiris agresivitas ekspansi kredit. Verifikasi komputasi (Delta Check) mencapai tingkat kesesuaian 100% terhadap perhitungan manual dan terbukti berhasil mengeliminasi anomali matematis double inversion. Pendekatan komprehensif ini berkontribusi menghadirkan metodologi evaluasi empiris sekaligus instrumen pendukung keputusan investasi yang transparan.
+Kata kunci: Exploratory Data Analysis, Ground Truth, Instrumen Komputasi, Kesehatan Finansial, Weighted Sum Method.
+ABSTRACT
+Assessing the financial health of the banking sector is crucial for macroeconomic stability. This research aimed to analyze the financial health of 32 banking issuers on the Indonesia Stock Exchange from 2015–2024 using an integrated approach of Exploratory Data Analysis (EDA) and the Weighted Sum Method (WSM). The Orcas instrument was developed to simultaneously process a matrix of 39 financial metrics. EDA was applied to explore data distributions, multivariate correlations, and identify anomalies prior to modeling. The WSM algorithm then performed normalization and criteria weighting based on the intermediation theory to produce an objective issuer ranking. The methodological novelty lies in testing result reliability through Ground Truth Analysis using an Ex-Post Facto approach. The results demonstrated highly robust model reliability; Kendall’s Tau () correlation coefficients for Customer Deposits and Return on Equity (ROE) were consistently strong (0.577–0.710) with absolute significance (). This testing phase also revealed a timing mismatch anomaly in Operating Cash Flow post-pandemic, serving as empirical evidence of aggressive credit expansion. The computational verification (Delta Check) achieved 100% consistency with manual calculations and successfully eliminated the double inversion mathematical anomaly. This comprehensive approach contributes an empirically tested evaluation methodology and a transparent investment decision support instrument.
+Keywords: Computational Instrument, Exploratory Data Analysis, Financial Health, Ground Truth, Weighted Sum Method.
+DAFTAR ISI
+TUGAS AKHIRi
+LEMBAR PENGESAHAN TUGAS AKHIRiii
+BERITA ACARA TUGAS AKHIRiv
+KATA PENGANTARv
+ABSTRAKvi
+ABSTRACTvii
+DAFTAR ISIviii
+DAFTAR GAMBARx
+DAFTAR TABELxi
+DAFTAR KODE PROGRAMxii
+BAB I PENDAHULUAN1
+1.1Latar Belakang1
+1.2Rumusan Masalah3
+1.3Tujuan Penelitian3
+1.4Manfaat Penelitian4
+1.5Batasan Masalah4
+1.6Sistematika Penulisan5
+BAB II KAJIAN PUSTAKA8
+2.1State of the Art8
+2.2Analisis Kesehatan Finansial & Fungsi Intermediasi16
+2.3Komponen Laporan Keuangan Perbankan17
+2.4Exploratory Data Analysis (EDA)19
+2.5Multi-Criteria Decision Making (MCDM)20
+2.6Formulasi Matematis Weighted Sum Method (WSM)21
+2.7Konsep Validasi Ground Truth23
+2.8Decision Support System (DSS)24
+2.9Arsitektur dan Teknologi Pengembangan Web26
+BAB III METODOLOGI PENELITIAN28
+3.1Tempat dan Waktu Penelitian28
+3.2Alur Penelitian28
+3.3Sumber Data dan Metode Pengumpulan Data30
+3.4Instrumen Penelitian33
+3.5Definisi Operasional Variabel34
+3.6Tahapan Prapemrosesan Data39
+3.7Skenario Analisis Eksploratif (EDA)42
+3.8Tahapan Operasional Perhitungan WSM43
+3.9Skenario Validasi Reliabilitas Perankingan45
+3.10Perancangan Sistem Orcas48
+BAB IV HASIL DAN PEMBAHASAN53
+4.1Hasil Ekstraksi dan Prapemrosesan Data53
+4.2Pengujian Instrumen Komputasi (Delta Check)56
+4.3Analisis Hasil Exploratory Data Analysis (EDA)58
+4.3.1Analisis Univariat58
+4.3.2Analisis Multivariat62
+4.4Analisis Pemeringkatan Weighted Sum Method (WSM)64
+4.4.1Hasil Normalisasi64
+4.4.2Pemeringkatan Emiten Perbankan66
+4.5Validasi Ground Truth70
+4.6Implementasi Instrumen Komputasi Orcas73
+4.7Pembahasan74
+4.7.1Implikasi Hasil Penilaian Finansial75
+4.7.2Perbandingan dengan Penelitian Terdahulu78
+4.7.3Kelebihan dan Keterbatasan Metode80
+BAB V PENUTUP82
+5.1Simpulan82
+5.2Saran83
+DAFTAR PUSTAKA85
+LAMPIRAN89
+DAFTAR GAMBAR
+Gambar 2.1 Arsitektur Decision Support System Berbasis Multi-Criteria25
+Gambar 3.1 Diagram Alur Penelitian29
+Gambar 3.2 Alur Prapemrosesan Data40
+Gambar 3.3 Flowchart Perhitungan WSM44
+Gambar 3.4 Arsitektur Sistem Orcas49
+Gambar 3.5 Entity Relationship Diagram Perancangan Basis Data Orcas50
+Gambar 3.6 Antarmuka Web Orcas51
+Gambar 4.1 Boxplot Distribusi Total Aset Perbankan BEI (2015–2024)59
+Gambar 4.2 Boxplot Distribusi Return on Assets (ROA) Perbankan BEI (2015–2024)60
+Gambar 4.3 Boxplot Distribusi Arus Kas Dari Aktivitas Operasi Perbankan BEI (2015–2024)61
+Gambar 4.4 Correlation Heatmap Lintas Section Laporan Keuangan Perbankan BEI (2015–2024)63
+Gambar 4.5 Tren Skor Komposit WSM Klasemen Atas vs Bawah (2015–2024)69
+Gambar 4.6 Tren Validasi Kinerja Model Berdasarkan Korelasi Spearman dan Kendall's Tau (2020–2024)70
+DAFTAR TABEL
+Tabel 3.1 Daftar Emiten Perbankan di BEI yang Digunakan31
+Tabel 3.2 Instrumen Penelitian33
+Tabel 3.3 Definisi Operasional Variabel dan Atribut Metrik Keuangan35
+Tabel 3.4 Skenario Pengujian Statistik EDA42
+Tabel 4.1 Ringkasan Penanganan Missing Values Berdasarkan Emiten53
+Tabel 4.2 Temuan 5 Anomali Persamaan Akuntansi Teratas55
+Tabel 4.3 Verifikasi Langkah Normalisasi dan Pembobotan WSM (Sampel 3 Metrik Tahun 2024)56
+Tabel 4.4 Hasil Skor Komposit Akhir WSM (Sampel Tahun 2024)57
+Tabel 4.5 Ringkasan Ekstraksi Nilai Korelasi Esensial Lintas Section (2015–2024)63
+Tabel 4.6 Ekstraksi Transformasi Min-Max Normalization (Stress Test Tahun 2021)65
+Tabel 4.7 Rata-rata Skor Komposit WSM Tertinggi dan Terendah (2015–2024)67
+Tabel 4.8 Rekapitulasi Validasi Time-Lag Model WSM (Spearman Rank dan Kendall's Tau)71
+Tabel 4.9 Matriks Komparasi Penelitian Terdahulu dengan Sistem Orcas78
+DAFTAR KODE PROGRAM
+BAB IPENDAHULUAN
+Bab I Pendahuluan memuat beberapa informasi yang digunakan untuk mengidentifikasi permasalahan dalam penelitian. Bab I Pendahuluan menyajikan beberapa bagian utama, yaitu latar belakang, rumusan masalah, tujuan penelitian, manfaat penelitian, batasan masalah, serta sistematika penulisan.
+Latar Belakang
+Sektor perbankan memegang peranan fundamental dalam menjaga stabilitas sistem keuangan serta mendorong pertumbuhan ekonomi nasional secara berkelanjutan melalui fungsi intermediasi (Nurwulandari et al., 2022). Mengingat risiko sistemik yang melekat pada industri ini, evaluasi kesehatan finansial bank menjadi instrumen vital bagi investor institusi. Namun, lanskap evaluasi kinerja perbankan saat ini telah bergeser dari sekadar penilaian rasio profitabilitas konvensional menjadi analisis yang lebih holistik dan multidimensi. Studi terbaru menunjukkan bahwa pendekatan lama sering kali gagal menangkap volatilitas arus kas (cash flow) yang sebenarnya, padahal indikator ini krusial untuk mendeteksi sinyal financial distress secara lebih dini (Seretidou et al., 2025). Selain itu, tuntutan untuk mengintegrasikan berbagai dimensi kinerja ke dalam satu model penilaian yang komprehensif semakin mendesak untuk mendapatkan gambaran kesehatan bank yang akurat di tengah persaingan industri yang ketat (Sari et al., 2022).
+Tantangan utama dalam analisis kesehatan finansial modern adalah kompleksitas data multidimensi yang sering kali memuat konflik antar-kriteria. Penelitian ini melibatkan evaluasi terhadap 32 emiten perbankan di Bursa Efek Indonesia (BEI) dengan rentang data historis satu dekade (2015–2024), mencakup 39 metrik keuangan dari komponen neraca, laba rugi, dan arus kas. Evaluasi terhadap dataset ini menghadirkan tantangan analitis yang unik terkait penentuan karakteristik metrik. Sebagai contoh, dalam sistem perbankan, Total Liabilitas sering kali disalahartikan sebagai risiko, padahal tingginya liabilitas yang didominasi oleh Dana Pihak Ketiga (DPK) justru mencerminkan tingginya kepercayaan nasabah sebagai sumber modal kerja produktif (Nurwulandari et al., 2022). Sebaliknya, indikator inefisiensi seperti tingginya Beban Usaha atau Beban Pajak harus diperlakukan sebagai cost (beban) karena sifatnya yang menggerus profitabilitas dan efisiensi operasional bank (Sari et al., 2022). Penelitian terdahulu menegaskan bahwa penggunaan metode Multi-Criteria Decision Making (MCDM) sangat diperlukan untuk mengagregasi metrik dengan karakteristik yang bertentangan tersebut guna menghasilkan pemeringkatan stabilitas bank yang objektif (Trung et al., 2024).
+Untuk menjawab kompleksitas tersebut, penelitian ini menerapkan pendekatan berbasis data (data-driven) yang mengintegrasikan Exploratory Data Analysis (EDA) dan Weighted Sum Method (WSM). Sebelum masuk ke tahap perankingan, penerapan EDA sangat krusial untuk mengeksplorasi karakteristik distribusi data, mendeteksi pencilan (outlier) ekstrem pada laporan keuangan, serta memetakan pola korelasi antar-metrik yang sering terabaikan dalam metode black-box. Pendekatan analitik visual ini terbukti efektif dalam memantau perubahan performa keuangan secara temporal serta mengevaluasi dampak kebijakan ekonomi terhadap pertumbuhan entitas bisnis secara lebih transparan (Arleo et al., 2023). Kombinasi eksplorasi visual (EDA) dan agregasi skor (WSM) ini menawarkan transparansi analisis yang lebih tinggi dibandingkan model evaluasi tunggal.
+Implementasi metode analisis yang kompleks pada data time-series memerlukan instrumen bantu untuk menjamin konsistensi perhitungan. Oleh karena itu, penelitian ini mengembangkan sistem Orcas sebagai alat bantu (enabler) untuk mengotomatisasi proses screening, normalisasi metrik sesuai tipenya (benefit/cost), dan pembobotan dinamis. Berbeda dengan penelitian sebelumnya yang sering kali berhenti pada pemeringkatan statis, penelitian ini melangkah lebih jauh dengan melakukan validasi hasil analisis terhadap kondisi faktual (ground truth). Validasi ini dilakukan dengan mengukur tingkat kesesuaian antara peringkat yang dihasilkan sistem menggunakan data masa lalu dengan kinerja aktual bank di tahun berikutnya. Langkah ini krusial untuk menguji reliabilitas metode MCDM dalam menilai kondisi fundamental bank di bawah ketidakpastian pasar (Baydaş & Pamučar, 2022).
+Rumusan Masalah
+Berdasarkan latar belakang yang telah dipaparkan, penelitian ini berfokus pada analisis data multidimensi untuk mengevaluasi kesehatan finansial pada sektor perbankan secara objektif. Melalui pendekatan tersebut, rumusan masalah dalam penelitian ini adalah sebagai berikut:
+Bagaimana karakteristik distribusi data, sebaran pencilan (outlier), dan pola hubungan antar-metrik keuangan pada 32 emiten perbankan periode 2015–2024 berdasarkan eksplorasi visual menggunakan metode exploratory data analysis (EDA).
+Bagaimana hasil pemeringkatan kesehatan finansial emiten perbankan yang dihasilkan melalui agregasi multi-kriteria menggunakan metode weighted sum method (WSM) dengan skenario pembobotan dinamis dalam menangani konflik antar-metrik benefit dan cost.
+Seberapa andal dan konsisten hasil pemeringkatan sistem jika divalidasi menggunakan perbandingan data kinerja aktual historis (ground truth) emiten perbankan pada periode tahun berikutnya.
+Tujuan Penelitian
+Tujuan penelitian ini disusun sebagai acuan untuk menjawab rumusan masalah yang telah ditetapkan secara terarah. Adapun tujuan yang ingin dicapai dalam penelitian ini adalah sebagai berikut:
+Menganalisis karakteristik data keuangan untuk mengidentifikasi profil distribusi, mendeteksi pencilan (outlier), serta memetakan korelasi antar-variabel menggunakan instrumen bantu sistem Orcas berbasis metode exploratory data analysis (EDA).
+Menentukan tingkat kesehatan dan peringkat stabilitas finansial emiten perbankan melalui agregasi 39 metrik keuangan menggunakan metode WSM yang mengakomodasi preferensi risiko pengguna secara dinamis.
+Mengukur tingkat validitas hasil analisis dengan membandingkan hasil perankingan sistem terhadap data kinerja riil perbankan di masa lalu (ground truth) untuk memastikan akurasi dan reliabilitas metode yang digunakan dalam instrumen penelitian.
+Manfaat Penelitian
+Penelitian ini diharapkan dapat memberikan kontribusi signifikan baik dari aspek pengembangan ilmu pengetahuan maupun penerapan praktis di industri, dengan rincian sebagai berikut:
+Manfaat Teoritis 
+Memberikan kontribusi empiris dalam bidang data science melalui penerapan metode integrasi exploratory data analysis (EDA) dan weighted sum method (WSM) untuk mengevaluasi kesehatan finansial sektor perbankan.
+Memperkaya literatur mengenai validasi metode pengambilan keputusan multi-kriteria (multi-criteria decision making) dengan pendekatan ground truth analysis menggunakan data historis untuk membuktikan reliabilitas hasil analisis.
+Manfaat Praktis 
+Bagi Analis Investasi: Menyediakan kerangka penilaian kesehatan bank yang objektif untuk meminimalkan bias subjektivitas (human error) dalam pengolahan metrik keuangan yang kompleks.
+Bagi Investor Institusi: Memberikan wawasan (insight) mendalam mengenai profil risiko dan stabilitas emiten perbankan melalui visualisasi data serta pemeringkatan yang transparan sebagai bahan pertimbangan keputusan strategis.
+Bagi Pengembangan Teknologi: Menunjukkan peran instrumen sistem pendukung keputusan sebagai enabler untuk mengotomatisasi pengolahan dataset skala besar sehingga fokus analisis beralih pada interpretasi hasil.
+Batasan Masalah
+Batasan masalah dalam penelitian ini ditetapkan agar ruang lingkup pembahasan tetap terarah pada aspek analisis data dan evaluasi kesehatan finansial. Adapun batasan masalah dalam penelitian ini adalah sebagai berikut:
+Data yang digunakan adalah laporan keuangan tahunan dari 32 emiten perbankan konvensional yang tercatat di Bursa Efek Indonesia dengan periode pengamatan sepuluh tahun (2015 hingga 2024).
+Variabel analisis mencakup 39 metrik keuangan yang bersumber dari tiga komponen utama laporan keuangan, yaitu Cashflow Statement, Balance Sheet, dan Income Statement.
+Metode utama yang diterapkan adalah Exploratory Data Analysis (EDA) untuk eksplorasi karakteristik distribusi data serta Weighted Sum Method (WSM) untuk proses pembobotan, penentuan skor, dan pemeringkatan.
+Validasi hasil pemeringkatan dilakukan menggunakan pendekatan Ground Truth Analysis, yaitu mengukur tingkat kesesuaian antara peringkat hasil perhitungan sistem dengan data kinerja aktual emiten pada periode tahun berikutnya (t+1).
+Implementasi sistem Orcas menggunakan arsitektur web (React, FastAPI, PostgreSQL, dan Redis) dibatasi sebagai platform komputasi untuk menjalankan algoritma analisis data, dengan penekanan utama pada validitas luaran sistem.
+Penelitian ini berfokus pada evaluasi kinerja historis (ex-post analysis) berdasarkan laporan keuangan, serta tidak menyediakan fitur peramalan (forecasting) harga saham di masa depan.
+Luaran sistem berupa skor kesehatan, peringkat, dan visualisasi data ditujukan sebagai instrumen pendukung keputusan (decision support) bagi analis investasi, dan tidak memberikan rekomendasi investasi langsung seperti sinyal buy, sell, atau hold.
+Sistematika Penulisan
+Sistematika penulisan dalam tugas akhir ini disusun untuk memberikan gambaran menyeluruh mengenai isi dan alur pembahasan penelitian. Laporan tugas akhir ini terdiri dari lima bab yang saling berkaitan dan disusun secara sistematis sebagai berikut:
+BAB I: PENDAHULUAN
+Bab I Pendahuluan berisi uraian mengenai latar belakang yang mendasari penelitian, rumusan masalah yang diselesaikan, tujuan yang ingin dicapai, manfaat yang diharapkan, batasan masalah untuk menjaga ruang lingkup penelitian, serta sistematika penulisan laporan.
+BAB II: KAJIAN PUSTAKA
+Bab II Kajian Pustaka berisi tinjauan terhadap penelitian terdahulu dalam bentuk state of the art untuk memetakan kebaruan penelitian. Bab ini juga menjabarkan landasan teori yang mencakup konsep kesehatan finansial perbankan, karakteristik laporan keuangan, metode exploratory data analysis (EDA), konsep multi-criteria decision making (MCDM), serta formulasi matematis weighted sum method (WSM).
+BAB III: METODOLOGI PENELITIAN
+Bab III Metodologi Penelitian berisi penjelasan mengenai desain penelitian, sumber data sekunder, serta tahapan prapemrosesan data untuk menjamin kualitas data. Bab ini juga menjabarkan desain analisis eksploratif, tahapan operasional perhitungan model WSM, skenario eksperimen validasi ground truth, serta gambaran umum pengembangan sistem Orcas sebagai instrumen bantu (enabler) dalam proses komputasi dan visualisasi data.
+BAB IV: HASIL DAN PEMBAHASAN
+Bab IV Hasil dan Pembahasan menyajikan temuan utama penelitian yang diawali dengan penyajian hasil luaran instrumen analisis pada dataset 32 emiten perbankan. Bab ini menguraikan hasil eksplorasi data (EDA) untuk mengidentifikasi distribusi dan pencilan pada 39 metrik keuangan, hasil pemeringkatan stabilitas finansial menggunakan metode WSM, serta pengujian validitas hasil melalui perbandingan dengan data kinerja aktual (ground truth analysis). Selain itu, bab ini memuat pembahasan mendalam mengenai implikasi temuan terhadap profil risiko perbankan serta analisis keterbatasan penelitian.
+BAB V: PENUTUP
+Bab V Penutup berisi simpulan yang menjawab seluruh rumusan masalah berdasarkan hasil analisis yang telah dilakukan. Bab ini juga memuat saran strategis untuk pengembangan penelitian selanjutnya di bidang analisis data finansial.
+BAB IIKAJIAN PUSTAKA
+Bab II menguraikan tinjauan pustaka dan landasan teori yang menjadi fondasi ilmiah dalam penelitian ini. Pembahasan diawali dengan tinjauan state of the art untuk memetakan posisi dan kebaruan penelitian di antara studi terdahulu. Selanjutnya, bab ini menjabarkan teori kesehatan finansial perbankan dan fungsi intermediasi yang menjadi dasar logika penentuan atribut benefit dan cost pada variabel penelitian. Landasan teori juga mencakup metodologi Data Science, meliputi teknik statistik Exploratory Data Analysis (EDA) untuk pemahaman karakteristik data, formulasi matematis Weighted Sum Method (WSM) untuk pengambilan keputusan, serta konsep validasi Ground Truth untuk pengujian reliabilitas. Seluruh kajian teoritis ini disusun untuk melegitimasi kerangka analisis yang diterapkan dalam pengembangan instrumen penelitian.
+State of the Art
+Sektor perbankan memegang peranan yang sangat fundamental dalam menjaga stabilitas sistem keuangan serta mendorong pertumbuhan ekonomi suatu negara secara berkelanjutan. Sebagai lembaga intermediasi, bank bertanggung jawab dalam memobilisasi sumber daya finansial dan mengalokasikan modal secara efisien, sehingga kesehatan institusi ini menjadi perhatian utama bagi investor institusi untuk memitigasi risiko investasi (Nurwulandari et al., 2022). Pengawasan yang konsisten melalui pemantauan indikator-indikator keuangan utama memungkinkan pemangku kepentingan untuk mendeteksi potensi kelemahan struktural dan mengambil keputusan strategis yang tepat di tengah volatilitas ekonomi (Mastilo et al., 2024). Evaluasi kinerja bank sangat krusial tidak hanya untuk melindungi kepentingan pemegang saham, tetapi juga untuk mencegah risiko sistemik yang dapat mengganggu ekosistem ekonomi makro secara luas. Mengingat volume data laporan keuangan yang terus meningkat dan masif, diperlukan teknik analisis data yang sistematis guna mengekstraksi informasi yang benar-benar relevan (Chakri et al., 2023). Transisi menuju pemahaman mendalam terhadap indikator-indikator tersebut membutuhkan dukungan teknik analisis data awal yang komprehensif seperti analisis deskriptif.
+Penerapan Exploratory Data Analysis (EDA) atau analisis deskriptif terbukti esensial dalam proses memahami karakteristik data keuangan sebelum dilakukan evaluasi pada tahap berikutnya. Analisis ini membantu peneliti dalam mengidentifikasi pola, tren, dan anomali yang terdapat dalam dataset yang besar (Munshi et al., 2022). Melalui pendekatan eksploratif, karakteristik unik dari data finansial dapat dipahami secara intuitif, yang pada gilirannya meningkatkan akurasi interpretasi hasil analisis. Penggunaan teknik deskriptif juga memungkinkan identifikasi korelasi awal antar variabel yang sering kali tersembunyi dalam tumpukan data mentah (Chakri et al., 2023). Pemahaman terhadap perilaku data ini menjadi landasan untuk memastikan bahwa proses penilaian yang dilakukan selanjutnya bertumpu pada kondisi data yang benar, bukan pada asumsi yang keliru. Wawasan awal yang diperoleh melalui EDA kemudian dapat diterapkan secara lebih spesifik untuk membedah isi laporan akuntansi perusahaan.
+Dalam lingkup laporan keuangan, Exploratory Data Analysis digunakan untuk menganalisis transaksi akuntansi yang mencakup neraca, laporan laba rugi, dan laporan arus kas guna memperoleh wawasan yang berharga bagi manajer (Chakri et al., 2023). Eksplorasi terhadap berbagai parameter seperti rasio utang, margin laba bersih, serta metrik keuangan lainnya sangat membantu dalam mengidentifikasi efisiensi operasional dan profitabilitas perusahaan (Chakri et al., 2023). Analis dapat memantau pergerakan modal dan efisiensi biaya melalui visualisasi tren historis yang disajikan secara sistematis dari tahun ke tahun. Selain membantu dalam optimalisasi performa internal, teknik deskriptif ini juga mempermudah manajer dalam melakukan perbandingan kinerja antar entitas dalam industri yang sama. Kemampuan analisis deskriptif dalam menangkap kondisi internal perusahaan ini terbukti sangat efektif ketika diaplikasikan pada dinamika data yang ada di pasar modal.
+Pada lingkungan pasar modal yang dinamis, EDA dimanfaatkan untuk memahami perilaku variabel-variabel keuangan melalui visualisasi dan ringkasan statistik sehingga pola serta ketidakwajaran data dapat dikenali lebih cepat (Munshi et al., 2022). Penggunaan teknik visualisasi seperti scatter plot, density plot, dan heatmap membantu analis dalam mendeteksi ketidakseimbangan data maupun outlier yang signifikan (Munshi et al., 2022). Analisis visual ini memperkuat pemahaman terhadap hubungan antar variabel serta variasi kinerja antar entitas, terutama ketika data yang dianalisis berskala besar dan beragam. Hasil eksplorasi ini menjadi dasar untuk menyusun interpretasi yang lebih terstruktur ketika data digunakan untuk kebutuhan evaluasi dan perbandingan lintas perusahaan. Dengan demikian, eksplorasi visual tidak hanya berfungsi sebagai tahap pengenalan data, tetapi juga sebagai pengarah fokus analisis agar selaras dengan tujuan evaluasi.
+Pendekatan Visual Analytics memungkinkan eksplorasi data keuangan dilakukan pada berbagai skala, mulai dari tingkat perusahaan individu hingga cakupan data agregat nasional (Arleo et al., 2023). Teknik ini membantu analis dalam memantau perubahan performa keuangan secara temporal serta mengevaluasi dampak kebijakan ekonomi terhadap pertumbuhan entitas bisnis. Dengan mengintegrasikan pengetahuan domain ke dalam model visual, peneliti dapat memvalidasi hipotesis mengenai hubungan ekonomi dan jaringan transaksi yang terjadi antar perusahaan (Arleo et al., 2023). Visualisasi yang interaktif mempermudah proses penemuan pengetahuan dari dataset yang sangat kompleks dan beragam. Meskipun teknik eksplorasi visual dan analisis deskriptif ini memberikan pemahaman yang sangat kaya mengenai pola data, proses pengambilan keputusan akhir untuk menentukan peringkat tetap memerlukan metodologi yang lebih terstruktur.
+Kebutuhan akan hasil evaluasi yang sistematis menunjukkan bahwa analisis yang bersifat deskriptif saja tidak cukup untuk menghasilkan urutan prioritas yang objektif dari berbagai alternatif yang ada. Pengambilan keputusan yang melibatkan banyak kriteria yang sering kali saling bertentangan memerlukan pendekatan yang mampu mengintegrasikan seluruh dimensi tersebut ke dalam satu nilai tunggal (de Oliveira et al., 2023). Dalam situasi di mana analis harus memilih atau merangking perusahaan berdasarkan puluhan metrik keuangan, subjektivitas harus diminimalisir melalui prosedur matematis yang baku. Hal ini menjadi alasan utama mengapa integrasi antara eksplorasi data dan kerangka evaluasi keputusan menjadi sangat krusial dalam sistem pendukung keputusan. Penggunaan Multi-Criteria Decision-Making (MCDM) muncul sebagai solusi logis untuk menangani kompleksitas evaluasi tersebut secara transparan dan terukur.
+Metode Multi-Criteria Decision-Making (MCDM) merupakan kerangka kerja yang dirancang untuk membantu pengambil keputusan dalam mengevaluasi dan merangking alternatif berdasarkan berbagai dimensi kinerja yang berbeda (Baydaş & Pamučar, 2022). Dalam studi tersebut, parameter tingkat return saham—yang didefinisikan sebagai persentase perubahan harga pasar—digunakan sebagai variabel eksternal untuk menguji keandalan hasil perankingan komposit terhadap realitas di bursa. Prinsip dasar dari metode ini adalah mencari solusi terbaik di antara sekumpulan pilihan dengan mempertimbangkan bobot kepentingan dari setiap kriteria yang telah ditentukan (Alamoudi & Bafail, 2022). Melalui pendekatan ini, perbandingan antaralternatif dapat dilakukan secara lebih adil karena setiap metrik keuangan diberikan porsi yang sesuai dengan tujuannya (de Oliveira et al., 2023). Metode ini juga memberikan struktur yang jelas bagi analis dalam melakukan evaluasi yang komprehensif dan multidimensi pada data finansial perusahaan. Keberhasilan dalam menghasilkan perankingan yang konsisten sangat bergantung pada ketepatan teknik pembobotan kriteria yang digunakan di awal proses analisis.
+Berbagai teknik pembobotan telah dikembangkan dalam literatur Multi-Criteria Decision-Making untuk menentukan tingkat kepentingan relatif dari setiap faktor evaluasi, seperti metode CILOS, IDOCRIW, FUCOM, hingga LBWA (Ayan et al., 2023). Pemilihan teknik pembobotan yang tepat sangat krusial karena perubahan kecil pada bobot kriteria dapat menyebabkan perubahan signifikan pada hasil akhir perankingan alternatif. Terdapat pendekatan pembobotan yang bersifat subjektif berdasarkan penilaian pakar serta pendekatan objektif yang didasarkan pada karakteristik data itu sendiri (Ayan et al., 2023). Beberapa penelitian terbaru mulai menyarankan penggunaan metode yang lebih efisien dalam hal jumlah perbandingan berpasangan guna mengurangi potensi kesalahan manusia selama proses evaluasi. Kekuatan dari prosedur pembobotan ini menjadi dasar bagi penerapan teknik perankingan yang lebih spesifik seperti Weighted Sum Method (WSM).
+Metode Weighted Sum Method atau yang juga dikenal sebagai Simple Additive Weighting (SAW) merupakan salah satu teknik dasar paling populer dalam Multi-Criteria Decision-Making yang bekerja dengan menjumlahkan nilai bobot kriteria (Ayan et al., 2023). Keunggulan utama dari metode ini terletak pada strukturnya yang sederhana, transparan, dan fleksibel dalam mengintegrasikan preferensi pengguna dengan algoritma matematika (Ayan et al., 2023). Pengguna dapat dengan mudah memahami bagaimana skor akhir sebuah alternatif dihasilkan melalui perkalian antara nilai normalisasi kriteria dengan bobot kepentingannya (Alamoudi & Bafail, 2022). Metode ini memungkinkan analis untuk menyesuaikan evaluasi berdasarkan perspektif profesional mereka terhadap kondisi pasar yang sedang berlangsung. Perkembangan selanjutnya dalam bidang ini menunjukkan adanya tren penggabungan metode perankingan dasar dengan teknik-teknik lain yang lebih kompleks untuk meningkatkan keandalan sistem.
+Evolusi metode evaluasi keputusan kini mengarah pada pendekatan hybrid yang menggabungkan berbagai teknik seperti integrasi antara analisis multikriteria dengan Data Envelopment Analysis (DEA) maupun analisis klaster (de Oliveira et al., 2023). Penggunaan kombinasi metode pembobotan dengan teknik perankingan yang lebih mutakhir seperti MARCOS, VIKOR, maupun RAPS bertujuan untuk meningkatkan stabilitas dan ketahanan hasil perankingan (Işık et al., 2025; Alamoudi & Bafail, 2022). Selain itu, penerapan simulasi bobot dengan menggunakan ribuan set data acak mulai sering dilakukan untuk menguji apakah sebuah alternatif tetap unggul di bawah berbagai skenario variasi bobot (Kaya et al., 2024). Pendekatan hybrid ini memberikan keyakinan lebih bagi analis karena hasil yang diperoleh tidak hanya didasarkan pada satu perspektif statis melainkan telah melalui pengujian yang mendalam (Mastilo et al., 2024). Di samping ketahanan hasil, aspek keterpahaman terhadap alasan di balik sebuah keputusan juga menjadi faktor yang sangat diperhatikan dalam aplikasi keuangan.
+Aspek keterpahaman (explainability) menjadi krusial dalam penerapan metode evaluasi keputusan pada sektor keuangan karena pengguna profesional memerlukan keluaran yang dapat ditelusuri dan dipertanggungjawabkan (Černevičienė & Kabašinskas, 2022). Keterpahaman ini dapat diwujudkan melalui penyajian langkah perhitungan yang eksplisit, seperti informasi normalisasi, bobot kriteria, serta kontribusi tiap metrik terhadap skor akhir, sehingga pengguna dapat memahami hubungan antara data masukan dan hasil pemeringkatan. Di sisi lain, evaluasi data keuangan juga dihadapkan pada kondisi informasi yang tidak selalu lengkap pada laporan publik perusahaan, sehingga diperlukan mekanisme penanganan data hilang yang jelas agar interpretasi hasil tetap konsisten (Seretidou et al., 2025). Dengan landasan metodologis tersebut, pembahasan kemudian diarahkan pada sektor perbankan sebagai konteks implementasi yang menuntut evaluasi ketat dan terstruktur.
+Sektor perbankan memiliki karakteristik yang sangat unik dengan tingkat regulasi yang sangat ketat serta paparan terhadap berbagai risiko sistemik yang memerlukan evaluasi secara holistik (Sari et al., 2022). Bank beroperasi dalam lingkungan yang dinamis di mana kesehatan finansialnya tidak hanya dipengaruhi oleh faktor internal tetapi juga oleh struktur modal dan inovasi teknologi seperti financial technology (fintech) yang terus berkembang di negara berkembang (Muhammed et al., 2024). Ketangguhan sebuah bank dalam menghadapi guncangan pasar sangat bergantung pada kemampuannya mengelola likuiditas, kualitas aset, dan kecukupan modal secara simultan. Oleh karena itu, penerapan sistem pendukung keputusan yang mampu menangkap seluruh kerumitan operasional bank menjadi kebutuhan yang mendesak bagi para investor institusi. Analisis mendalam terhadap kinerja perbankan di Indonesia telah menjadi subjek penelitian yang ekstensif guna memastikan kesehatan industri keuangan nasional.
+Penelitian mengenai kinerja bank di Indonesia sering kali menggunakan kerangka Risk-Based Bank Rating (RBBR) yang mengevaluasi profil risiko dan profitabilitas secara terintegrasi (Nurwulandari et al., 2022). Faktor-faktor seperti tingkat kompetisi dalam industri perbankan nasional terbukti memiliki pengaruh yang signifikan terhadap efisiensi operasional bank-bank komersial (Sari et al., 2022). Penggunaan rasio keuangan utama seperti Net Interest Margin (NIM) dan Loan-to-Deposit Ratio (LDR) sering dikaitkan dengan kemampuan bank dalam menghasilkan keuntungan yang stabil (Nurwulandari et al., 2022). Selain itu, implementasi tata kelola perusahaan yang baik atau Good Corporate Governance (GCG) berperan penting dalam memediasi hubungan antara profil risiko dan kinerja finansial bank secara keseluruhan (Nurwulandari et al., 2022). Dinamika performa perbankan ini tidak hanya terjadi di Indonesia tetapi juga menunjukkan pola yang menarik di berbagai negara Asia lainnya.
+Studi di negara-negara Asia seperti Vietnam dan Pakistan menunjukkan penggunaan berbagai pendekatan Multi-Criteria Decision-Making untuk mengevaluasi stabilitas dan kesehatan finansial bank (Işık et al., 2025; Trung et al., 2024). Hasil penelitian di wilayah tersebut mengonfirmasi bahwa bank dengan integrasi teknologi keuangan yang lebih tinggi cenderung memiliki tingkat inklusi dan profitabilitas yang lebih baik (Zheng et al., 2023). Perbandingan kinerja antar bank komersial sering kali menggunakan dataset multidimensi yang mencakup layanan pelanggan dan performa pasar saham guna mendapatkan gambaran yang lebih luas (Işık et al., 2025). Penggunaan metode perankingan hybrid di kawasan ini bertujuan untuk meminimalkan ketidakpastian yang timbul akibat fluktuasi ekonomi regional yang sering kali tidak terduga. Keanekaragaman konteks pasar ini juga terlihat dalam penelitian perbankan yang dilakukan di lingkup global dengan karakteristik yang berbeda-beda.
+Analisis kinerja perbankan global di berbagai negara seperti Turki, Bosnia Herzegovina, Arab Saudi, Ethiopia, dan kawasan Eropa menunjukkan penerapan metode evaluasi yang bervariasi sesuai dengan konteks pasar lokal (Kaya et al., 2024; Ünlü et al., 2022). Di Bosnia Herzegovina, penggunaan metode seperti MEREC dan MARCOS telah diterapkan untuk membedah indikator keuangan bank-bank komersial guna memberikan wawasan bagi regulator (Mastilo et al., 2024). Sementara itu, evaluasi terhadap saham sektor perbankan di Arab Saudi menggunakan pendekatan pembobotan yang lebih ketat untuk memberikan rekomendasi investasi bagi pelaku pasar (Alamoudi & Bafail, 2022). Penelitian di Ethiopia menyoroti pentingnya pengaruh struktur modal terhadap performa finansial, sedangkan di Turki fokus penelitian diarahkan pada dampak periode pandemi terhadap efisiensi perbankan (Muhammed et al., 2024; Tutar et al., 2025). Evaluasi menyeluruh ini sering kali bermuara pada pembentukan sebuah indeks komposit yang mampu merangkum seluruh aspek stabilitas bank.
+Penggunaan kerangka kerja CAMELS dan pembentukan indeks stabilitas komposit merupakan salah satu standar yang paling diakui untuk evaluasi kesehatan bank secara multidimensional (Boubaker et al., 2025). Integrasi berbagai rasio keuangan menjadi satu indeks tunggal menggunakan metode seperti Shannon Entropy memberikan ukuran stabilitas yang lebih komprehensif dan objektif (Boubaker et al., 2025). Selain rasio tradisional, penggunaan rasio arus kas dinilai semakin penting dalam melengkapi analisis kesehatan finansial perusahaan perbankan karena sifatnya yang lebih dinamis (Seretidou et al., 2025). Penelitian terbaru juga mulai mengintegrasikan kriteria lingkungan, sosial, dan tata kelola ke dalam model efisiensi perbankan untuk mencapai penilaian yang lebih berkelanjutan (Angilella et al., 2024). Meskipun pendekatan dan indikator yang digunakan semakin beragam, kebutuhan akan integrasi proses analisis dan penyajian hasil yang lebih praktis dalam sebuah sistem masih menjadi ruang pengembangan yang relevan.
+Berdasarkan kajian mendalam terhadap literatur yang telah dipaparkan, terdapat beberapa celah penelitian (research gap) yang menjadi landasan bagi studi ini. Pertama, mayoritas penelitian terdahulu menerapkan metode Multi-Criteria Decision Making (MCDM) secara langsung pada data mentah tanpa didahului oleh analisis eksploratif visual (exploratory data analysis) yang memadai. Padahal, identifikasi anomali distribusi dan multikolinearitas antar-variabel sangat krusial untuk memastikan input model tidak bias, terutama pada dataset perbankan yang memiliki pencilan (outlier) ekstrem. Kedua, sebagian besar studi perankingan bank bersifat statis dengan bobot kriteria yang ditetapkan secara permanen (fixed weights), sehingga gagal mengakomodasi preferensi risiko investor yang dinamis. Ketiga, literatur yang ada umumnya berhenti pada hasil pemeringkatan tanpa melakukan validasi empiris (ground truth validation) terhadap kinerja aktual emiten pada periode selanjutnya (t+1). Hal ini menyebabkan tingkat reliabilitas hasil analisis dari metode yang digunakan sering kali tidak terukur secara objektif. 
+Kebaruan (novelty) dari penelitian ini terletak pada pengembangan kerangka analisis yang mengintegrasikan Exploratory Data Analysis (EDA) untuk deteksi anomali data dan Weighted Sum Method (WSM) dinamis untuk perankingan, yang divalidasi tingkat reliabilitasnya menggunakan pendekatan Ground Truth Analysis pada data historis periode 2015–2024. Sistem Orcas dikembangkan sebagai instrumen bantu (enabler) untuk mengotomatisasi kompleksitas komputasi tersebut, menjamin transparansi perhitungan, dan memfasilitasi evaluasi kinerja perbankan yang terukur serta objektif.
+Analisis Kesehatan Finansial & Fungsi Intermediasi
+Kesehatan finansial pada sektor perbankan memiliki karakteristik yang berbeda dibandingkan perusahaan non-keuangan karena sifat dasar bisnis bank sebagai lembaga intermediasi (financial intermediary). Menurut teori intermediasi, fungsi utama bank adalah menghimpun dana dari unit surplus atau penabung dan menyalurkannya kembali kepada unit defisit atau peminjam dalam bentuk kredit maupun pembiayaan (Nurwulandari et al., 2022). Konsep ini menjadi landasan fundamental dalam menentukan indikator kesehatan bank, khususnya dalam pengklasifikasian atribut sebagai kriteria benefit atau cost. Berbeda dengan perusahaan manufaktur di mana tingginya liabilitas sering dianggap sebagai sinyal risiko kebangkrutan, dalam perbankan, komponen liabilitas tertentu—khususnya simpanan nasabah—justru mencerminkan kepercayaan publik dan ketersediaan likuiditas modal. Simpanan tersebut merupakan instrumen produktif atau bahan baku yang diperlukan bank untuk menghasilkan pendapatan bunga melalui penyaluran kredit (Sari et al., 2022). Oleh karena itu, dalam konteks evaluasi kinerja bank, peningkatan pada pos liabilitas produktif seperti simpanan nasabah dikategorikan sebagai atribut benefit karena menunjukkan tingginya kapasitas intermediasi bank dalam menghimpun modal kerja yang produktif.
+Sebaliknya, aspek efisiensi operasional dinilai dari kemampuan bank menekan pengeluaran yang menggerus laba bersih secara keseluruhan. Biaya operasional yang tinggi tanpa diimbangi pertumbuhan pendapatan menunjukkan inefisiensi manajemen dalam mengelola sumber daya perusahaan. Oleh karena itu, metrik yang berkaitan dengan pengeluaran, seperti beban usaha atau beban pajak, dikategorikan sebagai atribut cost di mana nilai yang lebih rendah mencerminkan kesehatan finansial dan efisiensi yang lebih prima (Tutar et al., 2025). Secara komprehensif, evaluasi kesehatan finansial dalam penelitian ini didasarkan pada integrasi tiga komponen utama laporan keuangan yang mencakup neraca (balance sheet) untuk mengukur kekuatan struktur modal dan likuiditas, laporan laba rugi (income statement) untuk mengukur profitabilitas serta efisiensi, dan laporan arus kas (cashflow statement) untuk mengukur kemampuan bank menghasilkan kas riil dari aktivitas operasi, investasi, maupun pendanaan guna menjamin keberlangsungan usaha jangka pendek (Seretidou et al., 2025). Pemahaman terhadap karakteristik unik laporan keuangan perbankan ini menjadi dasar validasi dalam penentuan tipe kriteria pada metode weighted sum method (WSM), sehingga hasil perankingan yang dihasilkan sistem mencerminkan logika bisnis perbankan yang sesungguhnya secara objektif dan transparan.
+Komponen Laporan Keuangan Perbankan
+Laporan keuangan perbankan merupakan representasi formal dari seluruh aktivitas finansial yang disusun berdasarkan Pernyataan Standar Akuntansi Keuangan (PSAK) serta ketentuan Otoritas Jasa Keuangan (OJK). Dalam penelitian ini, laporan keuangan berfungsi sebagai sumber data mentah (raw data) yang menyediakan parameter objektif untuk mengukur performa emiten. Keseluruhan analisis didasarkan pada 39 metrik keuangan yang diekstraksi dari tiga komponen utama laporan, yang mana pemilihan metrik tersebut ditujukan untuk merepresentasikan dimensi likuiditas, solvabilitas, dan profitabilitas secara komprehensif. Penggunaan dataset yang mencakup variabel dari berbagai sisi laporan ini bertujuan untuk meminimalisir bias informasi yang sering muncul jika hanya menggunakan satu dimensi rasio saja, sehingga model pengambilan keputusan multikriteria atau Multi-Criteria Decision Making (MCDM) yang dibangun memiliki basis data yang kuat dan berimbang.
+Komponen pertama yang menjadi sumber data adalah neraca (balance sheet) yang menyajikan posisi aset, liabilitas, dan ekuitas bank pada titik waktu tertentu. Struktur neraca perbankan mencerminkan kapasitas intermediasi dan kekuatan fundamental dalam mengelola modal. Sebanyak 14 metrik utama dalam penelitian ini diekstraksi dari komponen neraca, mencakup variabel seperti total aset sebagai ukuran skala bank, simpanan nasabah yang diidentifikasi sebagai instrumen produktif (benefit), serta posisi ekuitas. Selain itu, metrik valuasi pasar seperti Price to Book Value (PBV) dan Book Value Per Share (BVPS) juga diturunkan dari komponen ekuitas untuk mengukur persepsi pasar terhadap nilai intrinsik emiten. Integrasi variabel-variabel neraca ini sangat krusial untuk memastikan bahwa pemeringkatan tidak hanya melihat hasil akhir (laba), tetapi juga ketahanan struktur modal bank dalam menghadapi risiko pasar.
+Komponen kedua adalah laporan laba rugi (income statement) yang menyediakan informasi mengenai efisiensi operasional dan kemampuan emiten dalam menghasilkan keuntungan selama satu periode. Analisis kinerja operasional pada penelitian ini didasarkan pada 16 metrik yang diturunkan dari laporan laba rugi, termasuk pendapatan bunga dan laba bersih yang diklasifikasikan sebagai atribut benefit. Di sisi lain, komponen biaya seperti beban usaha dan beban pajak dikategorikan sebagai atribut cost yang mencerminkan tingkat inefisiensi manajemen. Fokus pada metrik laba rugi memungkinkan sistem untuk mengevaluasi kualitas manajemen dalam mengelola pengeluaran operasional terhadap pendapatan yang dihasilkan, yang menjadi indikator utama dalam menentukan tingkat stabilitas finansial bank dalam kondisi ekonomi yang dinamis.
+Komponen terakhir adalah laporan arus kas (cash flow statement) yang mencerminkan pergerakan kas riil dari aktivitas operasi, investasi, dan pendanaan. Dalam perspektif data science keuangan, laporan arus kas memiliki peran vital untuk memvalidasi kualitas laba akuntansi dan mendeteksi adanya manipulasi laba akrual yang mungkin tidak terlihat pada laporan laba rugi. Sebanyak 9 metrik diekstraksi dari laporan arus kas, termasuk operating cash flow dan free cash flow, untuk memastikan ketersediaan likuiditas riil emiten. Dengan mengagregasi total 39 metrik dari ketiga komponen laporan tersebut, kerangka analisis ini mampu memberikan penilaian kesehatan perbankan yang holistik, di mana stabilitas jangka pendek dijamin oleh arus kas, kekuatan struktur dijamin oleh neraca, dan profitabilitas jangka panjang dijamin oleh kinerja laba rugi.
+Struktur neraca perbankan memiliki standardisasi akuntansi khusus dalam pelaporan nilai total aset bruto dan nilai aset bersih setelah dikonversikan dengan komponen penyisihan. Posisi keuangan konsolidasian perbankan menempatkan nilai total aset bruto sebagai hasil penjumlahan kumulatif dari total liabilitas, total ekuitas, dan Cadangan Kerugian Penurunan Nilai atau CKPN. Kebijakan akuntansi tersebut memposisikan CKPN sebagai akun kontra-aset (contra-asset account) yang secara matematis merekonsiliasi perbedaan antara pencatatan aset bruto pada neraca utama dengan akumulasi riil liabilitas dan ekuitas bank.
+Exploratory Data Analysis (EDA)
+Exploratory Data Analysis (EDA) merupakan pendekatan analisis statistik yang bertujuan untuk memahami karakteristik mendasar dari suatu dataset melalui ringkasan numerik dan visualisasi grafis sebelum dilakukan pemodelan formal (Chakri et al., 2023). Dalam penelitian ini, EDA berfungsi sebagai mekanisme kontrol kualitas untuk mengidentifikasi pola distribusi, mendeteksi anomali (outlier), serta menguji korelasi pada 39 metrik keuangan dari 32 emiten perbankan. Implementasi teknik ini sangat krusial karena data laporan keuangan sering kali memiliki volatilitas tinggi dan pencilan ekstrem yang dapat mendistorsi hasil perhitungan. Secara operasional, analisis dalam penelitian ini mencakup pemeriksaan univariat untuk memahami sebaran tiap variabel dan analisis multivariat untuk melihat keterkaitan antar-variabel sebelum diproses oleh model pemeringkatan.
+Analisis univariat berfokus pada pemeriksaan distribusi setiap variabel secara mandiri untuk memahami ukuran pemusatan (central tendency) dan ukuran penyebaran (dispersion). Mengingat data keuangan perbankan sering kali memiliki distribusi yang miring (skewed), visualisasi menggunakan boxplot menjadi instrumen utama. Boxplot menyajikan ringkasan lima angka yang mencakup nilai minimum, kuartil pertama (Q1), median (Q2), kuartil ketiga (Q3), dan nilai maksimum. Proses deteksi pencilan dilakukan menggunakan metode Interquartile Range (IQR). Nilai IQR dihitung berdasarkan selisih antara kuartil ketiga dan kuartil pertama sebagaimana ditunjukkan pada Persamaan 2.1:
+(Persamaan 2.1)
+Berdasarkan nilai IQR tersebut, ditetapkan batas toleransi data yang disebut sebagai pagar bawah dan pagar atas. Pagar bawah merupakan ambang batas minimum data yang dianggap normal, sedangkan pagar atas merupakan ambang batas maksimum. Suatu titik data diklasifikasikan sebagai pencilan (outlier) jika berada di luar rentang pagar tersebut sesuai dengan formulasi pada Persamaan 2.2 dan Persamaan 2.3 (Munshi et al., 2022):
+(Persamaan 2.2)
+(Persamaan 2.3)
+Analisis multivariat diterapkan untuk memeriksa hubungan simultan antar-metrik, khususnya melalui penggunaan heatmap korelasi untuk memvisualisasikan matriks korelasi Pearson (r). Heatmap merepresentasikan kekuatan hubungan linear dengan gradasi warna, di mana nilai yang mendekati +1 menunjukkan korelasi positif kuat dan -1 menunjukkan korelasi negatif kuat. Analisis ini berfungsi untuk mendeteksi multikolinearitas atau redundansi informasi, yaitu kondisi di mana dua atau lebih metrik memiliki hubungan yang sangat tinggi sehingga memberikan informasi yang serupa. Dengan menjadikan EDA sebagai langkah pendahuluan sistematis, validitas data yang diproses oleh model weighted sum method (WSM) dapat terjamin, sehingga hasil pemeringkatan yang dihasilkan mencerminkan kondisi fundamental perbankan secara akurat tanpa terganggu oleh distorsi anomali data.
+Multi-Criteria Decision Making (MCDM)
+Multi-Criteria Decision Making (MCDM) merupakan kerangka kerja matematis yang digunakan untuk mengevaluasi sekumpulan alternatif berdasarkan sejumlah kriteria yang sering kali saling bertentangan (conflicting criteria). Dalam konteks analisis data perbankan, pendekatan ini menjadi krusial karena kinerja bank tidak dapat dinilai hanya dari satu dimensi saja. Sebagai contoh, sebuah bank mungkin memiliki tingkat profitabilitas yang sangat tinggi sebagai indikator positif, namun pada saat yang sama memiliki beban operasional yang tinggi pula sebagai indikator negatif. MCDM berfungsi untuk menyeimbangkan trade-off antara dimensi keuntungan dan risiko tersebut guna menghasilkan satu nilai preferensi tunggal yang objektif (Baydaş & Pamučar, 2022).
+Secara formal, masalah pengambilan keputusan dalam MCDM dipandang sebagai operasi pada Matriks Keputusan (X) berukuran m x n, di mana m merepresentasikan jumlah alternatif (32 emiten perbankan) dan n merepresentasikan jumlah atribut (39 metrik keuangan). Struktur matriks tersebut merepresentasikan setiap performa emiten terhadap metrik-metrik yang ditentukan sebagaimana ditunjukkan pada Persamaan 2.4:
+(Persamaan 2.4)
+Setiap elemen matriks xij mewakili kinerja emiten ke-i terhadap metrik ke-j. Komponen fundamental dalam struktur Multi-Criteria Decision Making (MCDM) yang diterapkan pada penelitian ini meliputi alternatif sebagai objek yang diperingkat, atribut atau kriteria pengukuran, serta bobot kepentingan relatif. Atribut dalam MCDM dibagi menjadi dua karakteristik preferensi, yaitu atribut benefit di mana nilai yang lebih besar lebih diinginkan untuk maksimalisasi kinerja seperti laba bersih, dan atribut cost di mana nilai yang lebih kecil lebih diinginkan untuk minimalisasi risiko atau inefisiensi seperti beban usaha. Selain itu, terdapat komponen bobot (w) yang merepresentasikan tingkat kepentingan relatif antar-kriteria, yang dalam sistem ini dirancang secara dinamis untuk mengakomodasi berbagai preferensi risiko investor. Klasifikasi tegas antara atribut benefit dan cost ini menjadi landasan logis bagi tahap normalisasi data pada proses selanjutnya, guna memastikan bahwa algoritma perankingan memperlakukan setiap variabel sesuai dengan dampak ekonominya terhadap stabilitas finansial bank secara akurat.
+Formulasi Matematis Weighted Sum Method (WSM)
+Weighted Sum Method (WSM) merupakan salah satu metode pengambilan keputusan multikriteria yang paling sederhana namun memiliki tingkat akurasi yang tinggi dalam menentukan peringkat alternatif melalui prinsip pembobotan linier. Metode ini bekerja dengan cara memberikan bobot relatif terhadap kriteria-kriteria yang telah ditentukan, kemudian menjumlahkan hasil perkalian antara bobot tersebut dengan nilai kriteria yang telah dinormalisasi. Secara operasional, tahapan perhitungan WSM pada instrumen penelitian ini terdiri dari proses normalisasi matriks keputusan dan proses agregasi skor preferensi. Normalisasi merupakan langkah krusial untuk mengubah nilai dari berbagai unit metrik keuangan yang berbeda ke dalam skala yang seragam antara 0 hingga 1. Formulasi normalisasi dibedakan berdasarkan karakteristik atribut, yang mana untuk atribut benefit menggunakan Persamaan 2.5 dan untuk atribut cost menggunakan Persamaan 2.6 (Boubaker et al., 2025):
+Keterangan dari formula tersebut menyatakan bahwa  adalah nilai hasil normalisasi emiten ke-i pada kriteria ke-j,  merupakan nilai mentah dari laporan keuangan,  adalah nilai minimum pada kriteria ke-j dalam populasi emiten, dan  adalah nilai maksimum pada kriteria ke-j dalam populasi emiten.
+Setelah seluruh nilai metrik berada dalam skala yang seragam, langkah selanjutnya adalah menghitung skor preferensi untuk setiap emiten. Skor ini diperoleh dengan mengalikan nilai normalisasi dengan bobot kepentingan  yang telah ditentukan untuk masing-masing dari 39 metrik keuangan, sebagaimana ditunjukkan pada Persamaan 2.7:
+Hasil akhir dari perhitungan ini adalah nilai  yang merepresentasikan skor kesehatan finansial bank secara keseluruhan. Emiten dengan skor tertinggi ditempatkan pada peringkat pertama, yang menunjukkan bahwa bank tersebut memiliki kombinasi performa fundamental terbaik berdasarkan kriteria yang telah ditetapkan.
+Konsep Validasi Ground Truth
+Kerangka validasi merupakan tahapan krusial dalam penelitian berbasis data untuk memastikan bahwa hasil analisis memiliki tingkat reliabilitas yang dapat dipertanggungjawabkan secara ilmiah. Dalam pengembangan model pendukung keputusan, evaluasi tidak cukup hanya dilakukan pada aspek fungsional sistem, melainkan harus mencakup validitas hasil analisis untuk membuktikan bahwa metode perankingan yang digunakan mampu merepresentasikan kondisi kesehatan finansial yang sesungguhnya. Instrumen pengujian utama yang diterapkan dalam penelitian ini adalah pendekatan ground truth analysis, yaitu sebuah metode pembandingan antara hasil pemodelan dengan data kebenaran atau fakta aktual yang telah terjadi. Mengingat penelitian ini menggunakan data time-series dari periode 2015 hingga 2024, validasi dilakukan dengan pendekatan evaluasi ex-post atau analisis mundur. Prinsip dasarnya adalah menguji kesesuaian antara hasil peringkat pada tahun t terhadap kinerja fundamental riil emiten pada periode selanjutnya (t+1) (Baydaş & Pamučar, 2022).
+Logika yang mendasari pendekatan ground truth ini adalah stabilitas kinerja finansial; sebuah bank yang dinilai memiliki peringkat kesehatan tinggi pada suatu periode seharusnya menunjukkan konsistensi atau pertumbuhan kinerja yang positif pada laporan keuangan tahun berikutnya. Untuk mengukur tingkat kesesuaian antara hasil perankingan sistem dengan fakta lapangan tersebut, digunakan metode statistik korelasi peringkat (rank correlation) yang mengukur kekuatan hubungan antara dua variabel ordinal. Dua teknik utama yang digunakan adalah Koefisien Korelasi Spearman  untuk mengukur kekuatan arah hubungan peringkat, serta Kendall’s Tau () untuk mengukur kesesuaian urutan data. Penggunaan Kendall’s Tau dinilai sangat tepat karena sifatnya yang lebih kuat (robust) dalam menangani dataset dengan jumlah sampel kecil hingga menengah, seperti 32 emiten perbankan yang menjadi objek dalam penelitian ini (Munshi et al., 2022).
+Selain validasi terhadap realitas ekonomi, penelitian ini juga mencakup verifikasi komputasi (computational verification) untuk menjamin integritas instrumen analisis. Verifikasi ini dilakukan dengan membandingkan output skor yang dihasilkan oleh algoritma sistem dengan perhitungan manual secara acak menggunakan perangkat olah data eksternal. Jika selisih atau delta antara kedua perhitungan tersebut adalah nol, maka sistem dinyatakan valid secara komputasi. Integrasi antara validasi model melalui ground truth dan verifikasi teknis ini memastikan bahwa sistem Orcas bukan sekadar alat bantu kalkulasi digital, melainkan instrumen penelitian yang teruji secara empiris. Dengan demikian, hasil perankingan yang dihasilkan memiliki dasar argumentasi yang kuat untuk digunakan sebagai referensi dalam proses pengambilan keputusan investasi yang objektif dan transparan.
+Decision Support System (DSS)
+Decision Support System (DSS) dalam konteks analisis keuangan modern didefinisikan sebagai instrumen komputasi interaktif yang mengintegrasikan pemrosesan data dengan model pengambilan keputusan multikriteria untuk menghasilkan rekomendasi yang transparan, dapat ditelusuri, dan dapat dipertanggungjawabkan oleh analis (Černevičienė & Kabašinskas, 2022). Permasalahan evaluasi kesehatan finansial perbankan dikategorikan sebagai masalah pengambilan keputusan semiterstruktur karena melibatkan data kuantitatif yang pasti dari laporan keuangan, namun tetap membutuhkan pertimbangan subjektif pengambil keputusan terkait preferensi risiko investor. Penelitian ini tidak memosisikan DSS untuk menggantikan peran analis sepenuhnya, melainkan berfungsi sebagai instrumen komputasi (computational instrument) untuk menangani volume dan dimensi data yang masif. Keberadaan 32 emiten dengan 39 metrik keuangan selama periode sepuluh tahun (2015–2024) menjadikan penggunaan sistem sangat krusial untuk menghindari kesalahan manusia (human error) serta meminimalisasi bias subjektivitas jika pengolahan data dilakukan secara manual. Arsitektur DSS secara teoretis terdiri dari tiga subsistem utama yang saling terintegrasi guna menjamin integritas hasil analisis, sebagaimana diilustrasikan pada Gambar 2.1 berikut:
+Gambar 2.1 Arsitektur Decision Support System Berbasis Multi-Criteria
+Subsistem pertama adalah manajemen data (data management subsystem) yang berfungsi sebagai basis pengetahuan (knowledge base) untuk mengonsolidasi data laporan keuangan (neraca, laba rugi, dan arus kas) yang heterogen menjadi format terstruktur. Dalam perspektif data science, komponen ini memastikan prinsip Garbage In, Garbage Out (GIGO) dapat dihindari sebelum data masuk ke tahap pemodelan. Subsistem kedua adalah manajemen model (model management subsystem) yang bertindak sebagai "otak" sistem dengan mengintegrasikan dua mesin inferensi utama, yaitu model statistik melalui Exploratory Data Analysis (EDA) untuk mendeteksi anomali secara otomatis, serta model keputusan menggunakan Weighted Sum Method (WSM) untuk memproses pembobotan dan normalisasi matriks keputusan.
+Subsistem ketiga adalah antarmuka pengguna atau dialog (user interface/dialog subsystem) yang berfungsi sebagai media komunikasi antara pengguna dan sistem. Subsistem ini memfasilitasi analisis visual (visual analytics) melalui grafik interaktif dan memungkinkan pengguna melakukan eksperimen berupa what-if analysis dengan mengubah parameter bobot kriteria secara dinamis. Kemampuan untuk menyesuaikan bobot ini sangat penting dalam analisis perbankan karena preferensi investor dapat berubah sewaktu-waktu mengikuti kondisi pasar, tanpa harus mengubah struktur model dasar sistem. Dengan mengintegrasikan ketiga subsistem tersebut, instrumen analisis ini mampu memberikan rekomendasi investasi secara objektif, transparan, dan dapat dipertanggungjawabkan secara ilmiah.
+Arsitektur dan Teknologi Pengembangan Web
+Pengembangan instrumen analisis Orcas mengadopsi arsitektur client-server modern yang bersifat decoupled guna memisahkan lapisan komputasi dengan lapisan visualisasi data. Pemilihan arsitektur ini merupakan keputusan strategis untuk memastikan bahwa proses logika matematis yang intensif pada backend tidak mengganggu responsivitas antarmuka pada frontend. Dengan pemisahan ini, sistem dapat mengelola permintaan kalkulasi skor Weighted Sum Method (WSM) secara mandiri, sementara sisi pengguna tetap mendapatkan pengalaman eksplorasi data yang lancar. Integrasi teknologi dalam arsitektur ini difokuskan pada empat komponen utama yang mendukung integritas data, presisi numerik, dan efisiensi waktu komputasi.
+Layanan komputasi di sisi server dikembangkan menggunakan bahasa pemrograman Python dengan kerangka kerja FastAPI. Python dipilih karena ekosistemnya yang sangat mapan dalam bidang data science, memungkinkan integrasi pustaka pemrosesan data untuk menangani operasi numerik secara presisi. Penggunaan FastAPI memberikan keunggulan pada performa tinggi melalui sifatnya yang asynchronous, sehingga mampu melayani permintaan kalkulasi matriks berukuran besar (32 emiten × 39 metrik) secara real-time dengan latensi rendah. Untuk menjaga integritas data laporan keuangan yang bersifat relasional, digunakan PostgreSQL sebagai sistem manajemen basis data utama. PostgreSQL menjamin konsistensi tipe data (data typing) dan integritas referensial, yang sangat krusial dalam penelitian ini untuk mencegah terjadinya kesalahan kalkulasi akibat ketidakkonsistenan format angka atau mata uang antar-tabel emiten.
+Di sisi antarmuka, teknologi React digunakan untuk memfasilitasi kebutuhan analisis visual (visual analytics) yang interaktif. Berbeda dengan halaman web statis konvensional, React memungkinkan pembuatan komponen grafik dinamis, seperti scatter plot untuk kebutuhan EDA maupun diagram batang untuk perankingan, yang merespons perubahan parameter bobot secara instan. Terakhir, untuk mengoptimalkan performa pada fitur simulasi skenario (what-if analysis), diterapkan teknologi Redis sebagai lapisan caching. Redis menyimpan hasil perhitungan sementara dalam memori utama (RAM), sehingga sistem tidak perlu melakukan kueri berulang ke basis data fisik untuk data yang sering diakses. Kombinasi infrastruktur ini membentuk lingkungan komputasi yang kokoh, memastikan instrumen penelitian mampu menghasilkan rekomendasi yang akurat secara matematis sekaligus responsif terhadap kebutuhan eksplorasi pengguna.
+BAB IIIMETODOLOGI PENELITIAN
+Bab III menjabarkan desain metodologi penelitian yang disusun secara sistematis untuk menjawab rumusan masalah secara terukur. Alur pembahasan mencakup prosedur pengumpulan data sekunder, definisi operasional variabel, serta teknik prapemrosesan data (data preprocessing). Fokus utama bab ini diarahkan pada perancangan skenario analisis data, yang meliputi skenario analisis eksploratif visual (EDA), tahapan operasional algoritma perhitungan WSM, hingga skenario validasi Ground Truth Analysis untuk menguji akurasi hasil perankingan. Bagian akhir bab ini membahas perancangan sistem Orcas, yang secara spesifik diposisikan sebagai pengembangan instrumen komputasi (computational instrument) untuk mengotomatisasi metode analisis yang telah dirancang sebelumnya.
+Tempat dan Waktu Penelitian
+Penelitian ini dilaksanakan di Kampus Bukit Universitas Udayana, tepatnya di Gedung Program Studi Teknologi Informasi, Fakultas Teknik, yang beralamat di Jalan Raya Kampus Udayana, Jimbaran, Kecamatan Kuta Selatan, Kabupaten Badung, Bali. Penelitian berlangsung dalam kurun waktu dua belas bulan, yakni dari bulan September 2025 hingga September 2026.
+Alur Penelitian
+Penelitian ini dijalankan melalui serangkaian tahapan sistematis yang dirancang untuk menjawab rumusan masalah secara objektif, mulai dari fase akuisisi data hingga tahap validasi akurasi perankingan. Seluruh alur penelitian disusun dengan pendekatan data-driven decision making, di mana setiap langkah berfungsi untuk menjamin integritas data serta meminimalisir bias subjektivitas dalam pengambilan keputusan. Struktur metodologi ini diilustrasikan secara komprehensif melalui diagram alir pada Gambar 3.1, yang menggambarkan transisi dari pengolahan data mentah menjadi instrumen analisis yang kredibel.
+Gambar 3.1 Diagram Alur Penelitian
+Mengingat format laporan keuangan perbankan yang dipublikasikan masih berupa dokumen tidak terstruktur (PDF) dengan tata letak yang bervariasi, pengumpulan data dilakukan melalui teknik ekstraksi manual terstruktur. Data dari pos-pos neraca, laba rugi, dan arus kas dipindahkan secara teliti ke dalam format basis data terstruktur (CSV) guna memudahkan proses komputasi pada tahap selanjutnya. Untuk memitigasi risiko kesalahan input (human error) sebagaimana dikhawatirkan dalam proses manual, diterapkan mekanisme verifikasi data bertingkat. Pertama, dilakukan pemeriksaan konsistensi internal dengan memastikan keseimbangan persamaan akuntansi dasar (Aset = Liabilitas + Ekuitas) pada setiap data yang diinput. Kedua, dilakukan validasi sampel acak (cross-check) terhadap 10% dari total dataset dengan membandingkan kembali nilai pada basis data terhadap dokumen asli PDF guna menjamin tingkat akurasi data sebelum masuk ke tahap prapemrosesan.
+Sumber Data dan Metode Pengumpulan Data
+Penelitian ini menggunakan data sekunder berupa laporan keuangan tahunan (annual report) auditan milik emiten perbankan yang tercatat di Bursa Efek Indonesia (BEI), dengan sumber data yang diperoleh secara eksklusif dari hasil audit Orcas Capital Partnership dan bukan bersumber dari laporan tahunan di situs resmi bursa efek. Periode observasi mencakup data runtut waktu (time-series) selama satu dekade, mulai dari tahun fiskal 2015 hingga 2024, yang bertujuan untuk menangkap dinamika kinerja perbankan dalam berbagai kondisi ekonomi, termasuk masa sebelum, selama, dan pascapandemi COVID-19. Populasi awal dalam penelitian ini meliputi 48 perusahaan sektor perbankan di BEI, namun pengambilan sampel dilakukan menggunakan metode purposive sampling guna menjaga homogenitas data dan reliabilitas model pemeringkatan. Penyaringan ini menghasilkan eksklusi terhadap 16 emiten berdasarkan empat kriteria pembatas yang dinilai dapat mendistorsi struktur ekuilibrium evaluasi multikriteria.
+Emiten dengan operasional akuntansi syariah murni dieksklusi pada kriteria pertama karena indikator utamanya berbasis bagi hasil sehingga tidak dapat diperbandingkan secara setara dengan rasio pendapatan bunga bank konvensional, yakni PT Bank Syariah Indonesia Tbk (BRIS), PT Bank BTPN Syariah Tbk (BTPS), PT Bank Aladin Syariah Tbk (BANK), dan PT Bank Panin Dubai Syariah Tbk (PNBS). Kriteria kedua mengeliminasi emiten yang tidak memiliki ketersediaan data historis lengkap akibat baru melakukan penawaran umum perdana (Initial Public Offering/IPO) pasca-2015, yang meliputi PT Bank Amar Indonesia Tbk (AMAR), PT Bank Ganesha Tbk (BGTG), PT Bank Multiarta Sentosa Tbk (MASB), dan PT Super Bank Indonesia Tbk (SUPA). Kriteria ketiga mengeksklusi emiten yang masuk dalam Papan Pemantauan Khusus (Full Call Auction/FCA) atau memiliki riwayat suspensi perdagangan bursa jangka panjang yang mengganggu reliabilitas data sekunder, yaitu PT Bank Pembangunan Daerah Banten Tbk (BEKS) dan PT Bank of India Indonesia Tbk (BSWD). Kriteria terakhir mengeluarkan emiten yang mengalami transformasi model bisnis radikal seperti peralihan menjadi bank digital atau aksi restrukturisasi ekstrem yang memicu anomali pembengkakan pos biaya secara tidak wajar, yaitu PT Allo Bank Indonesia Tbk (BBHI), PT Bank Neo Commerce Tbk (BBYB), PT Bank Raya Indonesia Tbk (AGRO), PT Krom Bank Indonesia Tbk (BBSI), PT Bank JTrust Indonesia Tbk (BCIC), dan PT Bank Mestika Dharma Tbk (BBMD). Keseluruhan kriteria penyaringan tersebut secara definitif menghasilkan 32 emiten bank umum konvensional yang memenuhi syarat sebagai objek penelitian sebagaimana disajikan pada Tabel 3.1 berikut:
+Tabel 3.1 Daftar Emiten Perbankan di BEI yang Digunakan
+No
+Kode Emiten
+Nama Perusahaan
+1
+BBRI
+PT Bank Rakyat Indonesia (Persero) Tbk
+2
+BBNI
+PT Bank Negara Indonesia (Persero) Tbk
+3
+BMRI
+PT Bank Mandiri (Persero) Tbk
+4
+BBCA
+PT Bank Central Asia Tbk
+5
+NISP
+PT Bank OCBC NISP Tbk
+6
+BBTN
+PT Bank Tabungan Negara (Persero) Tbk
+7
+BBKP
+PT Bank KB Bukopin Tbk
+8
+BVIC
+PT Bank Victoria International Tbk
+9
+BINA
+Bank Ina Perdana Tbk
+10
+NOBU
+PT Bank Nationalnobu Tbk
+11
+SDRA
+Bank Woori Saudara Indonesia 1906 Tbk
+12
+BJTM
+Bank Pembangunan Daerah Jawa Timur Tbk
+13
+BJBR
+Bank Pembangunan Daerah Jawa Barat dan Banten Tbk
+14
+BDMN
+Bank Danamon Indonesia Tbk
+15
+BNGA
+Bank CIMB Niaga Tbk
+16
+BSIM
+Bank Sinarmas Tbk
+17
+AGRS
+PT Bank IBK Indonesia Tbk
+18
+MAYA
+PT Bank Mayapada Internasional Tbk
+19
+BABP
+PT Bank MNC Internasional Tbk
+20
+BNII
+PT Bank Maybank Indonesia Tbk
+21
+BNLI
+PT Bank Permata Tbk
+22
+PNBN
+Bank Pan Indonesia Tbk
+23
+BTPN
+PT Bank SMBC Indonesia Tbk
+24
+INPC
+Bank Artha Graha Internasional Tbk
+25
+DNAR
+PT Bank Oke Indonesia Tbk
+26
+BNBA
+Bank Bumi Arta Tbk
+27
+MEGA
+Bank Mega Tbk
+28
+MCOR
+PT Bank China Construction Bank Indonesia Tbk
+29
+BKSW
+PT Bank QNB Indonesia Tbk
+30
+BACA
+PT Bank Capital Indonesia Tbk
+31
+ARTO
+PT Bank Jago Tbk
+32
+BMAS
+PT Bank Maspion Indonesia Tbk
+Metode pengumpulan data dilakukan secara manual dengan mengekstraksi nilai metrik keuangan dari setiap laporan tahunan ke dalam Google Sheets. Setiap emiten disimpan dalam satu tab terpisah dengan struktur kolom horizontal, dengan urutan tahun terbaru ditempatkan di sisi kiri untuk memudahkan penelusuran data. Data yang dikumpulkan mencakup 39 metrik keuangan yang dibagi ke dalam tiga komponen utama laporan keuangan, yaitu laporan arus kas, neraca, dan laporan laba rugi, dengan penamaan metrik mengikuti informasi yang disajikan pada laporan tahunan masing-masing emiten.
+Komponen laporan arus kas terdiri dari 9 metrik yang menggambarkan pergerakan kas perusahaan, meliputi arus kas dari aktivitas operasi (operating cash flow), arus kas dari aktivitas investasi, arus kas dari aktivitas pendanaan, kenaikan atau penurunan bersih kas dan setara kas, kas dan setara kas awal periode, kas dan setara kas akhir periode, capital expenditure, free cash flow, serta free cash flow per share.
+Komponen neraca terdiri dari 14 metrik yang menggambarkan posisi keuangan perusahaan, meliputi total aset, kas dan setara kas, giro pada Bank Indonesia, penempatan pada Bank Indonesia, pinjaman yang diberikan, aset tetap, simpanan nasabah, pinjaman yang diterima, total liabilitas, total ekuitas, price to book value, book value per share, tangible book value per share, serta asset turnover.
+Komponen laporan laba rugi terdiri dari 16 metrik yang mencerminkan kinerja profitabilitas perusahaan, meliputi total pendapatan, total beban pokok, laba kotor, beban usaha, laba usaha, pendapatan atau beban lain-lain, laba sebelum pajak, beban pajak penghasilan, laba bersih tahun berjalan, jumlah laba komprehensif, saham beredar, earnings per share, price to earnings ratio, price to sales, return on assets, serta return on equity.
+Instrumen Penelitian
+Pelaksanaan penelitian ini membutuhkan dukungan infrastruktur teknologi yang memadai untuk menangani seluruh rangkaian proses analisis data, mulai dari ekstraksi data mentah, prapemrosesan, analisis eksploratif, hingga perhitungan algoritma perankingan. Mengingat penelitian ini melibatkan pemrosesan dataset time-series dengan dimensi matriks yang kompleks (32 emiten x 39 metrik selama 10 tahun), instrumen penelitian dipilih dengan memprioritaskan kemampuan komputasi numerik yang presisi dan efisiensi pemrosesan data. Instrumen penelitian diklasifikasikan menjadi dua kategori utama, yaitu perangkat keras (hardware) sebagai lingkungan komputasi fisik, dan perangkat lunak (software) sebagai lingkungan pengembangan algoritma dan analisis. Rincian spesifikasi dan kegunaan fungsional dari setiap instrumen disajikan pada Tabel 3.2.
+Tabel 3.2 Instrumen Penelitian
+Perangkat
+Komponen
+Keterangan
+Kegunaan
+Hardware
+Laptop Macbook Pro 16 
+1TB SSD
+64GB RAM
+Chip Apple M1 Max
+Perangkat utama untuk pengolahan data dan pengembangan sistem
+Software
+Sistem Operasi
+macOS Tahoe 26.6
+Lingkungan kerja utama penelitian
+Spreadsheet
+Google Sheets
+Input dan penyusunan dataset metrik tahunan per emiten
+Notebook
+Google Colab
+Workbench analisis awal untuk pembersihan data, transformasi struktur, dan uji coba visualisasi EDA.
+Code Editor
+Visual Studio Code
+Pengembangan kode frontend dan backend
+Frontend
+React & TypeScript
+Membangun antarmuka web Orcas untuk analisis dan visualisasi
+Backend
+Python & FastAPI
+Environment komputasi utama untuk eksekusi algoritma EDA (statistik) dan perhitungan matriks WSM.
+Database
+PostgreSQL
+Basis data relasional untuk menjamin integritas struktur data laporan keuangan dan menyimpan riwayat ground truth.
+Cache
+Redis 
+Penyimpanan memori sementara untuk mempercepat simulasi skenario (what-if analysis) yang berulang.
+Version Control
+Git & Github
+Pengelolaan versi kode, pencatatan perubahan, dan kolaborasi
+Browser
+Google Chrome 
+Akses sistem web dan uji coba fitur dari sisi pengguna
+Pemilihan spesifikasi perangkat keras pada Tabel 3.2, khususnya penggunaan prosesor berbasis ARM (Apple M1 Max) dengan memori besar (64 GB), didasarkan pada kebutuhan untuk meminimalisir latensi saat melakukan iterasi perhitungan matriks Weighted Sum Method (WSM) dan rendering visualisasi data statistik yang intensif. Kapasitas memori yang besar sangat krusial untuk menampung dataframe pandas dalam memori (in-memory processing) selama proses EDA guna menjamin kecepatan akses data. Sementara itu, pada sisi perangkat lunak, ekosistem Python dipilih karena ketersediaan pustaka yang menjadi standar industri dalam pengolahan data ilmiah. Seluruh instrumen ini diintegrasikan guna memastikan bahwa hasil analisis yang diperoleh memiliki tingkat akurasi tinggi dan dapat direproduksi (reproducible).
+Definisi Operasional Variabel
+Definisi operasional variabel bertujuan untuk memberikan batasan yang jelas mengenai parameter-parameter keuangan yang digunakan dalam instrumen analisis, serta menetapkan arah preferensi (atribut) untuk setiap metrik dalam model Weighted Sum Method (WSM). Variabel penelitian ini mencakup 39 metrik keuangan yang diekstraksi dari tiga komponen utama laporan keuangan: Neraca (Balance Sheet), Laba Rugi (Income Statement), dan Arus Kas (Cash Flow). Penentuan atribut metrik diklasifikasikan menjadi dua kategori berdasarkan dampaknya terhadap kesehatan finansial bank yaitu benefit dan cost. Atribut Benefit merupakan variabel yang memberikan kontribusi positif terhadap kinerja atau kekuatan fundamental. Nilai yang semakin besar menunjukkan kondisi yang semakin sehat (misalnya: Laba Bersih, Total Aset, dan Dana Pihak Ketiga). Atribut Cost merupakan variabel yang mencerminkan beban, risiko, atau inefisiensi. Nilai yang semakin kecil menunjukkan efisiensi atau manajemen risiko yang lebih baik (misalnya: Beban Usaha dan Rasio Valuasi yang terlalu tinggi).
+Khusus pada sektor perbankan, penentuan atribut mempertimbangkan Fungsi Intermediasi dan skala bisnis. Sebagai contoh, Simpanan Nasabah secara akuntansi merupakan liabilitas, namun dalam konteks ini dikategorikan sebagai Benefit karena mencerminkan kepercayaan pasar dan sumber likuiditas utama. Rincian lengkap mengenai definisi, satuan, dan atribut untuk ke-39 metrik disajikan pada Tabel 3.3.
+Tabel 3.3 Definisi Operasional Variabel dan Atribut Metrik Keuangan
+No
+Nama Metrik
+Komponen
+Satuan
+Atribut
+Definisi & Justifikasi Singkat
+1
+Aset Tetap
+Neraca
+Rp Miliar
+Benefit
+Prasarana fisik pendukung operasional bank jangka panjang.
+2
+Asset Turnover
+Neraca
+Kali
+Benefit
+Efisiensi penggunaan aset untuk menghasilkan pendapatan operasional.
+3
+Book Value Per Share (BVPS)
+Neraca
+Rp/Saham
+Benefit
+Nilai ekuitas per saham; indikator nilai intrinsik dari sisi modal.
+4
+Giro Pada Bank Indonesia
+Neraca
+Rp Miliar
+Benefit
+Komponen likuiditas wajib untuk memenuhi cadangan minimum.
+5
+Kas Dan Setara Kas
+Neraca
+Rp Miliar
+Benefit
+Aset paling likuid untuk memenuhi kewajiban jangka pendek.
+6
+Penempatan Pada BI
+Neraca
+Rp Miliar
+Benefit
+Instrumen investasi likuid dengan profil risiko sangat rendah.
+7
+Pinjaman Yang Diberikan
+Neraca
+Rp Miliar
+Benefit
+Portofolio kredit; sumber utama pendapatan bunga bank.
+8
+Pinjaman yang Diterima
+Neraca
+Rp Miliar
+Benefit
+Akses pendanaan dari pihak lain untuk ekspansi kredit.
+9
+Price to Book Value (PBV)
+Neraca
+Kali
+Benefit
+Valuasi pasar relatif terhadap nilai buku; indikator harga wajar.
+10
+Simpanan Nasabah
+Neraca
+Rp Miliar
+Benefit
+Dana Pihak Ketiga (DPK); sumber likuiditas utama bank.
+11
+Tangible Book Value Per Share
+Neraca
+Rp/Saham
+Benefit
+Nilai buku aset bersih fisik setelah dikurangi aset tidak berwujud.
+12
+Total Aset
+Neraca
+Rp Miliar
+Benefit
+Representasi ukuran (size) dan kapasitas bisnis bank.
+13
+Total Ekuitas
+Neraca
+Rp Miliar
+Benefit
+Total modal bersih sebagai penyangga risiko kerugian.
+14
+Total Liabilitas
+Neraca
+Rp Miliar
+Benefit
+Total kewajiban yang mencerminkan kapasitas leverage bank.
+15
+Arus Kas Aktivitas Investasi
+Arus Kas
+Rp Miliar
+Benefit
+Net arus kas dari investasi untuk pertumbuhan jangka panjang.
+16
+Arus Kas Aktivitas Operasi
+Arus Kas
+Rp Miliar
+Benefit
+Kas nyata yang dihasilkan dari aktivitas perbankan inti melalui penyauran kredit ke masyarakat.
+17
+Arus Kas Aktivitas Pendanaan
+Arus Kas
+Rp Miliar
+Cost
+Arus kas pendanaan keluar untuk pembayaran dividen atau pelunasan utang. Jika arus pendanaan bernilai positif maka perusahaan rajin atau gemar berutang.
+18
+Capital Expenditure
+Arus Kas
+Rp Miliar
+Benefit
+Investasi modal untuk penguatan infrastruktur teknologi/fisik.
+19
+Free Cash Flow
+Arus Kas
+Rp Miliar
+Benefit
+Sisa kas untuk ekspansi setelah memenuhi kewajiban modal.
+20
+Free Cash Flow Per Share
+Arus Kas
+Rp/Saham
+Benefit
+Alokasi kas bebas untuk setiap lembar saham beredar.
+21
+Kas Akhir Periode
+Arus Kas
+Rp Miliar
+Benefit
+Posisi likuiditas kas akhir tahun untuk operasional tahun depan.
+22
+Kas Awal Periode
+Arus Kas
+Rp Miliar
+Benefit
+Saldo kas awal yang menjamin kelancaran aktivitas harian.
+23
+Kenaikan Bersih Kas
+Arus Kas
+Rp Miliar
+Benefit
+Pertumbuhan neto posisi kas selama satu tahun fiskal.
+24
+Beban Pajak Penghasilan
+Laba Rugi
+Rp Miliar
+Cost
+Kewajiban finansial sebagai wajib pajak; bersifat mengurangi laba.
+25
+Beban Usaha
+Laba Rugi
+Rp Miliar
+Cost
+Biaya operasional; nilai rendah menunjukkan efisiensi biaya. Beban usaha yang tinggi dan bertumbuh artinya perusahaan gagal efisien.
+26
+Earnings Per Share (EPS)
+Laba Rugi
+Rp/Saham
+Benefit
+Porsi laba yang diatribusikan kepada setiap lembar saham.
+27
+Jumlah Laba Komprehensif
+Laba Rugi
+Rp Miliar
+Benefit
+Total laba bersih ditambah pendapatan komprehensif lain.
+28
+Laba Bersih Tahun Berjalan
+Laba Rugi
+Rp Miliar
+Benefit
+Hasil akhir kinerja finansial setelah seluruh beban dikurangi.
+29
+Laba Kotor
+Laba Rugi
+Rp Miliar
+Benefit
+Keuntungan sebelum dikurangi beban operasional dan pajak.
+30
+Laba Sebelum Pajak
+Laba Rugi
+Rp Miliar
+Benefit
+Kinerja laba murni dari aktivitas bisnis sebelum pengaruh pajak.
+31
+Laba Usaha
+Laba Rugi
+Rp Miliar
+Benefit
+Profitabilitas yang berasal dari kegiatan operasional utama.
+32
+Pendapatan/Beban Lain-lain
+Laba Rugi
+Rp Miliar
+Benefit
+Hasil bersih dari aktivitas di luar bisnis inti bank.
+33
+Price to Earnings Ratio (PER)
+Laba Rugi
+Kali
+Cost
+Rasio harga terhadap laba yang dihasilkan; PER rendah dianggap lebih atraktif bagi investor karena cepat balik modal.
+34
+Price to Sales (P/S)
+Laba Rugi
+Kali
+Cost
+Valuasi relatif terhadap pendapatan; indikator mahal atau tidaknya suatu saham.
+35
+Return on Assets (ROA)
+Laba Rugi
+%
+Benefit
+Efisiensi bank dalam memanfaatkan aset untuk meraih laba.
+36
+Return on Equity (ROE)
+Laba Rugi
+%
+Benefit
+Efektivitas pengelolaan modal dalam menghasilkan keuntungan.
+37
+Saham Beredar
+Laba Rugi
+Miliar Lembar
+Benefit
+Jumlah lembar saham yang menentukan kapitalisasi pasar.
+38
+Total Beban Pokok Penjualan
+Laba Rugi
+Rp Miliar
+Cost
+Biaya langsung untuk menghasilkan pendapatan; indikator inefisiensi. Semakin besar beban pokok, maka laba jadi tergerus.
+39
+Total Pendapatan
+Laba Rugi
+Rp Miliar
+Benefit
+Seluruh arus masuk ekonomi dari operasional bunga dan lainnya.
+Melalui penetapan definisi operasional ini, proses transformasi data mentah laporan keuangan menjadi nilai normalisasi dalam algoritma WSM memiliki landasan logika yang konsisten. Klasifikasi atribut benefit dan cost yang tertuang pada tabel di atas menjadi parameter utama dalam penentuan fungsi normalisasi, guna memastikan bahwa hasil perankingan akhir secara akurat merepresentasikan tingkat kesehatan finansial emiten berdasarkan data empiris yang tersedia.
+Tahapan Prapemrosesan Data
+Tahapan prapemrosesan data (data preprocessing) dilakukan untuk menjamin kualitas, konsistensi, dan integritas datasetsebelum memasuki fase pemodelan analitik. Prosedur standardisasi menjadi sangat krusial mengingat data mentah berasal dari ekstraksi manual laporan keuangan yang memiliki variasi format penulisan angka serta satuan mata uang, guna mencegah terjadinya bias komputasi atau prinsip garbage in, garbage out. Seluruh rangkaian prapemrosesan ini dijalankan secara terpusat menggunakan skrip Python guna menjamin presisi dan kemudahan dalam melakukan replikasi data. Alur tahapan prapemrosesan data secara teknis disajikan pada Gambar 3.2 berikut:
+Gambar 3.2 Alur Prapemrosesan Data
+Akuisisi data mengawali prosedur teknis dalam tahapan ini melalui pembacaan data emiten dari Google Sheets (32 Tab Emiten) oleh sistem, yang dimuat melalui proses Load Data via Google Drive. Langkah selanjutnya adalah ParsingFormat Angka (menghapus "B", mengonversi kurung negatif, dan mengonversi persentase) untuk mengubah format penulisan akuntansi menjadi nilai numerik penuh, yang mencakup penghapusan huruf penanda skala satuan, konversi format kurung negatif menjadi nilai minus murni, serta konversi persentase menjadi desimal.
+Penanganan data kosong dilakukan melalui tahapan Handle Missing Value. Sel yang tidak memiliki angka pada laporan mentah dalam proses ini tidak akan dipaksakan untuk diisi menggunakan nilai rata-rata (mean imputation). Skrip Python akan menangkap nilai yang kosong tersebut dan membiarkannya tetap kosong (direpresentasikan secara konseptual sebagai keberadaan NaN di dalam memori). Keputusan untuk tidak memanipulasi sel kosong ini merupakan prinsip protective coding guard guna menjaga kemurnian fakta historis bank.
+Tahap berikutnya adalah Deteksi Outlier (Flag nilai tidak wajar) untuk mengidentifikasi nilai ekstrem secara statistik. Anomali atau outlier dalam penelitian ini tidak dihapus melainkan hanya diberi penanda (flagging), mengingat kesenjangan skala aset antara bank besar dan bank kecil merupakan fakta riil di sektor perbankan yang harus tetap diakomodasi dalam model. Transformasi struktur selanjutnya dilakukan untuk menggabungkan 32 tab sheet emiten yang terpisah menjadi satu DataFrame utama. Data dikonsolidasikan ke dalam format matriks cross-sectional melebar (wide format), dengan metrik keuangan sebagai baris dan seluruh kode emiten berjejer sebagai kolom guna mengoptimalkan pembacaan komparatif.
+Fase validasi data dijalankan sebelum data dinyatakan bersih (cek tipe data, range, logging) melalui pengecekan ulang konsistensi aritmetika dasar, yaitu memastikan keseimbangan persamaan akuntansi dasar  untuk menjamin tidak adanya kesalahan pergeseran digit selama proses transformasi. Prosedur diakhiri dengan Export CSV untuk menghasilkan keluaran berupa berkas Data Bersih (CSV).
+Lapisan pertahanan tingkat lanjut dibentuk melalui pemrosesan berkas CSV tersebut oleh API Orcas Backend pada saat fase sinkronisasi (upload). Sistem backend diarsiteki dengan dua gerbang validasi utama. Gerbang pertama menggunakan struktur sparse data pada algoritma, sehingga sel CSV yang kosong atau NULL akan sepenuhnya dilewati (skip) dan tidak dimasukkan ke dalam basis data PostgreSQL agar tidak membebani komputasi. Gerbang kedua memberlakukan Data Clone Detection yang akan membandingkan seluruh nilai metrik CSV yang baru diunggah dengan data tahun-tahun sebelumnya. Sistem seketika memblokir proses masuknya data dan memicu peringatan  apabila terdeteksi kesamaan angka 100%, guna mencegah duplikasi dan kecurangan data historis. 
+Skenario Analisis Eksploratif (EDA)
+Skenario Analisis Eksploratif (Exploratory Data Analysis atau EDA) dirancang bukan sekadar untuk kebutuhan visualisasi data, melainkan sebagai prosedur audit kualitas statistik guna memahami karakteristik fundamental dari 39 metrik keuangan sebelum dilakukan pemodelan perankingan. Mengingat dataset perbankan memiliki variabilitas yang sangat tinggi antara bank dengan aset raksasa dan bank kecil, pemahaman terhadap sebaran data menjadi prasyarat mutlak agar proses normalisasi pada tahap WSM nanti tidak menghasilkan bias. Skenario pengujian ini dibagi menjadi dua fokus utama, yaitu analisis univariat untuk memahami perilaku metrik secara individu dan analisis multivariat untuk melihat interaksi antar-variabel, sebagaimana dirangkum dalam Tabel 3.4.
+Tabel 3.4 Skenario Pengujian Statistik EDA
+Jenis Analisis
+Teknik Visualisasi
+Metrik Statistik Utama
+Tujuan Analisis
+Univariat
+Boxplot
+Median (Q2), Kuartil (Q1, Q3), dan IQR
+Mengidentifikasi bentuk distribusi data (skewness) serta mendeteksi pencilan (outlier) pada data emiten.
+Multivariat
+Correlation Heatmap
+Koefisien Korelasi Pearson (r)
+Mengukur kekuatan hubungan linear antar-variabel untuk mendeteksi redundansi data (multikolinearitas).
+Analisis univariat berfokus pada identifikasi ukuran pemusatan dan penyebaran data pada setiap kriteria keuangan. Dalam skenario ini, median digunakan sebagai ukuran pemusatan utama alih-alih rata-rata (mean), mengingat data keuangan perbankan cenderung memiliki distribusi yang miring (skewed) akibat dominasi emiten berkapitalisasi besar. Untuk mengukur dispersi atau penyebaran data, digunakan metode Interquartile Range (IQR) yang diintegrasikan ke dalam visualisasi boxplot. Deteksi pencilan (outlier) dilakukan secara sistematis menggunakan metode Pagar Tukey (Tukey Fences) dengan ambang batas . Prosedur ini krusial untuk memastikan bahwa data yang sangat ekstrem telah teridentifikasi dan ditandai, sehingga tidak merusak skala penilaian pada saat transformasi data ke dalam matriks keputusan dilakukan.
+Pada tahap selanjutnya, analisis multivariat diterapkan untuk menginvestigasi hubungan linear antar-metrik keuangan menggunakan Koefisien Korelasi Pearson (r). Hasil korelasi divisualisasikan melalui heatmap untuk mempermudah identifikasi multikolinearitas, yaitu kondisi di mana dua atau lebih metrik memiliki tingkat korelasi yang sangat tinggi sehingga bersifat redundan. Meskipun dalam instrumen ini seluruh variabel tetap dipertahankan guna menjaga kelengkapan informasi laporan keuangan, deteksi korelasi memberikan insight penting mengenai independensi antar-kriteria dalam model WSM. Dengan menggabungkan kedua skenario analisis tersebut, instrumen Orcas mampu menyajikan gambaran kesehatan finansial bank yang objektif, di mana setiap anomali dan keterkaitan data telah dipetakan secara matematis sebelum proses perankingan dijalankan.
+Tahapan Operasional Perhitungan WSM
+Tahapan operasional perhitungan Weighted Sum Method (WSM) merupakan fase komputasi inti yang bertugas mentransformasi matriks data keuangan yang telah melalui proses prapemrosesan menjadi skor preferensi tunggal bagi setiap emiten. Algoritma WSM dikonfigurasi dalam penelitian ini sebagai mesin inferensi utama pada instrumen analisis untuk menangani kompleksitas penilaian 39 metrik secara simultan dan objektif. Prosedur ini dijalankan secara sistematis melalui urutan logika algoritma yang menjamin transparansi perhitungan pada setiap tahapannya, sebagaimana diilustrasikan dalam diagram alir pada Gambar 3.3 berikut:
+Gambar 3.3 Flowchart Perhitungan WSM
+Rangkaian prosedur teknis yang dilakukan oleh algoritma dalam menghasilkan peringkat kesehatan finansial emiten dijabarkan sebagai berikut: Inisiasi matriks keputusan dilakukan dengan memuat dataset bersih hasil prapemrosesan yang terdiri dari  emiten (32 bank) dan  kriteria (39 metrik keuangan) untuk periode tahun fiskal tertentu. Algoritma memindai keberadaan nilai kosong (missing value) yang tersimpan sebagai NULL di dalam basis data. Sistem tidak melakukan imputasi angka buatan pada nilai mentah tersebut sebagai protective coding guard agar tidak merusak ekuilibrium skala Min-Max populasi. Algoritma secara dinamis melakukan bypass (pengabaian) pada tahap normalisasi, lalu mengonversi nilai kontribusi metrik tersebut menjadi 0,0 (zero contribution) pada tahap agregasi skor akhir. Pendekatan ini menjaga stabilitas perhitungan matriks dan menghindari kegagalan sistem (runtime error), tanpa mendistorsi kemurnian data historis bank. Algoritma selanjutnya mengidentifikasi atribut setiap kriteria berdasarkan klasifikasi yang telah ditetapkan pada Tabel 3.3. Pemisahan antara atribut benefit dan cost ini menjadi instruksi bagi sistem untuk menentukan arah optimasi pada fase normalisasi.
+Tahap normalisasi matriks keputusan dilakukan untuk menyetarakan skala data yang heterogen, mengingat dataset terdiri dari berbagai satuan ukuran yang berbeda. Proses transformasi nilai mentah  menjadi nilai ternormalisasi  dijalankan secara terprogram oleh sistem dengan merujuk pada formulasi matematis yang telah dijabarkan pada Bab II, yang mana kriteria benefit diproses menggunakan Persamaan 2.5 dan kriteria cost diproses menggunakan Persamaan 2.6. Prosedur ini memastikan seluruh variabel berada dalam rentang skala yang seragam antara 0 hingga 1, sehingga perbandingan antar-metrik dapat dilakukan secara adil tanpa didominasi oleh variabel dengan nilai nominal besar.
+Algoritma melanjutkan ke tahap pembobotan dan agregasi skor preferensi  dengan mengalikan nilai ternormalisasi dengan bobot kepentingan  setelah seluruh nilai dalam matriks berada dalam skala yang seragam. Proses penggabungan nilai terbobot untuk menghasilkan skor akhir setiap emiten  dijalankan menggunakan fungsi penjumlahan linier berdasarkan Persamaan 2.7 pada Bab II.
+Tahap akhir dari operasional WSM adalah proses perankingan (sorting), yang mana seluruh emiten diurutkan berdasarkan nilai skor preferensi  dari yang terbesar hingga yang terkecil. Emiten yang memperoleh skor tertinggi ditetapkan sebagai peringkat pertama, yang merepresentasikan kondisi kesehatan finansial terbaik berdasarkan kombinasi performa dari 39 metrik keuangan yang dianalisis.
+Skenario Validasi Reliabilitas Perankingan
+Skenario validasi dirancang untuk mengukur tingkat kepercayaan (reliability) instrumen analisis dari dua perspektif utama, yaitu kebenaran komputasi teknis dan akurasi analisis finansial melalui pendekatan ex-post facto analysis. Pengujian ini dilakukan dengan menggunakan data historis untuk membandingkan hasil rekomendasi sistem dengan fakta kinerja yang telah terjadi di lapangan melalui dua tahapan pengujian yang terintegrasi.
+Tahap pertama adalah verifikasi komputasi atau Delta Check yang bertujuan memastikan algoritma Weighted Sum Method (WSM) pada sistem Orcas bebas dari kesalahan logika pemrograman. Verifikasi dilakukan dengan memproses sampel data secara paralel melalui sistem dan perhitungan manual (Interactive Notebook), yang mana parameter keberhasilannya adalah nilai selisih (Delta) yang harus bernilai mutlak nol .
+Tahap kedua adalah validasi prediktif menggunakan pendekatan time-lag (jeda waktu) satu tahun untuk membuktikan relevansi peringkat terhadap kondisi kinerja masa depan emiten. Dalam skenario ini, peringkat kesehatan bank dihitung berdasarkan data laporan keuangan pada tahun  sebagai input prediksi, yang kemudian dibandingkan dengan ground truth berupa kinerja fundamental aktual bank tersebut pada tahun  sebagai data fakta. Kinerja fundamental aktual pada tahun  direpresentasikan secara spesifik oleh tiga metrik keuangan esensial, yaitu Arus Kas dari Aktivitas Operasi (merepresentasikan likuiditas riil), Simpanan Nasabah (merepresentasikan tingkat kepercayaan publik), dan Return on Equity atau ROE (merepresentasikan efisiensi pengelolaan modal).
+Meskipun pengumpulan dataset historis mencakup rentang waktu 10 tahun dari periode 2015 hingga 2024, skenario validasi luaran model murni difokuskan pada periode 2020–2024 yang terbagi ke dalam 4 gelombang pengujian. Pembagian fungsi data ini didasarkan pada dua justifikasi metodologis utama. Pertama, data pada kurun waktu 2015–2019 difungsikan sebagai data historis baseline. Baseline ini esensial bagi kerangka analisis untuk memetakan karakteristik dan pola kinerja perbankan dalam kondisi ekonomi normal sebelum terjadinya guncangan global. Kedua, periode 2020–2024 bertindak sebagai instrumen stress test terbaik bagi model. Periode tersebut mencakup fluktuasi ekonomi paling ekstrem akibat pandemi COVID-19, fase transisi, pemulihan, hingga normalisasi pasar. Pembuktian keandalan model dalam menghasilkan akurasi pemeringkatan pada periode "paling bergelombang" ini secara ilmiah menguji keandalan serta ketahanan sistem dalam jangka panjang secara ekstrem.
+Guna menguji ketangguhan model dalam menghadapi berbagai dinamika makroekonomi, pengujian ini dirancang secara ex-post facto mencakup periode data 2020 hingga 2024 yang dibagi secara sistematis ke dalam empat gelombang pengujian beruntun. Gelombang 1 (prediksi tahun data 2020 terhadap fakta kinerja 2021) merepresentasikan Fase Puncak Pandemi; Gelombang 2 (prediksi tahun data 2021 terhadap fakta kinerja 2022) merepresentasikan Fase Transisi; Gelombang 3 (prediksi tahun data 2022 terhadap fakta kinerja 2023) merepresentasikan Fase Pemulihan Awal; dan Gelombang 4 (prediksi tahun data 2023 terhadap fakta kinerja 2024) merepresentasikan Fase Normalisasi Ekonomi.
+Tingkat kesesuaian antara peringkat prediksi dan peringkat fakta tersebut diukur menggunakan korelasi statistik peringkat. Kekuatan korelasi arah tren diukur menggunakan koefisien korelasi Spearman (, sedangkan keselarasan urutan peringkat diuji menggunakan korelasi Kendall’s Tau . Pemilihan Kendall’s Tau didasarkan pada karakteristiknya yang lebih kuat (robust) dalam menangani jumlah sampel kecil  serta keunggulannya dalam mengukur probabilitas konkordansi (kesesuaian urutan mutlak) yang lebih presisi dibandingkan metode lainnya. Hipotesis validasi menyatakan bahwa jika nilai korelasi menunjukkan angka positif yang signifikan secara statistik , maka instrumen analisis terbukti mampu merefleksikan prospek keberlanjutan kinerja emiten, sehingga layak digunakan sebagai pendukung keputusan investasi.
+Kerangka pengujian Ground Truth dengan pendekatan time-lag ( ke ) dirancang murni untuk menguji tingkat reliabilitas dan keandalan metodologi WSM pada data historis. Model komputasi ini otomatis dinyatakan sah dan valid digunakan sebagai referensi pendukung keputusan investasi profesional untuk pemrosesan data tahun buku terakhir (2024), tanpa harus menunggu rilisnya data aktual tahun berikutnya, setelah terbukti andal secara statistik di seluruh gelombang pengujian (dengan tingkat signifikansi mutlak ).
+Perancangan Sistem Orcas
+Pengembangan instrumen analisis Orcas dirancang khusus untuk mendukung kebutuhan komputasi matriks yang intensif serta penyajian visualisasi data yang interaktif. Berbeda dengan sistem informasi konvensional yang berfokus pada manajemen transaksi harian, arsitektur Orcas difokuskan pada efisiensi pemisahan beban kerja antara pengelolaan data mentah, mesin komputasi (Exploratory Data Analysis dan Weighted Sum Method), serta lapisan antarmuka pengguna. Pendekatan ini diterapkan guna menjamin integritas data serta kecepatan proses analisis (low latency) saat menangani iterasi perhitungan peringkat yang kompleks.
+Sistem mengadopsi pola arsitektur Decoupled Client-Server untuk menjamin performa perhitungan skoring tidak mengganggu responsivitas antarmuka. Pemisahan ini krusial mengingat beban komputasi algoritma WSM yang melibatkan matriks berdimensi besar () memerlukan sumber daya pemrosesan yang terdedikasi. Gambar 3.4 mengilustrasikan alur data masukan yang dimulai dari Komputer Admin pada lapisan Data Source dengan memilih berkas CSV lokal hasil prapemrosesan offline. Admin kemudian mengunggah berkas tersebut secara manual melalui peramban di Client Layer menuju halaman antarmuka React Frontend pada Presentation Layer. Sisi Frontend selanjutnya meneruskan berkas tersebut menggunakan pemanggilan API HTTP POST Multipart Form Data menuju FastAPI Backendpada Application Layer. FastAPI Backend bertindak sebagai mesin komputasi sentral yang menangani seluruh logika algoritma pemeringkatan, validasi data, serta manajemen berkas (file management). Backend berinteraksi dengan PostgreSQL pada lapisan Data Layer untuk penyimpanan data relasional, dan mengelola Local Storage secara terpusat untuk menampung file CSV. Sistem penyimpanan berkas ini dilengkapi dengan mekanisme proteksi Soft-Delete berupa direktori Trash Bin. Data yang dihapus dari antarmuka tidak dimusnahkan seketika, melainkan diisolasi ke dalam Trash Bin, sehingga administrator memiliki opsi untuk memulihkan data (Restore/Put Back) apabila terjadi kesalahan penghapusan.
+Lapisan aplikasi diintegrasikan dengan External AI Layer yang ditenagai oleh Large Language Model (LLM) melalui pemanggilan Gemini API guna meningkatkan fungsionalitas analitik sistem. Sistem dirancang agar AI tidak melakukan perhitungan algoritmik, melainkan murni mengekstraksi matriks hasil komputasi backend (Prompt Request) guna merumuskan interpretasi naratif secara otomatis (AI Response). Sistem memanfaatkan teknologi Redis pada Cache Layeruntuk manajemen penyimpanan memori sementara demi menjamin optimasi waktu komputasi. Sisi Frontend yang dikembangkan dengan React berfokus sepenuhnya pada penyajian visualisasi data yang responsif bagi pengguna tanpa dibebani oleh proses kalkulasi yang berat.
+Gambar 3.4 Arsitektur Sistem Orcas
+Komponen cache layer menggunakan teknologi Redis diimplementasikan di luar pemisahan logika untuk menyimpan hasil perhitungan sementara secara in-memory. Implementasi ini memungkinkan proses re-ranking saat pengguna melakukan simulasi perubahan bobot (what-if analysis) dapat dilakukan secara instan tanpa harus membebani basis data utama secara berulang, sehingga meningkatkan efisiensi waktu eksplorasi data secara signifikan.
+Struktur penyimpanan data dirancang menggunakan sistem manajemen basis data relasional (Relational Database Management System) PostgreSQL untuk menjamin integritas referensial yang ketat antara entitas emiten, metrik laporan keuangan, dan hasil perhitungan akhir. Integritas ini sangat vital dalam konteks penelitian data science untuk memastikan bahwa setiap angka yang diolah dapat ditelusuri sumbernya. Skema basis data, sebagaimana ditunjukkan pada Gambar 3.5, dirancang secara terstruktur dengan memisahkan penyimpanan data keuangan mentah dengan data hasil olahan peringkat. Basis data Orcas terdiri atas 14 tabel yang saling berelasi secara terintegrasi berdasarkan rancangan ERD.
+Gambar 3.5 Entity Relationship Diagram Perancangan Basis Data Orcas
+Kelompok tabel pertama berfokus pada data keuangan historis yang mencakup tabel EMITENS (profil bank emiten), METRIC_DEFINITIONS (kamus metrik keuangan), dan tabel transaksi FINANCIAL_DATA yang menyimpan nilai riil keuangan pada atribut value dengan tipe data decimal yang bersifat nullable (dapat menyimpan nilai kosong murni tanpa nilai default 0,0). Kelompok tabel kedua menangani hasil analisis pemeringkatan WSM yang dialokasikan pada tabel SCORING_TEMPLATES, SCORING_RUNS, SCORING_RUN_ITEMS, dan SCORING_RESULTS. Kelompok ketiga merupakan tabel operasional pendukung aplikasi yang mencakup tabel USERS untuk manajemen akun, REPORTS untuk dokumen keluaran, serta tabel pencatatan log seperti SIMULATION_LOGS, COMPARISONS, AUDIT_LOGS, WEIGHT_TEMPLATES, dan IMPORT_HISTORY. Hubungan relasional antar-tabel dijaga secara ketat melalui kunci tamu (Foreign Key) untuk menjamin integritas referensial data di seluruh sistem.
+Instrumen ini mampu menjaga konsistensi data historis selama periode sepuluh tahun (2015–2024) melalui rancangan skema relasional tersebut, sekaligus menyediakan struktur yang fleksibel untuk menyimpan berbagai skenario simulasi bobot yang dilakukan oleh pengguna tanpa merusak integritas data utama.
+Antarmuka pengguna didesain bukan sekadar sebagai alat masukan, melainkan sebagai Analytical Dashboard yang mengintegrasikan hasil penyaringan (screening), perhitungan peringkat WSM, simulasi skenario, serta modul generasi teks berbasis kecerdasan buatan (Artificial Intelligence) dalam satu tampilan terpadu. Desain ini bertujuan meminimalkan beban kognitif pengguna saat menginterpretasikan data multidimensi. Gambar 3.6 menampilkan rancangan antarmuka utama yang memungkinkan analis membandingkan performa antaremiten secara berdampingan (side-by-side comparison). Antarmuka ini dilengkapi dengan grafik interaktif yang merespons perubahan parameter secara real-time, sehingga memungkinkan pengguna untuk melakukan interpretasi hasil analisis secara komprehensif mulai dari level makro berupa peringkat hingga level mikro yang mencakup detail per metrik.
+Gambar 3.6 Antarmuka Web Orcas
+Secara keseluruhan, spesifikasi teknis yang mencakup arsitektur terpisah, manajemen data relasional yang ketat, dan antarmuka analitis ini membentuk satu kesatuan instrumen yang handal. Konstruksi sistem ini memastikan bahwa Orcas layak digunakan sebagai alat bantu penelitian yang valid untuk menguji metode WSM dan EDA pada sektor perbankan secara ilmiah.
+BAB IVHASIL DAN PEMBAHASAN
+Bab IV memaparkan secara komprehensif hasil pengujian dan analisis terhadap tingkat kesehatan finansial pada 32 emiten perbankan di Bursa Efek Indonesia. Rangkaian pembahasan diawali dengan pelaporan hasil ekstraksi dan prapemrosesan data keuangan historis, yang dilanjutkan dengan pengujian validitas komputasi instrumen melalui verifikasi Delta Check. Selanjutnya, karakteristik data dieksplorasi secara mendalam melalui Exploratory Data Analysis (EDA) univariat maupun multivariat untuk mengidentifikasi sebaran distribusi, pencilan (outlier), serta korelasi antar-metrik. Hasil analisis tersebut kemudian digunakan sebagai dasar dalam eksekusi pemeringkatan emiten menggunakan algoritma Weighted Sum Method (WSM), yang keandalan prediksinya diuji secara empiris melalui validasi ground truth berbasis Kendall's Tau. Sebagai penutup, Bab 4 juga menguraikan implikasi hasil penilaian, perbandingan dengan literatur terdahulu, serta batasan-batasan objektif dari metode yang diterapkan.
+Hasil Ekstraksi dan Prapemrosesan Data
+Tahap awal persiapan dataset merupakan fondasi krusial sebelum eksekusi pemodelan matematis dilakukan. Proses ekstraksi data yang bersumber langsung dari dokumen Laporan Keuangan Tahunan (Annual Report) resmi emiten perbankan di Bursa Efek Indonesia (BEI) selama kurun waktu 10 tahun (2015–2024) dengan menggunakan 39 metrik keuangan riil, berhasil menghimpun total 12.480 sel data observasi. Algoritma komputasi mendeteksi eksistensi 241 sel data yang berstatus kosong atau missing value (NaN) pada tahap inspeksi awal. Sebaran akumulasi data kosong untuk setiap emiten yang teridentifikasi oleh log pemindaian sistem disajikan secara lengkap pada Tabel 4.1.
+Tabel 4.1 Ringkasan Penanganan Missing Values Berdasarkan Emiten
+Kode Emiten
+Jumlah Missing Value
+Persentase dari Total (12.480)
+Metode Penanganan
+BINA
+23
+0,18%
+Skip NULL / Zero Contribution Guard
+BMAS
+23
+0,18%
+Skip NULL / Zero Contribution Guard
+BSIM
+21
+0,17%
+Skip NULL / Zero Contribution Guard
+ARTO
+19
+0,15%
+Skip NULL / Zero Contribution Guard
+BKSW
+15
+0,12%
+Skip NULL / Zero Contribution Guard
+INPC
+15
+0,12%
+Skip NULL / Zero Contribution Guard
+DNAR
+14
+0,11%
+Skip NULL / Zero Contribution Guard
+NOBU
+14
+0,11%
+Skip NULL / Zero Contribution Guard
+BNLI
+13
+0,10%
+Skip NULL / Zero Contribution Guard
+BACA
+12
+0,10%
+Skip NULL / Zero Contribution Guard
+BNBA
+11
+0,09%
+Skip NULL / Zero Contribution Guard
+MCOR
+11
+0,09%
+Skip NULL / Zero Contribution Guard
+AGRS
+10
+0,08%
+Skip NULL / Zero Contribution Guard
+BBCA
+10
+0,08%
+Skip NULL / Zero Contribution Guard
+BVIC
+10
+0,08%
+Skip NULL / Zero Contribution Guard
+BABP
+9
+0,07%
+Skip NULL / Zero Contribution Guard
+MAYA
+7
+0,06%
+Skip NULL / Zero Contribution Guard
+MEGA
+2
+0,02%
+Skip NULL / Zero Contribution Guard
+NISP
+2
+0,02%
+Skip NULL / Zero Contribution Guard
+Total
+241 Data
+~1,93% (Kumulatif)
+Berdasarkan log ekstraksi pada Tabel 4.1, tingkat kekosongan data akumulatif tergolong sangat rendah, yakni hanya berada di angka ~1,93% (241 sel) dari keseluruhan populasi observasi historis. Penyelidikan terhadap struktur data mentah menyingkap bahwa kekosongan ini terpusat pada beberapa kebijakan pelaporan khusus. Salah satunya dipengaruhi oleh variasi struktur pelaporan resmi di BEI yang menyumbang data kosong pada pos Pendapatan/Beban Lain-lain. Emiten dengan modal inti besar seperti BBCA memilih untuk mengonsolidasikan komponen tersebut langsung ke dalam pos Pendapatan/Beban Operasional Utama pada Laporan Laba Rugi. Sementara itu, pada emiten BKSW, sistem secara presisi menangkap nilai kosong (NaN) pada subperiode 2018–2023 murni karena dokumen Laporan Laba Rugi internal bank pada rentang tahun tersebut mengalami perubahan format penyajian.
+Proses impor data melewati (skip) kekosongan data atau format tidak valid yang terdeteksi pada file CSV untuk menjaga kualitas data tanpa melakukan manipulasi buatan pada database, sehingga database relasional tetap murni (berisi nilai NULL). Sistem menerapkan protective coding guard secara dinamis pada arsitektur backend Python (FastAPI) tepat sebelum kalkulasi matriks dijalankan untuk mencegah kegagalan sistem akibat keberadaan nilai kosong tersebut. Setiap nilai kosong (None/NULL) atau data tidak valid yang terdeteksi secara dinamis akan dilewati (di-bypass) saat sistem mengeksekusi komputasi normalisasi Min-Max, lalu baru dikonversi menjadi kontribusi 0,0 (zero contribution) pada saat agregasi pembobotan WSM di dalam service perhitungan backend. Mekanisme dynamic guard ini wajib dieksekusi secara terprogram untuk memutus rantai propagasi nilai kosong (NaN propagation) dan mengeliminasi risiko kegagalan sistem (runtime error seperti TypeError atau ValueError) saat server merender halaman peringkat dan scorecard emiten.
+Keutuhan kedekatan nilai dataset diuji pasca-parsing data melalui verifikasi persamaan dasar akuntansi guna mendeteksi adanya ketidakseimbangan pencatatan di dalam laporan. Hasil pemindaian sistem terhadap ketidakseimbangan pencatatan teratas dirangkum secara rinci pada Tabel 4.2.
+Tabel 4.2 Temuan 5 Anomali Persamaan Akuntansi Teratas
+Kode Emiten
+Tahun
+Total Aset (Rp Miliar)
+Total Liabilitas + Ekuitas (Rp Miliar)
+Total Deviasi/Selisih (Rp Miliar)
+BBRI
+2024
+1.996.978
+1.992.983
+3.995
+BBRI
+2023
+1.968.369
+1.965.007
+3.362
+AGRS
+2016
+4.060
+4.036
+24
+BSIM
+2015
+27.886
+27.869
+17
+BMAS
+2022
+14.943
+14.957
+14
+Tabel 4.2 menunjukkan bahwa sisa deviasi tertinggi secara nominal tercatat pada emiten kelas kakap PT Bank Rakyat Indonesia (Persero) Tbk (BBRI) dengan selisih Rp3.362 miliar pada tahun 2023 dan Rp3.995 miliar pada tahun 2024. Nilai deviasi sebesar Rp3,36 triliun (2023) dan Rp3,99 triliun (2024) ini terbukti sinkron secara absolut dengan nilai pos kontra-aset berupa Cadangan Kerugian Penurunan Nilai (CKPN) yang dibentuk oleh manajemen BBRI seiring ekspansi portofolio kredit mereka. Perbedaan angka ini murni merupakan konsekuensi logis dari penyajian nilai aset bruto pada lembar neraca utama sebelum dikurangi komponen penyisihan CKPN, sebagaimana telah dijabarkan pada Subbab 2.3 mengenai standardisasi akuntansi pelaporan aset bruto perbankan.
+Deviasi maksimum yang berada pada level desimal minor serta dapat dijelaskan secara ilmiah melalui penyesuaian pos kontra-aset ini menjadi bukti empiris kuat yang mengesahkan validitas mutlak dataset yang digunakan. Tantangan algoritma Weighted Sum Method (WSM) pada tahap berikutnya murni difokuskan pada kapabilitas teknik normalisasi data (Min-Max Normalization) dalam menetralisasi bias skala (scale bias). Langkah ini sangat esensial untuk menjembatani ketimpangan skala matematis yang sangat ekstrem antara indikator neraca berskala triliunan rupiah melawan indikator rasio profitabilitas desimal.
+Keandalan lapis kedua dari sistem validasi data juga teruji secara empiris pada antarmuka Sync Data di samping verifikasi integritas akuntansi. Sistem Orcas berhasil membuktikan kapabilitas Data Clone Detection saat diberikan skenario unggahan dataset tiruan (sebagai contoh, data tahun 2018 yang direkayasa penamaannya menjadi 2014). Algoritma komputasi secara presisi mampu mengidentifikasi kesamaan nilai matriks 100% pada file tersebut dan seketika memblokir proses unggah dengan memunculkan Warning Modal interaktif berkode  Data Clone Detected. Kehadiran lapis pertahanan sistem ini terbukti mutlak mampu mengeliminasi risiko manipulasi maupun duplikasi data historis secara tidak sengaja oleh administrator, sehingga menjamin dataset yang mengalir ke mesin WSM adalah data yang benar-benar independen dan valid.
+Pengujian Instrumen Komputasi (Delta Check)
+Setelah integritas dataset tervalidasi pada tahap prapemrosesan, langkah krusial berikutnya adalah melakukan pengujian terhadap instrumen komputasi algoritma Weighted Sum Method (WSM) yang ditanamkan pada sistem. Pengujian ini bertujuan untuk membongkar proses pemodelan yang bersifat black-box guna membuktikan bahwa transformasi matriks dari nilai mentah (Rupiah) hingga menjadi skor akhir berjalan secara transparan, akurat, dan sesuai dengan landasan teoretis pada Bab 3. Sebagai sampel pengujian, sistem mengekstrak log perhitungan untuk tahun buku 2024 dengan memfokuskan observasi pada empat emiten perbankan raksasa, yakni BBCA, BBRI, BMRI, dan BBNI. Proses pembuktian diawali dengan melacak tiga metrik representatif yang mewakili kriteria benefit (Total Aset dan Laba Bersih Tahun Berjalan) serta kriteria cost (Beban Usaha), sebagaimana disajikan pada Tabel 4.3.
+Tabel 4.3 Verifikasi Langkah Normalisasi dan Pembobotan WSM (Sampel 3 Metrik Tahun 2024)
+Emiten
+Metrik
+Nilai Mentah (Rp Miliar)
+Nilai Normalisasi
+Bobot Metrik (Weight)
+Nilai Terbobot (Weighted)
+BBCA
+Total Aset (Benefit)
+1.449.301,00
+0,595741
+0,025641
+0,015275
+BBRI
+Total Aset (Benefit)
+1.996.978,00
+0,822143
+0,025641
+0,021081
+BMRI
+Total Aset (Benefit)
+2.427.223,00
+1,000000
+0,025641
+0,025641
+BBNI
+Total Aset (Benefit)
+1.129.806,00
+0,463666
+0,025641
+0,011889
+BBCA
+Laba Bersih Tahun Berjalan (Benefit)
+54.851,00
+0,906451
+0,025641
+0,023242
+BBRI
+Laba Bersih Tahun Berjalan (Benefit)
+60.644,00
+0,992281
+0,025641
+0,025443
+BMRI
+Laba Bersih Tahun Berjalan (Benefit)
+61.165,00
+1,000000
+0,025641
+0,025641
+BBNI
+Laba Bersih Tahun Berjalan (Benefit)
+21.669,00
+0,414822
+0,025641
+0,010636
+BBCA
+Beban Usaha (Cost)
+(32.026,00)
+0,521661
+0,025641
+0,013376
+BBRI
+Beban Usaha (Cost)
+(66.730,00)
+0,000000
+0,025641
+0,000000
+BMRI
+Beban Usaha (Cost)
+(28.218,00)
+0,578901
+0,025641
+0,014844
+BBNI
+Beban Usaha (Cost)
+(15.588,00)
+0,768752
+0,025641
+0,019712
+Tabel 4.3 merepresentasikan ketepatan eksekusi matematis oleh instrumen perangkat lunak. Sistem secara akurat mengidentifikasi nilai optimal (pada kasus ini dimiliki oleh BMRI) dan mengonversinya menjadi nilai normalisasi maksimal 1,000000 pada metrik berkarakteristik benefit seperti Total Aset dan Laba Bersih. Nilai dari emiten lain dinormalisasi secara proporsional sebagai pecahan dari nilai maksimal tersebut. Sistem membuktikan ketangguhannya pada metrik berkarakteristik cost dengan input mentah negatif seperti Beban Usaha melalui pemrosesan nilai tersebut secara absolut terlebih dahulu. Hasil komputasi menunjukkan bahwa BBRI yang memiliki beban operasional paling besar, yaitu sebesar (66.730,00), mendapat penalti matematis berupa skor normalisasi terendah 0,000000, sedangkan emiten dengan efisiensi beban terbaik seperti BBNI mendapat skor tinggi. Nilai normalisasi ini selanjutnya dikalikan dengan parameter equal weight sebesar 0,025641 (hasil dari distribusi merata   terhadap total 39 metrik) guna menghasilkan nilai terbobot (weighted). Mekanisme linear ini dieksekusi oleh sistem secara menyeluruh terhadap 39 kolom metrik pelaporan. Total penjumlahan (agregasi) dari keseluruhan nilai terbobot tersebut kemudian membentuk skor komposit penentu peringkat kesehatan finansial bank, yang dapat dilihat pada Tabel 4.4.
+Tabel 4.4 Hasil Skor Komposit Akhir WSM (Sampel Tahun 2024)
+Kode Emiten
+Skor Komposit Akhir WSM (Tahun 2024)
+BMRI (Bank Mandiri)
+0,723747
+BBRI (Bank BRI)
+0,710542
+BBCA (Bank BCA)
+0,591084
+BBNI (Bank BNI)
+0,506030
+Perolehan skor komposit akhir yang ditunjukkan pada Tabel 4.4 secara empiris memvalidasi bahwa modul evaluasi multikriteria pada instrumen komputasi telah berjalan presisi sesuai dengan arsitektur yang dirancang. Sistem terbukti berhasil mengeliminasi potensi anomali matematis, seperti risiko pembalikan ganda (double inversion) pada atribut cost bernilai negatif, berdasarkan hasil pembongkaran data (white-box) ini. Pengujian juga mengonfirmasi tidak ditemukannya cacat logika, kebocoran memori, maupun kesalahan pembulatan (floating-point error) yang mendistorsi ekuilibrium perhitungan matriks. Tervalidasinya mesin penghitung ini menandakan bahwa algoritma WSM dinyatakan siap dan tangguh untuk mengeksekusi analisis pemeringkatan skala penuh terhadap keseluruhan dataset yang mencakup 32 emiten selama 10 tahun berturut-turut.
+Analisis Hasil Exploratory Data Analysis (EDA) 
+Tahapan Exploratory Data Analysis (EDA) merupakan langkah analitis esensial yang wajib dilakukan sebelum mengimplementasikan model Weighted Sum Method (WSM). Tujuan utama dari tahapan ini adalah untuk membedah karakteristik fundamental, mengidentifikasi anomali sebaran data, serta memahami struktur dataset 32 emiten perbankan selama periode 2015–2024. Eksplorasi pada subbab ini dipecah ke dalam dua pendekatan utama. Pendekatan pertama adalah analisis univariat, yang difokuskan pada pengamatan pemusatan distribusi data tunggal untuk melacak keberadaan outliers secara terisolasi pada masing-masing section laporan keuangan. Pendekatan kedua adalah analisis multivariat, yang ditujukan untuk membedah pola korelasi linear dan fenomena finansial lintas section guna mendeteksi potensi multikolinearitas. Hasil temuan dari kedua tahap eksplorasi ini menjadi justifikasi ilmiah atas perlunya tahapan normalisasi pada algoritma pemeringkatan akhir.
+Analisis Univariat
+Analisis univariat pada tahap Exploratory Data Analysis (EDA) bertujuan untuk membedah karakteristik pemusatan dan penyebaran data dari masing-masing metrik keuangan secara mandiri sebelum dilakukan pemodelan multikriteria. Observasi difokuskan pada distribusi data selama 10 tahun (2015–2024) guna mengidentifikasi derajat variabilitas dan anomali pencilan (outlier). Pengujian pertama dilakukan terhadap metrik Total Aset yang merepresentasikan skala ukuran entitas bisnis. Berdasarkan kalkulasi deskriptif, sektor perbankan mencatatkan nilai rata-rata (mean) aset sebesar Rp233.015,37 miliar. Namun, nilai tengah (median/Q2) populasi justru berada jauh di bawahnya, yakni sebesar Rp78.327 miliar, diiringi dengan standar deviasi masif mencapai 419.649,69. Kesenjangan ekstrem antara rata-rata dan nilai tengah ini mengindikasikan adanya distribusi data yang sangat asimetris (right-skewed), yang menunjukkan bahwa kekayaan industri hanya terpusat pada segelintir entitas raksasa. Bentuk visualisasi dari ketimpangan struktur modal ini dapat diamati pada kurva sebaran Gambar 4.1.
+Gambar 4.1 Boxplot Distribusi Total Aset Perbankan BEI (2015–2024)
+Berdasarkan pemetaan Interquartile Range (IQR) pada Gambar 4.1, sebaran titik-titik pencilan atas (upper outliers) memvalidasi keberadaan struktur oligopoli di pasar perbankan Indonesia. Terdapat empat emiten berstatus Bank BUMN (Persero) dan Bank Swasta Nasional yang secara absolut mendominasi puncak aset selama 10 tahun berturut-turut, yaitu BMRI, BBRI, BBCA, dan BBNI (dengan nilai batas atas menembus Rp2.427.223 miliar). Di sisi lain, industri perbankan terbukti tidak memiliki pencilan bawah sama sekali pada metrik ini, dengan entitas berskala menengah-bawah seperti BKSW terkonfirmasi aman berada di atas kuartil pertama (Q1) dan berbaur dengan batas kewajaran rata-rata industri. Setelah meninjau skala ukuran bisnis, analisis dilanjutkan pada evaluasi efisiensi operasional murni melalui metrik Return on Assets (ROA). Statistik fundamental ROA menampilkan rata-rata industri yang tertahan di angka 0,69% dengan standar deviasi 1,69%, membuktikan tingginya tingkat fluktuasi profitabilitas antarbank. Pemetaan batas kewajaran dan pencilan rasio efisiensi ini divisualisasikan melalui Gambar 4.2.
+Gambar 4.2 Boxplot Distribusi Return on Assets (ROA) Perbankan BEI (2015–2024)
+Visualisasi pada Gambar 4.2 mengungkap polarisasi kinerja finansial yang sangat kontras di luar ambang kewajaran operasional bank reguler. Pada spektrum pencilan bawah (lower outliers), sistem mendeteksi sejumlah emiten yang terpuruk dalam defisit ekstrem, di antaranya ARTO (pada masa transisi bank digital 2019–2020) dengan rasio kerugian mencapai titik minimum -9,23%, BKSW yang secara konsisten membukukan defisit di bawah batas kewajaran, serta BBKP dan BABP yang mengalami defisit berkelanjutan di kisaran -6% hingga -8%. Sebaliknya, pencilan atas (upper outlier) secara eksklusif dikuasai oleh BBCA, yang terbukti anomali secara positif karena konsisten menghasilkan ROA di atas batas kewajaran industri hingga menyentuh puncaknya di 3,78% pada tahun 2024. Kendati demikian, pencatatan profitabilitas di atas kertas ini belum sepenuhnya mencerminkan realitas kekuatan likuiditas kas riil yang digerakkan oleh emiten perbankan. Oleh karena itu, ekspansi analisis univariat dilanjutkan pada pembedahan section laporan arus kas (Cashflow Statement) melalui metrik Arus Kas Dari Aktivitas Operasi untuk melacak perputaran dana bersih yang sesungguhnya, dengan sebaran volatilitas data yang disajikan pada Gambar 4.3.
+Gambar 4.3 Boxplot Distribusi Arus Kas Dari Aktivitas Operasi Perbankan BEI (2015–2024)
+Kurva distribusi pada Gambar 4.3 memperlihatkan tingkat volatilitas dan dispersi data yang jauh lebih radikal dibandingkan dengan section neraca maupun laba rugi. Berdasarkan kalkulasi statistik deskriptif terhadap data populasi 10 tahun, metrik Arus Kas Dari Aktivitas Operasi mencatatkan nilai rata-rata (mean) sebesar Rp5.280,38 miliar, sementara nilai tengah (median/Q2) populasi hanya mampu beranjak di angka Rp467,50 miliar. Lonjakan standar deviasi yang sangat masif hingga mencapai Rp20.815,44 merupakan indikator empiris kuat mengenai tingginya sensitivitas perputaran kas riil pada industri perbankan nasional yang sangat dipengaruhi oleh tren deposito dan agregat penyaluran pinjaman tahunan. Pola upper outliers secara konsisten didominasi oleh kelompok bank blue chip yang memiliki basis massa pengendali dana murah (CASA) skala masif. Emiten dengan rekam jejak surplus kas operasional tertinggi dikuasai oleh BBRI yang berhasil memecah batas atas kewajaran sebanyak 9 kali survei tahunan, disusul oleh BBCA sebanyak 8 kali, BBNI sebanyak 6 kali, dan BMRI sebanyak 5 kali, hingga menyentuh nilai maksimum absolut Rp129.892 miliar.
+Sebaliknya, anomali pada spektrum pencilan bawah (lower outliers) mengungkap fenomena timing mismatch berupa penurunan likuiditas operasional jangka pendek, yang secara objektif justru melanda emiten bank berkategori aset terbesar pascapandemi. Kasus paling mencolok berhasil ditangkap oleh sistem pada entitas BMRI yang terlempar menjadi pencilan negatif terparah dengan defisit arus kas operasional mencapai -Rp79.558 miliar (sekitar -Rp79,5 triliun) pada tahun 2024 dan -Rp69.622 miliar (sekitar -Rp69,6 triliun) pada tahun 2023. Gejala serupa juga terekam pada BBNI di tahun 2024 dengan nilai defisit kas operasional sebesar -Rp63.218 miliar (sekitar -Rp63,2 triliun) serta BNLI di tahun 2023 sebesar -Rp31.514 miliar (sekitar -Rp31,5 triliun). Defisit berskala masif ini mengonfirmasi realitas bahwa bank yang memiliki fundamental aset raksasa dan ROA positif tetap berpotensi mengalami tekanan arus kas operasional apabila laju penyaluran kredit jumbo berjalan sangat agresif namun belum tertagih kembali menjadi kas masuk penambah ekuitas. Temuan univariat dari ketiga jangkar laporan keuangan ini secara meyakinkan memberikan landasan empiris mengenai karakteristik sebaran data yang asimetris, sekaligus menjadi justifikasi ilmiah mengapa tahapan normalisasi linear pada metode Weighted Sum Method (WSM) sangat mutlak diperlukan dalam menekan bias skala modal sebelum dataset didorong masuk ke pemodelan akhir.
+Analisis Multivariat
+Setelah karakteristik pemusatan dan penyebaran data dibedah secara terisolasi pada masing-masing komponen laporan keuangan, tahap eksplorasi dilanjutkan dengan analisis multivariat. Sesuai dengan skenario pengujian hubungan linear lintas-seksi (cross-section) yang telah dirancang menggunakan Koefisien Korelasi Pearson ( pada Subbab 3.7, sistem mengekstraksi 11 metrik jangkar (anchor metrics) yang menjadi pilar utama fundamental perbankan, yaitu: Total Aset, Total Liabilitas, Total Ekuitas, Total Pendapatan, Beban Usaha, Laba Bersih, Arus Kas Dari Aktivitas Operasi, Free Cash Flow, Return on Assets (ROA), Return on Equity (ROE), dan Price to Book Value (PBV). Langkah pembatasan dimensi ini diambil guna menghindari penumpukan dimensi visual (scale collapse) serta menjaga ketajaman analisis. Representasi visual dari matriks korelasi simultan keseluruhan metrik tersebut disajikan secara komprehensif melalui Correlation Heatmap
+Gambar 4.4 Correlation Heatmap Lintas Section Laporan Keuangan Perbankan BEI (2015–2024)
+Pemetaan matriks warna pada Gambar 4.4 mengindikasikan adanya polarisasi hubungan yang sangat tajam antarmetrik operasional bank. Sistem melakukan ekstraksi nilai korelasi ke dalam tiga pilar analisis utama untuk membedah fenomena finansial di balik pergerakan angka tersebut secara mendalam, yaitu skala bisnis, efisiensi dan likuiditas (trade-off kas riil), serta anomali valuasi pasar, sebagaimana dirangkum secara sistematis pada Tabel 4.5.
+Tabel 4.5 Ringkasan Ekstraksi Nilai Korelasi Esensial Lintas Section (2015–2024)
+Pilar Analisis
+Variabel X
+Variabel Y
+Nilai Korelasi (r)
+Skala Bisnis 
+Total Aset
+Total Liabilitas
++0,999
+Total Ekuitas
+Total Pendapatan
++0,980
+Efisiensi & Likuiditas
+Total Pendapatan
+Beban Usaha
+-0,954
+Laba Bersih
+Arus Kas Operasi
++0,379
+ROE
+Arus Kas Operasi
++0,205
+Valuasi Pasar
+Total Ekuitas
+PBV
+0,088
+Total Aset
+PBV
+0,072
+Berdasarkan Tabel 4.5, analisis mendalam pada pilar efisiensi dan likuiditas menyingkap temuan paling krusial dalam analisis multivariat ini, yaitu konfirmasi empiris mengenai adanya timing mismatch akuntansi. Fenomena tersebut ditunjukkan oleh lemahnya korelasi Pearson antara Laba Bersih Tahun Berjalan dengan Arus Kas dari Aktivitas Operasi . Angka korelasi yang sangat rendah ini membuktikan secara ilmiah bahwa pertumbuhan laba akrual yang tercatat pada Laporan Laba Rugi tidak serta-merta mencerminkan aliran likuiditas kas riil yang masuk ke dalam sistem kas operasional emiten perbankan. Implikasi praktis bagi analis pasar modal dan regulator adalah bahwa surplus arus kas operasi tidak dapat lagi diinterpretasikan secara kaku sebagai indikator tunggal kesehatan bank, melainkan harus dianalisis secara integratif bersama komponen neraca dan laba rugi.
+Analisis Pemeringkatan Weighted Sum Method (WSM)
+Setelah karakteristik sebaran data, anomali pencilan (outliers), dan masalah multikolinearitas ekstrem dibongkar secara mendalam pada tahap Exploratory Data Analysis(EDA), tahapan penelitian dilanjutkan ke dalam arsitektur pemodelan inti. Bagian ini menerapkan algoritma Weighted Sum Method (WSM) sebagai instrumen Multi-Criteria Decision Support System (DSS) untuk mengevaluasi dan memeringkat tingkat kesehatan finansial dari 32 emiten perbankan secara objektif. Pembobotan yang terukur pada model ini dirancang untuk menetralisir bias skala kapitalisasi sehingga performa operasional bank berskala raksasa maupun kecil dapat dinilai secara adil dan proporsional tanpa mengorbankan relevansi metrik efisiensi. Pembahasan pada Subbab 4.4 ini dipecah ke dalam dua tahapan eksekusi utama untuk memberikan pemaparan yang komprehensif dan sistematis, yaitu proses transformasi penyetaraan dimensi metrik keuangan pada Subbab 4.4.1 Hasil Normalisasi, yang kemudian dilanjutkan dengan akumulasi nilai pembobotan serta pemetaan klasemen historis satu dekade pada Subbab 4.4.2 Pemeringkatan Emiten Perbankan.
+Hasil Normalisasi
+Sebelum mengintegrasikan seluruh bobot kriteria pada tahap akhir Weighted Sum Method (WSM), sistem wajib melakukan transformasi data mentah menggunakan algoritma Min-Max Normalization. Proses ini esensial untuk menghilangkan bias skala ekstrem (scale bias) yang terjadi akibat perbedaan satuan ukur yang terlampau jauh antarmetrik, seperti nominal rupiah pada neraca yang bernilai triliunan berbanding dengan rasio profitabilitas yang hanya berada pada kisaran desimal persentase.
+Guna membuktikan validitas dan keadilan matematis dari algoritma normalisasi ini, sistem melakukan uji beban (stress test) menggunakan dataset tahun 2021. Tahun 2021 dipilih karena merepresentasikan periode anomali tertinggi di bursa efek, yakni ketika terjadi polarisasi ekstrem antara bank konvensional berkapitalisasi raksasa dengan bank bervaluasi kecil. Pengujian ini mengekstraksi dua metrik paling kontras, yaitu metrik skala absolut (Total Aset) melawan metrik persentase (Return on Assets atau ROA), dari enam emiten yang terbagi ke dalam tiga kelompok kapitalisasi. Hasil transformasi nilai mentah (raw data) menjadi skala seragam  disajikan pada Tabel 4.6.
+Tabel 4.6 Ekstraksi Transformasi Min-Max Normalization (Stress Test Tahun 2021)
+Kelompok Kapitalisasi
+Kode Emiten
+Total Aset (Raw)
+Total Aset (Norm)
+ROA (Raw)
+ROA (Norm)
+Atas
+BMRI
+1.725.611 Miliar
+1,0000
+1,62%
+0,8827
+BBRI
+1.678.098 Miliar
+0,9723
+1,85%
+0,9020
+Menengah
+BJTM
+100.723 Miliar
+0,0541
+1,51%
+0,8735
+BBKP
+89.216 Miliar
+0,0474
+-2,56%
+0,5327
+Bawah
+BKSW
+17.702 Miliar
+0,0058
+-8,92%
+0,0000
+DNAR
+7.721 Miliar
+0,0000
+0,23%
+0,7663
+Berdasarkan Tabel 4.6, implementasi normalisasi Min-Max memberikan tiga pembuktian krusial terhadap integritas sistem pemeringkatan ini. Pertama, kesetaraan medan komparasi (leveling the playing field). Secara nilai mentah, rentang nilai Total Aset berjarak hingga 1,72 triliun, sementara rentang ROA keseluruhan industri hanya sebesar 0,1194 (selisih antara titik batas atas 3,02% dan batas bawah -8,92%). Jika sistem menggunakan kalkulasi linear tanpa normalisasi, metrik ROA dapat kehilangan relevansinya karena tertelan oleh besaran nominal aset. Namun, melalui transformasi ini, seluruh jarak data ditekan ke dalam skala mutlak , dengan BMRI menyentuh batas atas (1,0000) dan DNAR berada di batas bawah (0,0000).
+Kedua, proporsionalitas penilaian fundamental. Algoritma ini memastikan bahwa bank berkapitalisasi kecil tidak tertindas oleh volume kuantitatif emiten raksasa. Hal ini dibuktikan oleh performa emiten DNAR (kapitalisasi bawah). Kendati tertinggal jauh secara nominal aset (0,0000), penilaian fundamental operasionalnya tetap objektif. Pada komputasi ROA, DNAR menerima skor normalisasi yang sangat kompetitif (0,7663), menempel ketat efisiensi cetak laba milik bank raksasa seperti BMRI (0,8827).
+Ketiga, transparansi deteksi defisit performa. Keunggulan normalisasi secara presisi membedah emiten yang memiliki skala fisik besar namun mengalami inefisiensi operasional. Emiten BBKP (kapitalisasi menengah) memiliki keunggulan aset yang aman (0,0474) jika dibandingkan dengan BKSW. Akan tetapi, akibat kerugian operasional yang dideritanya, skor normalisasi profitabilitas (ROA) BBKP ditarik jatuh menjadi 0,5327. Fenomena matematis ini mengonfirmasi bahwa keputusan untuk mempertahankan pencilan statistik (outliers) pada kriteria nominal absolut menyebabkan nilai ternormalisasi bank berskala kecil menumpuk mendekati nilai batas bawah 0,0000 (sebagaimana terlihat pada emiten DNAR dengan skor aset 0,0000 berbanding BMRI dengan skor 1,0000). Namun, bias skala modal (scale bias) ini berhasil dimitigasi secara proporsional oleh kehadiran kriteria rasio kinerja operasional. Pada metrik intensif rasio seperti ROA dan ROE yang nilainya tidak bergantung pada skala modal fisik bank, emiten DNAR terbukti mampu menghasilkan skor normalisasi yang sangat kompetitif sebesar 0,7663, menempel ketat efisiensi bank raksasa seperti BMRI yang berada di angka 0,8827. Keberadaan multikriteria yang saling menetralisir ini membuktikan bahwa kerangka kerja WSM pada sistem Orcas tidak memberikan bias kemenangan mutlak bagi emiten berskala raksasa, melainkan secara adil menyeimbangkan bobot kapasitas fisik neraca terhadap kelincahan profitabilitas riil emiten.
+Pemeringkatan Emiten Perbankan
+Tahap final dari eksekusi algoritma Weighted Sum Method (WSM) dilakukan dengan mendistribusikan bobot merata (equal weight) ekuivalen  ke seluruh atribut metrik yang telah melalui pemetaan fungsional benefit (dimaksimalkan) maupun cost (diminimalkan). Sistem kemudian mengkalkulasi agregasi nilai normalisasi dengan pengali tersebut secara kumulatif untuk menghasilkan indeks Skor Komposit bagi ke-32 emiten secara berkesinambungan dari tahun 2015 hingga 2024. Penarikan peringkat final dilakukan berdasarkan perhitungan nilai rata-rata (mean) Skor Komposit WSM selama 10 periode penelitian berturut-turut untuk mereduksi bias volatilitas tahunan atau fenomena anomali sesaat (one-hit wonder) pada performa emiten. 
+Meskipun klasemen baseline pada pemeringkatan ini dieksekusi menggunakan equal weight guna menjaga netralitas komparasi historis, sistem Orcas sejatinya mengimplementasikan arsitektur algoritma Weighted Sum Method (WSM) yang bersifat dinamis melalui fitur Weight Profile. Arsitektur stateless pada modul kalkulasi memungkinkan sistem menerima intervensi bobot dari analis secara on-the-fly (saat runtime). Mesin kalkulasi akan mencegat (intercept) nilai bobot bawaan (default) dan melakukan normalisasi ulang terhadap matriks bobot kustom tersebut secara dinamis. Proses matematis ini menjamin total bobot parameter selalu terkalibrasi menjadi bernilai satu , sehingga validitas hasil komputasi tetap terjaga. Antarmuka Orcas dilengkapi dengan fitur Auto-Balance guna mencegah kebingungan pengguna (user confusion) akibat disparitas antara nilai bobot bebas yang diinput dengan hasil proporsional matematis. Fitur ini berfungsi sebagai mekanisme normalisasi visual yang secara instan mengkalibrasi ulang total akumulasi bobot kustom menjadi rasio yang genap 100% di layar tampilan. Pendekatan arsitektur ini secara langsung memfasilitasi kapabilitas simulasi skenario interaktif (what-if analysis). Analis memiliki otonomi penuh untuk memodifikasi sensitivitas model dan melihat dampaknya terhadap perubahan klasemen bank secara instan tanpa mengubah konfigurasi persisten di dalam basis data. Fleksibilitas preferensi analis ini mengubah sistem Orcas dari sekadar alat komputasi peringkat statis menjadi instrumen analitik prediktif yang adaptif. Rincian peringkat keseluruhan 32 emiten selama satu dekade dapat dilihat pada lembar Lampiran, sementara ekstraksi khusus untuk klasemen puncak (Top 5) dan klasemen dasar (Bottom 5) disajikan pada Tabel 4.7.
+Tabel 4.7 Rata-rata Skor Komposit WSM Tertinggi dan Terendah (2015–2024)
+Klasemen
+Peringkat Final
+Kode Emiten
+Rata-rata Skor Komposit WSM
+Top 5
+1
+BBRI
+0,714
+2
+BMRI
+0,692
+3
+BBCA
+0,623
+4
+BBNI
+0,558
+5
+BTPN
+0,392
+Bottom 5
+28
+NOBU
+0,295
+29
+BBKP
+0,294
+30
+AGRS
+0,289
+31
+BKSW
+0,282
+32
+ARTO
+0,278
+Puncak hierarki kesehatan finansial industri perbankan secara mutlak dikuasai oleh kelompok bank raksasa KBMI 4 sebagaimana ditunjukkan pada Tabel 4.7. Peringkat pertama diduduki oleh BBRI dengan skor komposit tertinggi 0,714, disusul ketat oleh BMRI (0,692), BBCA (0,623), dan BBNI (0,558), sementara BTPN menempati posisi kelima (0,392) dengan jarak margin skor yang cukup persisten dari empat besar. Pembongkaran matriks skor (section contribution) milik sang jawara BBRI membuktikan bahwa dominasi bank raksasa di dalam model WSM ini bukan sekadar bias dari skala aset semata. Dekomposisi skor komposit BBRI menunjukkan bahwa kontribusi poin terbesarnya ditarik dari section Laba Rugi yang menyumbang 40,4% pembentukan skor akhir. Kekuatan ukuran fisik melalui section Neraca menyumbang porsi yang hampir setara, yaitu 39,5%, dan sisanya sebesar 20,1% ditopang oleh stabilitas Arus Kas. Hal ini membuktikan bahwa algoritma pemeringkatan beroperasi secara adil; BBRI meraih peringkat puncak bukan hanya karena kapitalisasinya yang masif, melainkan berkat optimalisasi kinerja multidimensi yang sejalan dengan tingginya mesin pencetak margin perusahaan.
+Zona juru kunci (bottom 5) di kutub yang berlawanan ditempati oleh deretan bank dengan skala menengah bawah, yang berakar pada NOBU (0,295), BBKP (0,294), AGRS (0,289), BKSW (0,282), dan ditutup secara absolut oleh ARTO (0,278) di peringkat ke-32. Keruntuhan skor komposit pada emiten papan bawah seperti ARTO terekam sangat kontras apabila dibedah menggunakan dekomposisi matriks yang sama. Kehancuran posisi ARTO secara fundamental disebabkan oleh ketiadaan sandaran modal yang mapan untuk menahan guncangan operasional pada masa transisi digital. Bobot section Neraca ARTO terbukti sangat kerdil dan hanya mampu menyumbang proporsi 10,5% terhadap skornya yang sudah minim. Sisanya diselamatkan oleh section Laba Rugi (46,2%) dan pertahanan section Arus Kas (43,3%). Fakta empiris ini mengonfirmasi bahwa entitas yang kekurangan struktur modal dasar secara otomatis tertinggal di dasar kuartil industri ketika dievaluasi menggunakan instrumen multikriteria yang menuntut keseimbangan seluruh elemen finansial.
+Untuk menguji sensitivitas model terhadap dinamika waktu, pergerakan skor komposit dari emiten perwakilan klasemen atas dan klasemen bawah diplot ke dalam kurva deret waktu (time series). Tren stabilitas dari pergerakan peringkat tersebut dapat diamati secara visual pada Gambar 4.5.
+Gambar 4.5 Tren Skor Komposit WSM Klasemen Atas vs Bawah (2015–2024)
+Plot kurva pada Gambar 4.5 mencerminkan tingginya volatilitas di sektor perbankan secara jelas. Kuintet bank papan atas menampilkan pita stabilitas vertikal (flat upper ribbon) yang sangat solid, melayang secara konsisten di rentang skor 0,39 hingga 0,8 selama satu dekade penuh. Entitas top skor seperti BBRI dan BMRI bahkan membentuk garis ekuilibrium stagnan yang nyaris tidak terpengaruh oleh pergantian siklus tutup buku maupun guncangan ekonomi eksternal. Klaster emiten papan bawah justru memperlihatkan kontras yang sangat tajam. Garis pergerakan NOBU, BBKP, AGRS, BKSW, dan ARTO menampilkan fluktuasi yang bergelombang, dengan benturan dasar (menyentuh zona skor 0,1 hingga 0,2) yang drastis pada tahun-tahun tertentu. Bukti visual ini secara empiris mengesahkan bahwa kalkulasi multikriteria WSM yang dibangun tidak hanya bertindak presisi dalam memisahkan emiten secara hierarkis, tetapi juga sangat responsif dalam menangkap guncangan operasional dan kerentanan struktural dari entitas berskala menengah bawah.
+Validasi Ground Truth
+Eksekusi pengujian validitas prediktif terhadap hasil perankingan model Weighted Sum Method (WSM) pada sistem Orcas menyajikan hasil pengukuran yang sangat krusial dalam menentukan reliabilitas instrumen analisis. Sesuai dengan skenario time-lag yang dirancang pada Bab III, hasil skor komposit tahun  dikorelasikan dengan realitas data keuangan aktual bank (ground truth) pada tahun . Berdasarkan hasil olahan data, derajat korelasi arah hubungan serta tingkat keselarasan urutan peringkat untuk masing-masing gelombang pengujian direpresentasikan secara visual melalui Gambar 4.6.
+Gambar 4.6 Tren Validasi Kinerja Model Berdasarkan Korelasi Spearman dan Kendall's Tau (2020–2024) 
+Berdasarkan visualisasi pada Gambar 4.6, terlihat adanya polarisasi arah korelasi yang sangat kontras antara metrik neraca/laba rugi dengan metrik arus kas. Gambar 4.6 memvisualisasikan koefisien korelasi Spearman Rank  berdampingan secara langsung dengan koefisien Kendall’s Tau  dalam bentuk diagram batang berpasangan untuk setiap metrik ground truth lintas gelombang pengujian guna menyajikan hasil pengujian secara transparan dan menghindari bias pemilihan satu uji statistik (cherry-picking).
+Secara matematis, nilai koefisien korelasi Kendall’s Tau  secara konsisten mencatatkan angka yang lebih konservatif (lebih rendah) dibandingkan koefisien Spearman . Hal ini merupakan konsekuensi logis dari perbedaan formulasi komputasi keduanya, yang mana Kendall's Tau mengukur probabilitas perbedaan pasangan konkordansi dan diskordansi secara ketat, sedangkan Spearman menghitung selisih kuadrat peringkat secara linear. Meskipun terdapat perbedaan margin nilai koefisien, kedua kurva statistik tersebut bergerak secara paralel dan menunjukkan konsistensi tren arah hubungan yang identik, yang membuktikan kekuatan reliabilitas urutan peringkat model WSM pada sampel kecil (32 emiten).
+Tiang koefisien korelasi Spearman maupun Kendall’s Tau berdiri tegak secara konsisten pada area positif di seluruh gelombang pengujian pada klaster Simpanan Nasabah (merepresentasikan tingkat kepercayaan publik) dan Return on Equity atau ROE (merepresentasikan efisiensi modal). Kekuatan korelasi sebaliknya mengalami penurunan drastis pada klaster Arus Kas dari Aktivitas Operasi pasca-Gelombang 1, bahkan tiang Gelombang 3 runtuh melintasi baseline nol menuju area korelasi negatif. Meskipun Gambar 4.6 telah memvisualisasikan tren korelasi secara komparatif, analisis forensik terhadap signifikansi statistik dan nilai eksak masing-masing koefisien dijabarkan secara lengkap pada Tabel 4.8.
+Tabel 4.8 Rekapitulasi Validasi Time-Lag Model WSM (Spearman Rank dan Kendall's Tau)
+Periode Pengujian (Time-Lag)
+Metrik Ground Truth 
+Spearman 
+Kendall's Tau 
+Keputusan
+Gelombang 1 (WSM 2020 vs Realitas 2021)
+Simpanan Nasabah
+0,853
+< 0,001
+0,71
+< 0,001
+Sangat Signifikan
+Return on Equity (ROE)
+0,767
+< 0,001
+0,577
+< 0,001
+Sangat Signifikan
+Arus Kas Operasi
+0,703
+< 0,001
+0,52
+< 0,001
+Sangat Signifikan
+Gelombang 2 (WSM 2021 vs Realitas 2022)
+Simpanan Nasabah
+0,857
+< 0,001
+0,669
+< 0,001
+Sangat Signifikan
+Return on Equity (ROE)
+0,809
+< 0,001
+0,61
+< 0,001
+Sangat Signifikan
+Arus Kas Operasi
+0,181
+0,321
+0,121
+0,342
+Tidak Signifikan
+Gelombang 3 (WSM 2022 vs Realitas 2023)
+Simpanan Nasabah
+0,872
+< 0,001
+0,706
+< 0,001
+Sangat Signifikan
+Return on Equity (ROE)
+0,839
+< 0,001
+0,653
+< 0,001
+Sangat Signifikan
+Arus Kas Operasi
+-0,037
+0,839
+-0,004
+0,987
+Tidak Signifikan
+Gelombang 4 (WSM 2023 vs Realitas 2024)
+Simpanan Nasabah
+0,839
+< 0,001
+0,661
+< 0,001
+Sangat Signifikan
+Return on Equity (ROE)
+0,826
+< 0,001
+0,649
+< 0,001
+Sangat Signifikan
+Arus Kas Operasi
+0,178
+0,33
+0,117
+0,358
+Tidak Signifikan
+Keterangan: Penolakan Hipotesis Nol () dinyatakan signifikan pada ambang  dan sangat signifikan pada ambang .
+Data empiris pada Tabel 4.8 mempertegas stabilitas dan reliabilitas model WSM yang sangat tangguh pada parameter Simpanan Nasabah dan ROE. Koefisien korelasi Kendall’s Tau  untuk kedua metrik tersebut secara konsisten berada pada rentang kuat (0,577 hingga 0,710) dengan nilai signifikansi yang mutlak di seluruh gelombang pengujian. Hal ini mengonfirmasi keabsahan model komposit dalam merefleksikan prospek fundamental emiten, yang mana bank-bank yang diidentifikasi sehat oleh sistem terbukti mampu menjaga pertumbuhan efisiensi pengembalian modal serta mempertahankan loyalitas simpanan masyarakat di tahun berikutnya. Secara konseptual, konsistensi korelasi pada Simpanan Nasabah membuktikan ketajaman model komposit dalam memetakan emiten yang kebal terhadap fenomena dissaving (kondisi di mana masyarakat kelas menengah ke bawah terpaksa menguras tabungan mereka untuk bertahan hidup) di era pascapandemi. Sementara itu, kuatnya korelasi pada parameter ROE menunjukkan bahwa sistem Orcas presisi mendeteksi kapasitas operasional bank dalam memutar modal untuk mencetak laba bersih secara efisien tanpa terdistorsi oleh bias ukuran atau skala aset emiten (baik bank kelas kakap maupun bank kecil).
+Disintegrasi ekstrem yang tercatat pada metrik Arus Kas Operasi mulai Gelombang 2 hingga Gelombang 4, yakni ketika korelasi merosot ke zona tak bersignifikansi statistik (0,121 hingga −0,004), bukanlah wujud kegagalan maupun cacat komputasi dari sistem pemeringkatan. Disparitas ini merupakan konfirmasi struktural atas teori timing mismatch dan agresi penyaluran kredit perbankan nasional di era normalisasi ekonomi. Sistem mencatat korelasi linier yang kuat pada kas di masa krisis gelombang awal (Gelombang 1) karena menahan uang tunai (cash is king) adalah ukuran mutlak kelangsungan hidup emiten. Namun, emiten unggulan yang menduduki peringkat teratas WSM secara agresif melakukan ekspansi dengan melepaskan uang tunai untuk penyaluran kredit secara masif ke sektor riil setelah kebijakan restrukturisasi dilonggarkan memasuki tahun 2022 hingga 2024. Pelepasan kredit baru ini terekam dalam pencatatan laporan keuangan sebagai defisit arus kas keluar dari aktivitas operasi. Akibatnya, hierarki emiten tersehat dipastikan bergerak secara asimetris dengan nilai surplus kas, membuktikan bahwa kesehatan fundamental perbankan pascapandemi justru direpresentasikan oleh seberapa besar keberanian manajemen dalam melepaskan pelarut likuiditasnya. Secara keseluruhan, integrasi bukti visual dan parametrik ini mengesahkan algoritma WSM sebagai model pendukung keputusan yang sangat objektif dan responsif terhadap pergeseran struktur makroekonomi perbankan.
+Implementasi Instrumen Komputasi Orcas
+Seluruh rangkaian evaluasi kesehatan finansial pada penelitian ini dieksekusi secara terotomatisasi menggunakan instrumen komputasi Orcas. Pemosisian sistem ini bertindak murni sebagai alat bantu pendukung keputusan (decision support) untuk menangani kompleksitas matriks data yang melibatkan 32 emiten dan 39 metrik secara simultan. Instrumen ini dirancang mengutamakan kapabilitas komputasional dalam mengeksekusi normalisasi linear yang terbukti kebal terhadap anomali double inversion. Eksekusi algoritma berlanjut pada kalkulasi skor komposit Weighted Sum Method (WSM) yang hasilnya direpresentasikan melalui modul analitis Scoring dan Metric Ranking, didukung oleh sebuah Scorecard yang membedah kontribusi nilai dari setiap komponen laporan keuangan secara transparan. Penyempurnaan fungsionalitas modul Scorecard tersebut dicapai melalui integrasi teknologi kecerdasan buatan (Artificial Intelligence) berbasis Large Language Model (LLM) dengan memanfaatkan Gemini API. Sistem dirancang secara tegas agar AI tidak mencampuri perhitungan matematis WSM sama sekali. AI murni bertugas mengekstraksi matriks hasil komputasi backend, lalu memprosesnya melalui arsitektur generative AI guna merumuskan narasi evaluasi finansial berformat 5W+1H (Who, What, Where, When, Why, How). Otomatisasi ini secara praktis mengonversi data kuantitatif yang kaku menjadi penjelasan kualitatif yang dinamis, menaikkan taraf sistem Orcas dari sekadar kalkulator matematis menjadi asisten analis investasi (robo-advisor) yang interaktif. Kapabilitas AI ini juga diekspansi ke dalam modul chatbotinteraktif bernama LearnWithOrcas, yang difungsikan secara spesifik sebagai media edukasi finansial untuk membantu pengguna menginterpretasikan istilah keuangan serta memahami logika fundamental di balik pergerakan metrik secara real-time.
+Keunggulan instrumen Orcas juga terletak pada arsitektur perlindungan datanya di samping kapabilitas analitik. Sistem dilengkapi dengan Dynamic Warning Modal yang menghentikan aktivitas antarmuka dan memaksa analis mengambil keputusan (melalui tombol instan 'Move to trash') apabila terdeteksi anomali duplikasi pada saat unggah data. Data yang bermasalah tersebut tidak langsung dimusnahkan, melainkan diamankan dalam sistem Soft-Delete (direktori Trash Bin). Hal ini memberikan keleluasaan bagi pengguna untuk memulihkan (Restore/Put Back) data tersebut jika terjadi kekeliruan, atau menghapusnya secara permanen. Mekanisme logis ini menjadikan Orcas instrumen yang tidak hanya akurat secara komputasi, tetapi juga sangat kokoh dan toleran terhadap kesalahan pengoperasian manusia (human error).
+Instrumen komputasi ini turut memfasilitasi kebutuhan eksplorasi data yang lebih mendalam melalui modul analitis komparatif dan prediktif. Pendekatan perbandingan performa antaremiten secara berdampingan (side-by-side) serta visualisasi tren fluktuasi historis skor bank dari waktu ke waktu diakomodasi sepenuhnya melalui modul Compare Stocksdan Historical. Keterbatasan bobot kriteria yang bersifat statis berhasil dimitigasi melalui kehadiran modul Simulationberbasis what-if analysis. Modul analitik prediktif ini memberikan ruang bagi analis untuk melakukan intervensi bobot risiko secara dinamis, sehingga dampak fluktuasi metrik tertentu terhadap proyeksi skor emiten di masa depan dapat disimulasikan tanpa mengubah integritas basis data utama.
+Fokus utama instrumen Orcas dipertahankan secara ketat pada keandalan operasional algoritma analitik guna mendukung interpretasi data finansial. Rincian visualisasi antarmuka pengguna (user interface) beserta fungsi teknis dari seluruh modul instrumen tersebut sengaja dipisahkan dari bab pembahasan utama agar integritas analisis kuantitatif tetap terjaga. Dokumentasi visual dan operasional secara komprehensif disajikan pada bagian Lampiran di akhir dokumen ini sebagai referensi pelengkap arsitektur sistem.
+Pembahasan
+Rangkaian pengujian komputasional dan validasi empiris yang telah diuraikan pada subbab-subbab sebelumnya mengonfirmasi bahwa kerangka kerja Multi-Criteria Decision Making (MCDM) pada sistem Orcas tidak hanya beroperasi secara akurat secara matematis, tetapi juga memiliki tingkat validitas prediktif historis yang teruji. Kendati demikian, matriks keluaran dari algoritma Weighted Sum Method (WSM) tidak dirancang untuk berdiri sendiri sebagai sekadar deret peringkat statis; angka-angka tersebut menuntut interpretasi yang lebih mendalam agar dapat memberikan nilai guna bagi pengambilan keputusan. Oleh karena itu, subbab pembahasan ini didedikasikan untuk menjahit hasil kalkulasi sistem dengan realitas ekonomi perbankan dan literatur akademis. Pembedahan materi diawali dengan mengurai implikasi strategis dan makna fundamental dari anomali hasil pemeringkatan finansial (Subbab 4.7.1). Selanjutnya, analisis dilanjutkan dengan pemetaan letak kebaruan (novelty) serta posisi strategis penelitian ini saat dikomparasikan dengan studi-studi terdahulu (Subbab 4.7.2), dan diakhiri dengan sebuah evaluasi objektif yang menyoroti keunggulan komputasional sekaligus batasan operasional dari metodologi yang diterapkan (Subbab 4.7.3).
+Implikasi Hasil Penilaian Finansial
+Analisis hasil penilaian finansial emiten perbankan selama satu dekade (2015–2024) mengungkap sejumlah implikasi ekonomi penting yang mendefinisikan ulang cara penafsiran kesehatan perbankan. Pemodelan multikriteria yang dieksekusi melalui sistem Orcas tidak hanya menghasilkan daftar peringkat statis, melainkan berhasil memetakan dinamika ketahanan sektoral secara lebih mendalam. Temuan paling krusial dalam analisis multivariat adalah konfirmasi empiris mengenai adanya timing mismatch akuntansi yang ditunjukkan oleh lemahnya korelasi Pearson antara Laba Bersih Tahun Berjalan dengan Arus Kas dari Aktivitas Operasi . Angka korelasi yang sangat rendah ini membuktikan bahwa pertumbuhan laba akrual yang tercatat pada Laporan Laba Rugi tidak serta-merta mencerminkan aliran likuiditas kas riil yang masuk ke dalam sistem kas operasional bank. Implikasi praktis bagi analis pasar modal dan regulator adalah bahwa surplus arus kas operasi tidak dapat lagi diinterpretasikan secara kaku sebagai indikator tunggal kesehatan bank, karena dalam siklus ekspansi, disparitas angka tersebut justru merepresentasikan perputaran dana yang dinamis.
+Menariknya, fenomena timing mismatch statis ini terkonfirmasi secara dinamis melalui pengujian validitas prediktif ground truth ex-post facto pada Subbab 4.5. Berdasarkan log hasil eksperimen pada Gelombang 2 hingga Gelombang 4, terekam anomali parametrik, yakni ketika koefisien korelasi Kendall's Tau  pada metrik Arus Kas Operasi merosot tajam ke zona tidak signifikan secara statistik pada rentang nilai 0,121 hingga -0,004. Kejatuhan korelasi ini bukanlah indikator kegagalan komputasi dari sistem pemeringkatan, melainkan konfirmasi struktural atas agresivitas dan keberanian manajemen emiten perbankan nasional dalam melepaskan pelarut likuiditas secara masif untuk ekspansi penyaluran kredit produktif pascapandemi. Penyaluran kredit jumbo jangka panjang oleh bank dicatat sebagai pendapatan bunga akrual pada Laporan Laba Rugi, namun secara faktual uang tunai dilepaskan keluar dari sistem untuk mendanai sektor riil, sehingga terekam sebagai defisit arus kas keluar pada aktivitas operasi.
+Fenomena disparitas angka ini terekam secara ekstrem pada bank-bank kategori KBMI 4, khususnya PT Bank Mandiri (Persero) Tbk (BMRI) dan PT Bank Negara Indonesia (Persero) Tbk (BBNI) pada periode tahun buku 2023–2024. Sistem Orcas mendeteksi BMRI mengalami defisit arus kas operasional yang sangat masif hingga mencapai -Rp69.622 miliar pada tahun 2023 dan membengkak menjadi -Rp79.558 miliar pada tahun 2024, sementara BBNI mencatatkan defisit operasional sebesar -Rp63.218 miliar pada tahun 2024. Secara konvensional, nilai defisit arus kas operasional yang menembus angka puluhan triliun rupiah dapat disalahtafsirkan sebagai sinyal kerentanan likuiditas atau ancaman kebangkrutan. Namun, dokumentasi historis menunjukkan bahwa kedua emiten raksasa tersebut tetap membukukan Laba Bersih dan tingkat pengembalian modal (Return on Equity / ROE) yang sangat tinggi pada tahun fiskal yang sama. Sebagaimana ditegaskan oleh Seretidou et al. (2025), integrasi antara rasio keuangan akrual tradisional dan rasio arus kas sangat vital karena arus kas memberikan dimensi penilaian likuiditas jangka pendek yang lebih sensitif, bertindak sebagai instrumen deteksi dini (early warning system) terhadap potensi kegagalan sistem pembayaran bank yang tidak mampu diidentifikasi oleh rasio profitabilitas statis. Pertumbuhan kredit yang agresif ini pada akhirnya membuktikan bahwa ketahanan likuiditas bank-bank KBMI 4 tetap terjaga berkat kemampuan tinggi mereka dalam menghimpun Dana Pihak Ketiga (DPK), seperti simpanan nasabah, sebagai bahan baku modal produktif, sehingga fenomena defisit operasional tersebut bukan merupakan sinyal kerentanan sistemik melainkan bukti ekspansi yang terukur.
+Implikasi penting kedua terdeteksi pada klaster bank berskala kecil, dengan contoh kasus paling anomali pada PT Bank Jago Tbk (ARTO) selama masa transisi bisnis menjadi bank digital pada periode 2019–2020. Hasil dekomposisi skor komposit menunjukkan bahwa ARTO sempat mengalami kerontokan skor pada kriteria Neraca (Balance Sheet) yang hanya menyumbang proporsi minimal sebesar 14,78% akibat kerdilnya modal dasar dan volume aset fisik. Namun, kerentanan struktural pada spektrum neraca tersebut berhasil dimitigasi secara instan oleh tingginya kontribusi pertahanan dari section Arus Kas sebesar 49,24% serta tingkat efisiensi operasional pada section Laba Rugi sebesar 35,98%. Secara komputasi, keadilan penilaian multidimensi ini dimungkinkan berkat berjalannya fungsi Normalisasi Linear Min-Max pada algoritma WSM sistem Orcas. Melalui transformasi normalisasi ini, ketimpangan skala data yang sangat ekstrem antara volume aset bank KBMI 4 bernilai ribuan triliun rupiah melawan bank digital KBMI 1 berhasil ditekan ke dalam rentang rasio yang seragam. Mekanisme ini secara efektif meredam bias kapitalisasi (scale bias), membuktikan bahwa emiten bermodal kecil tetap memiliki peluang bertahan hidup (survival rate) yang tinggi apabila ditopang oleh efisiensi pengelolaan biaya operasional dan kelincahan putaran kas.
+Fenomena efisiensi bank digital ini melahirkan sebuah paradigma baru bagi analis investasi bahwa stabilitas institusi perbankan modern tidak lagi ditentukan secara mutlak oleh skala kepemilikan aset fisik raksasa, melainkan oleh kelincahan operasional (operational agility) dan efisiensi biaya. Temuan ini sejalan dengan teori daya saing perbankan modern yang menyatakan bahwa efisiensi biaya operasional merupakan penentu utama daya saing bank dalam menghadapi tekanan kompetisi industri (Sari et al., 2022). Dengan demikian, integrasi penilaian multidimensi yang ditawarkan oleh kerangka kerja sistem Orcas terbukti berhasil memberikan potret komprehensif yang adil bagi entitas bank digital maupun konvensional. Sistem ini membantu analis untuk menghindari bias likuiditas semu akibat analisis rasio tunggal yang kaku, serta menempatkan rasio kas dan akrual dalam porsi evaluasi keputusan yang seimbang.
+Perbandingan dengan Penelitian Terdahulu
+Evaluasi kinerja dan tingkat kesehatan keuangan institusi perbankan telah berkembang pesat seiring dengan diterapkannya berbagai model komposit berbasis pengambilan keputusan multikriteria (Multi-Criteria Decision Making / MCDM). Perkembangan literatur global menunjukkan bahwa integrasi berbagai rasio keuangan yang saling bertentangan (conflict of criteria) dapat diselesaikan secara sistematis melalui berbagai variasi algoritma pembobotan dan pemeringkatan. Jurnal acuan seperti Baydaş dan Pamučar (2022) telah berhasil meletakkan dasar teoretis komparasi keandalan multimetode MCDM dengan menguji sensitivitas model terhadap pergerakan indikator pasar modal. Alamoudi dan Bafail (2022) juga mengusulkan pemanfaatan metode integratif Best-Worst Method (BWM) dan RAPS untuk menyusun indeks kesehatan emiten bank komersial konvensional secara terstruktur. Penelitian di kawasan regional Asia Tenggara oleh Trung et al. (2024) turut memperkuat literatur pendukung keputusan dengan menguji stabilitas finansial perbankan komersial menggunakan tiga metode pemeringkatan sekaligus demi merumuskan potret ketahanan industri perbankan yang komprehensif. Mayoritas penelitian terdahulu yang ditinjau masih berfokus pada usulan arsitektur model pembobotan dan penyusunan hierarki peringkat statis. Kondisi ini sering kali memunculkan keterbatasan operasional dalam hal penyaringan validitas data awal, penyelarasan skala modal emiten, penyediaan skenario preferensi analis yang fleksibel, serta pembuktian validitas empiris berbasis kondisi riil (ex-post facto) di tahun berikutnya. Tabel 4.9 menyajikan kesenjangan metodologis dan praktis tersebut secara komparatif guna memetakan posisi strategis penelitian ini terhadap lanskap literatur yang ada.
+Tabel 4.9 Matriks Komparasi Penelitian Terdahulu dengan Sistem Orcas
+Parameter Komparasi
+Baydaş dan Pamučar (2022)
+Alamoudi dan Bafail (2022)
+Trung et al. (2024)
+Sistem Orcas
+Lapisan Audit Statistik
+Absen:Matriks keputusan langsung disusun dari rasio keuangan mentah tanpa visualisasi sebaran data.
+Absen:Algoritma pembobotan dan perankingan langsung dieksekusi pada data tanpa pemeriksaan pencilan.
+Absen:Kalkulasi model keputusan multikriteria langsung diterapkan tanpa pengujian multikolinearitas.
+Aktif: Mengintegrasikan analisis eksploratif visual (EDA) untuk deteksi pencilan statistik, didukung audit persamaan dasar akuntansi pada tahap prapemrosesan.
+Penanganan Ketimpangan Skala Emiten
+Rentan Bias Kapitalisasi:Peringkat akhir sangat sensitif terhadap dominasi nilai nominal aset emiten berskala raksasa.
+Rentan Bias Kapitalisasi:Skor komposit dipengaruhi oleh nominal absolut metrik tanpa penyeimbang skala aset bank.
+Rentan Bias Kapitalisasi:Ketiadaan perlakuan penyeimbang khusus terhadap disparitas ukuran kapasitas bank.
+Proporsional & Kebal Anomali: Normalisasi linear Min-Max pada algoritma WSM menyetarakan unit keuangan heterogen ke dalam skala seragam, sekaligus secara terprogram mengeliminasi anomali matematis (double inversion) pada atribut cost bernilai negatif.
+Fleksibilitas Preferensi Analis
+Statis:Menggunakan pembobotan kaku (equal weighting) atau tetap.
+Statis:Menggunakan metode pembobotan tetap dari pakar (BWM).
+Statis: Bobot ditentukan tetap tanpa ruang intervensi dinamis.
+Dinamis: Menyediakan fitur simulasi skenario interaktif (what-if analysis) untuk menyesuaikan bobot risiko secara real-time.
+Validasi Empiris
+Parsial:Menguji sensitivitas model sejenis terhadap fluktuasi pasar tanpa memprediksi masa depan.
+Terbatas:Pemeringkatan disajikan sebagai keputusan mutlak tanpa pengujian validitas prediktif historis.
+Terbatas:Pemeringkatan disajikan sebagai keputusan mutlak tanpa pengujian validitas prediktif historis.
+Tervalidasi Empiris: Analisis ex-post facto (jeda waktu satu tahun) menguji keandalan model pada tahun dasar ( terhadap kinerja fundamental nyata emiten perbankan di tahun berikutnya  menggunakan uji statistik nonparametrik Spearman  dan Kendall's Tau .
+Pemetaan komparatif tersebut melahirkan penegasan ilmiah mengenai kebaruan (novelty) dan kontribusi metodologis yang disajikan oleh sistem Orcas dalam melengkapi celah penelitian (research gap) sebelumnya. Pendekatan pembuktian ex-post facto berlapis seperti yang dijabarkan pada tabel di atas tidak hanya meningkatkan derajat kepercayaan analis investasi terhadap akurasi prediksi luaran sistem, tetapi juga memberikan kontribusi akademis yang berharga berupa standardisasi evaluasi Decision Support System (DSS) perbankan yang lebih transparan, dinamis, dan dapat diaudit secara prediktif.
+Kelebihan dan Keterbatasan Metode
+Implementasi kerangka kerja yang mengintegrasikan Exploratory Data Analysis (EDA) dan Weighted Sum Method(WSM) pada sistem Orcas menunjukkan sejumlah keunggulan komputasi yang signifikan. Kelebihan utama terletak pada penerapan EDA sebagai lapisan penyaring validitas statistik prapemodelan. Tahapan ini secara efektif mendeteksi anomali fundamental di lapangan, seperti pergeseran persamaan dasar akibat Cadangan Kerugian Penurunan Nilai (CKPN) pada BBRI. Langkah ini juga bertindak sebagai sistem audit yang mampu mendeteksi anomali akibat kekeliruan input data (seperti kasus ekstrem pada emiten BKSW) sebelum masuk ke tahap pembobotan algoritma. Penggunaan normalisasi linear Min-Max pada metode WSM juga terbukti tangguh dalam meratakan ketimpangan skala (leveling the playing field) antara bank raksasa kategori KBMI 4 dan bank berskala kecil di kategori KBMI 1. Pendekatan ini memastikan bank dengan efisiensi operasional tinggi, seperti DNAR, dapat dievaluasi secara adil dan proporsional. Berbeda dengan model kecerdasan buatan (machine learning) yang sering kali beroperasi sebagai black-box dengan tingkat keterpahaman rendah (Černevičienė & Kabašinskas, 2022), metode WSM menawarkan instrumen pendukung keputusan yang sepenuhnya transparan dan dapat diaudit (explainable). Seluruh keunggulan teoretis tersebut telah tervalidasi secara empiris melalui analisis ex-post facto, yang mana nilai prediksi komposit model terbukti sejalan dengan realitas kinerja emiten di tahun berikutnya yang dikonfirmasi oleh signifikansi koefisien Kendall's Tau.
+Metode ini tetap memiliki keterbatasan objektif yang perlu disadari oleh analis investasi. Keterbatasan paling esensial adalah sifatnya yang murni bergantung pada data kuantitatif historis. Kondisi ini menyebabkan sistem belum mampu menangkap variabel kualitatif yang memengaruhi sentimen jangka pendek, seperti tingkat kepatuhan tata kelola perusahaan (Good Corporate Governance), dinamika pasar, maupun indikator makroekonomi eksternal (Seretidou et al., 2025). Secara teknis, sistem juga menghadapi tantangan berupa inkonsistensi struktur kebijakan akuntansi antaremiten. Hal ini tercermin dari adanya perbedaan pencatatan pada BBCA yang cenderung mengonsolidasikan pos beban dan pendapatan tertentu secara langsung ke bagian Laba Rugi (Income Statement) operasional utama. Inkonsistensi tersebut memaksa sistem menerapkan mekanisme bypass dinamis (dynamic guard) yang menihilkan nilai kontribusi skor pada metrik yang kosong, guna menghindari kegagalan komputasi tanpa memanipulasi data asli. Konfigurasi pembobotan merata (equal weight) yang digunakan secara default oleh sistem terbukti rentan terhadap guncangan siklus ekonomi yang ekstrem. Fenomena ini terekam jelas dari melemahnya korelasi pada metrik arus kas operasi saat industri perbankan secara serentak melakukan ekspansi kredit masif pascapandemi. Luaran sistem ini pada akhirnya dibatasi murni sebagai instrumen pendukung keputusan pendahuluan (decision support). Keterbatasan algoritma pembobotan statis tersebut berhasil dimitigasi melalui ketersediaan fitur simulasi skenario (what-if analysis) pada sistem Orcas, yang memfasilitasi analis untuk tetap melakukan intervensi dan penyesuaian bobot secara dinamis saat terjadi pergeseran iklim makroekonomi yang radikal.
+BAB VPENUTUP
+Bab ini merupakan tahap akhir dari seluruh rangkaian penelitian yang merangkum capaian fungsional dan analitikal dari sistem Orcas. Hasil ekstraksi data, implementasi algoritma, hingga tahapan pengujian komputasional dan validasi empiris pada bab-bab sebelumnya melahirkan sejumlah simpulan utama yang menjawab rumusan masalah. Selain itu, bab ini juga memaparkan sasaran pengembangan bagi peneliti selanjutnya dengan fokus utama pada peningkatan keakuratan sistem sebagai instrumen referensi pertimbangan investasi.
+Simpulan 
+Implementasi sistem Orcas membuktikan bahwa kerangka kerja pemodelan multikriteria dapat dieksekusi secara tangguh untuk mengevaluasi kesehatan finansial perbankan secara terotomatisasi. Integrasi Exploratory Data Analysis (EDA) di fase prapemodelan terbukti sangat krusial sebagai penyaring kualitas (quality gate). Pendekatan ini secara komputasional berhasil mendeteksi anomali statistik serta inkonsistensi input data fundamental sebelum masuk ke tahap kalkulasi, sehingga menjaga integritas algoritma. Penerapan metode Weighted Sum Method (WSM) yang dikombinasikan dengan normalisasi linear Min-Max sukses mengatasi masalah ketimpangan skala ekstrem (scale bias). Mekanisme ini memastikan emiten bank berskala kecil dan bank digital dapat dievaluasi secara proporsional dan objektif berdasarkan efisiensi riilnya, bukan sekadar dominasi volume aset dari kelompok bank raksasa di kategori KBMI 4.
+Keandalan sistem Orcas tidak hanya sebatas pada keberhasilan komputasi matematis, tetapi juga tervalidasi secara empiris terhadap realitas ketahanan ekonomi emiten di lapangan. Pengujian ground truth menggunakan pendekatan ex-post facto dengan koefisien korelasi Spearman ) dan Kendall's Tau  mengonfirmasi bahwa arah peringkat yang diprediksi oleh sistem memiliki keselarasan yang signifikan dengan kinerja nyata emiten di tahun berikutnya. Predikat sebagai Decision Support System (DSS) yang adaptif juga berhasil dicapai melalui ketersediaan fitur simulasi skenario interaktif (what-if analysis). Fitur ini memfasilitasi pengguna untuk mengkustomisasi preferensi bobot kriteria secara dinamis dan transparan, menjadikan sistem ini jauh lebih unggul dan aplikatif dibandingkan dengan model-model penilaian rasio tunggal yang bersifat kaku dan statis. Integrasi generative AI pada sistem sukses melahirkan narasi interpretasi finansial secara otomatis, yang secara praktis meningkatkan utilitas aplikasi dari sekadar kalkulator matematis menjadi asisten analis investasi (robo-advisor) yang komprehensif.
+Saran 
+Meskipun arsitektur komputasi sistem Orcas telah beroperasi dengan validitas yang baik, prioritas pengembangan di masa depan harus difokuskan pada peningkatan keakuratan dan kelengkapan informasi sebagai modal referensi penilaian. Secara sistem, analisis saat ini murni bergantung pada angka kuantitatif laporan keuangan, padahal pergerakan pasar saham sangat dipengaruhi oleh sentimen kualitatif dan arah tata kelola perusahaan. Pengembangan selanjutnya disarankan untuk membangun modul ekstraksi teks berbasis Natural Language Processing (NLP) yang mampu melakukan penarikan data (crawling) secara otomatis terhadap pemberitaan emiten dari portal media massa arus utama. Modul ini juga dapat dirancang untuk menarik rincian agenda Rapat Umum Pemegang Saham (RUPS). Ketersediaan rangkuman berita dan agenda korporasi ini tidak ditujukan agar mesin menilai moral tata kelola secara langsung, melainkan berfungsi sebagai panel informasi pelengkap yang krusial bagi analis investasi dalam menimbang sentimen kualitatif pasar.
+Peningkatan keakuratan model juga dapat dicapai melalui penajaman granularitas data historis yang diolah. Pengembangan sistem selanjutnya disarankan untuk memfasilitasi penarikan dan pemrosesan metrik laporan keuangan dengan frekuensi yang lebih rapat, seperti data kuartalan (Q1, Q2, Q3) alih-alih hanya berfokus pada laporan tahunan auditan. Pemrosesan data dengan interval yang lebih pendek secara drastis meningkatkan responsivitas sistem dalam mendeteksi tren pergeseran likuiditas maupun profitabilitas emiten secara dini (early warning). Pengayaan dimensi waktu ini, yang dipadukan dengan fitur kustomisasi bobot interaktif milik pengguna, menjadikan instrumen penilaian ini semakin komprehensif dan akurat dalam mendukung perumusan strategi investasi di bursa efek.
+DAFTAR PUSTAKA
+Alamoudi, M. H., & Bafail, O. A. (2022). BWM-RAPS approach for evaluating and ranking banking sector companies based on their financial indicators in the Saudi stock market. Journal of Risk and Financial Management, 15(10), 467. https://doi.org/10.3390/jrfm15100467
+Angilella, S., Doumpos, M., Pappalardo, M. R., & Zopounidis, C. (2024). Assessing the performance of banks through an improved sigma-mu multicriteria analysis approach. Omega, 127, 103099. https://doi.org/10.1016/j.omega.2024.103099 
+Arleo, A., Tsigkanos, C., Leite, R. A., Dustdar, S., Miksch, S., & Sorger, J. (2023). Visual exploration of financial data with incremental domain knowledge. Computer Graphics Forum, 42(1), 101–116. https://doi.org/10.1111/cgf.14723 
+Ayan, B., Abacıoğlu, S., & Basilio, M. P. (2023). A comprehensive review of the novel weighting methods for multi-criteria decision-making. Information, 14(5), 285. https://doi.org/10.3390/info14050285 
+Baydaş, M., & Pamučar, D. (2022). Determining objective characteristics of MCDM methods under uncertainty: An exploration study with financial data. Mathematics, 10(7), 1115. https://doi.org/10.3390/math10071115 
+Boubaker, S., Ngo, T., Samitas, A., & Tripe, D. (2025). An MCDA composite index of bank stability using CAMELS ratios and Shannon entropy. Annals of Operations Research, 353, 353–376. https://doi.org/10.1007/s10479-024-06023-3 
+Černevičienė, J., & Kabašinskas, A. (2022). Review of multi-criteria decision-making methods in finance using explainable artificial intelligence. Frontiers in Artificial Intelligence, 5, 827584. https://doi.org/10.3389/frai.2022.827584 
+Chakri, P., Pratap, S., Lakshay, & Gouda, S. K. (2023). An exploratory data analysis approach for analyzing financial accounting data using machine learning. Decision Analytics Journal, 7, 100212. https://doi.org/10.1016/j.dajour.2023.100212 
+de Oliveira, M. S., Steffen, V., de Francisco, A. C., & Trojan, F. (2023). Integrated data envelopment analysis, multi-criteria decision making, and cluster analysis methods: Trends and perspectives. Decision Analytics Journal, 8, 100271. https://doi.org/10.1016/j.dajour.2023.100271 
+Işık, Ö., Shabir, M., Demir, G., Puska, A., & Pamucar, D. (2025). A hybrid framework for assessing Pakistani commercial bank performance using multi-criteria decision-making. Financial Innovation, 11, 38. https://doi.org/10.1186/s40854-024-00728-x
+Kaya, A., Pamucar, D., Gürler, H. E., & Ozcalici, M. (2024). Determining the financial performance of the firms in the Borsa Istanbul sustainability index: Integrating multi criteria decision making methods with simulation. Financial Innovation, 10, 21. https://doi.org/10.1186/s40854-023-00512-3 
+Mastilo, Z., Štilić, A., Gligović, D., & Puška, A. (2024). Assessing the banking sector of Bosnia and Herzegovina: An analysis of financial indicators through the MEREC and MARCOS methods. Journal of Central Banking Theory and Practice, 13(1), 167–197. https://doi.org/10.2478/jcbtp-2024-0008 
+Muhammed, S., Desalegn, G., & Emese, P. (2024). Effect of capital structure on the financial performance of Ethiopian commercial banks. Risks, 12(4), 69. https://doi.org/10.3390/risks12040069
+Munshi, M., Patel, M., Alqahtani, F., Tolba, A., Gupta, R., Jadav, N. K., Tanwar, S., Neagu, B.-C., & Dragomir, A. (2022). Artificial intelligence and exploratory-data-analysis-based initial public offering gain prediction for public investors. Sustainability, 14(20), 13406. https://doi.org/10.3390/su142013406 
+Nurwulandari, A., Hasanudin, H., Subiyanto, B., & Pratiwi, Y. C. (2022). Risk based bank rating and financial performance of Indonesian commercial banks with GCG as intervening variable. Cogent Economics & Finance, 10(1), 2127486. https://doi.org/10.1080/23322039.2022.2127486 
+Sari, S., Ajija, S. R., Wasiaturrahma, W., & Ahmad, R. A. R. (2022). The efficiency of Indonesian commercial banks: Does the banking industry competition matter? Sustainability, 14(17), 10995. https://doi.org/10.3390/su141710995 
+Seretidou, D., Billios, D., & Stavropoulos, A. (2025). Integrative analysis of traditional and cash flow financial ratios: Insights from a systematic comparative review. Risks, 13(4), 62. https://doi.org/10.3390/risks13040062 
+Trung, D. D., Dudić, B., Dung, H. T., & Truong, N. X. (2024). Innovation in financial health assessment: Applying MCDM techniques to banks in Vietnam. Economics - Innovative and Economics Research Journal, 12(2), 21–33. https://doi.org/10.2478/eoik-2024-0011 
+Tutar, H., Kavas, Y. B., Medetoğlu, B., & Koltai, J. (2025). Analysis of financial performance of deposit banks in Turkey using multi-criteria decision-making methods. Journal of International Studies, 18(1), 196–215. https://doi.org/10.14254/2071-8330.2025/18-1/12 
+Ünlü, U., Yalçın, N., & Avşarlıgil, N. (2022). Analysis of efficiency and productivity of commercial banks in Turkey pre- and during COVID-19 with an integrated MCDM approach. Mathematics, 10(13), 2300. https://doi.org/10.3390/math10132300
+Zheng, C., Rahman, M. A., Hossain, S., & Moudud-Ul-Huq, S. (2023). Does fintech-driven inclusive finance induce bank profitability? Empirical evidence from developing countries. Journal of Risk and Financial Management, 16, 457. https://doi.org/10.3390/jrfm16100457
+LAMPIRAN
+TAMPILAN UI SISTEM ORCAS
+KETERANGAN
+Tampilan login sistem Orcas yang hanya bisa diakses oleh pihak internal Orcas Partnership. Kredensial login dibuat oleh admin.
+Panel User adalah area akun utama untuk melihat profil dan mengakses fitur sesuai role; employee mendapat Analysis, Scoring, Compare, Simulation, Reports, dan My Profile, sedangkan admin mendapat semua akses tersebut ditambah dengan User Management, Sync Data, dan Activity Log.
+melakukan CRUD (Create, Read, Update, Delete) terhadap member (admin dan employee) yang memiliki akses ke website Orcas. Admin juga bisa mempromosikan employee menjadi admin.
+Screening merupakan fitur untuk mencari emiten dengan metrik tertentu yang memenuhi kebutuhan analisis.
+Metric Ranking adalah fitur untuk mencari winner atau loser pada satu metrik dalam rentang tahun tertentu.
+Scoring adalah peringkat skor total dalam satu tahun tertentu pada 32 emiten perbankan yang menjadi objek penelitian.
+Scorecard merupakan informasi detail satu emiten pada satu tahun tertentu yang menampilkan angka keseluruhan metrik.
+Compare Stocks merupakan fitur untuk membandingkan dua hingga empat emiten perbankan dalam rentang tahun tertentu yang bertujuan memberikan visualisasi fluktuasi performa emiten perbankan yang dipilih.
+Fitur Compare Historical berfungsi untuk melihat tren satu emiten dalam rentang tahun tertentu sesuai dengan kebutuhan analisis.
+Simulation merupakan fitur tambahan Orcas untuk melakukan simulasi terhadap naik-turunnya suatu nilai metrik yang dapat memengaruhi skor emiten perbankan pada satu tahun mendatang.
+Reports merupakan tempat berkumpulnya laporan analisis dari semua fitur yang disediakan oleh sistem Orcas.
+Bagian Sync Data menjadi tempat penyimpanan dataset bersih per tahun dari semua emiten yang menjadi objek pengamatan dan analisis Orcas.
+Log menampilkan riwayat aktivitas pengguna dan sistem untuk membantu proses audit, pemantauan, dan penelusuran perubahan.

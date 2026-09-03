@@ -74,7 +74,7 @@ fi
 
 # Start frontend in background
 # CRITICAL: Run npm INSIDE frontend directory, write logs/PID to repo root
-nohup npm run dev -- --host localhost --port 5173 --strictPort \
+nohup npm run dev -- --host 127.0.0.1 --port 5173 --strictPort \
     </dev/null > "$REPO_ROOT/vite.log" 2>&1 &
 VITE_PID=$!
 echo $VITE_PID > "$REPO_ROOT/vite.pid"

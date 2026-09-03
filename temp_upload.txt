@@ -1,0 +1,151 @@
+142:async def upload_csv(
+143-    request: Request,
+144-    file: UploadFile = File(...),
+145-    year: Optional[int] = Form(None),
+146-    import_to_db: bool = Form(False),
+147-    db: Session = Depends(get_db),
+148-    admin: User = Depends(require_admin),
+149-) -> dict:
+150-    """
+151-    Upload a CSV file to the processed data folder (admin only).
+152-    
+153-    Parameters:
+154-    - file: CSV file to upload
+155-    - year: Year for the data (optional if filename is YYYY.csv)
+156-    - import_to_db: If True, validate and import data to database
+157-    """
+158-    if not file.filename:
+159-        raise HTTPException(
+160-            status_code=status.HTTP_400_BAD_REQUEST,
+161-            detail="No filename provided",
+162-        )
+163-    
+164-    if not re.match(r"^\d{4}\.csv$", file.filename):
+165-        raise HTTPException(
+166-            status_code=status.HTTP_400_BAD_REQUEST,
+167-            detail="[ERR-02] Naming Format: File must be named exactly as YYYY.csv (e.g., 2014.csv).",
+168-        )
+169-        
+170-    if not file.filename.endswith(".csv"):
+171-        raise HTTPException(
+172-            status_code=status.HTTP_400_BAD_REQUEST,
+173-            detail="[ERR-03] File Type: Only .csv files are allowed.",
+174-        )
+175-    
+176-    # Determine year from filename or parameter
+177-    file_year = extract_year_from_filename(file.filename)
+178-    target_year = year or file_year
+179-    
+180-    if not (MIN_YEAR <= target_year <= MAX_YEAR):
+181-        raise HTTPException(
+182-            status_code=status.HTTP_400_BAD_REQUEST,
+183-            detail=f"Year must be between {MIN_YEAR} and {MAX_YEAR}",
+184-        )
+185-        
+186-    # ERR-01 Duplicate File Check
+187-    import os
+188-    target_filename = f"{target_year}.csv"
+189-    filepath = os.path.join(DATA_DIR, target_filename)
+190-    if os.path.exists(filepath):
+191-        raise HTTPException(
+192-            status_code=status.HTTP_400_BAD_REQUEST,
+193-            detail="[ERR-01] Duplicate File: File with this year already exists on the server. Please delete it first.",
+194-        )
+195-    
+196-    # Read file content
+197-    try:
+198-        raw_content = await file.read()
+199-        if len(raw_content) > 5 * 1024 * 1024:
+200-            raise HTTPException(
+201-                status_code=status.HTTP_400_BAD_REQUEST,
+202-                detail="[ERR-04] Oversize: File exceeds the 5MB limit.",
+203-            )
+204-        content_str = raw_content.decode("utf-8")
+205-    except HTTPException:
+206-        raise
+207-    except Exception as e:
+208-        raise HTTPException(
+209-            status_code=status.HTTP_400_BAD_REQUEST,
+210-            detail=f"Failed to read file: {str(e)}",
+211-        )
+212-    
+213-    rows_added = 0
+214-    rows_updated = 0
+215-    parsed_data = {}
+216-    
+217-    # If import_to_db is True, validate and import to database
+218-    if import_to_db:
+219-        result = validate_and_import_csv(db, content_str, target_year, admin, request)
+220-        rows_added = result["rows_added"]
+221-        rows_updated = result["rows_updated"]
+222-    
+223-    # Save file to disk
+224-    os.makedirs(DATA_DIR, exist_ok=True)
+225-    target_filename = f"{target_year}.csv"
+226-    filepath = os.path.join(DATA_DIR, target_filename)
+227-    
+228-    try:
+229-        with open(filepath, "wb") as buffer:
+230-            buffer.write(raw_content)
+231-    except Exception as e:
+232-        raise HTTPException(
+233-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+234-            detail=f"Failed to save file: {str(e)}",
+235-        )
+236-    
+237-    if import_to_db:
+238-        message = f"Data for year {target_year} successfully imported."
+239-    else:
+240-        message = f"File saved as {target_filename}"
+241-        
+242-    return UploadResponse(
+243-        success=True,
+244-        filename=target_filename,
+245-        message=message,
+246-        rows_imported=rows_added,
+247-        rows_updated=rows_updated,
+248-    )
+249-
+250-
+251-def validate_and_import_csv(
+252-    db: Session,
+253-    content: str,
+254-    year: int,
+255-    admin: User,
+256-    request: Request,
+257-) -> dict:
+258-    """
+259-    Validate CSV content and import to database.
+260-    
+261-    Expected CSV format:
+262-    - First column: ticker_code
+263-    - Subsequent columns: metric values (column names are metric_name)
+264-    
+265-    Returns dict with rows_added, rows_updated counts.
+266-    """
+267-    try:
+268-        reader = csv.DictReader(io.StringIO(content))
+269-        rows = list(reader)
+270-    except Exception as e:
+271-        raise HTTPException(
+272-            status_code=status.HTTP_400_BAD_REQUEST,
+273-            detail=f"Invalid CSV format: {str(e)}",
+274-        )
+275-    
+276-    if not rows:
+277-        raise HTTPException(
+278-            status_code=status.HTTP_400_BAD_REQUEST,
+279-            detail="CSV file is empty",
+280-        )
+281-    
+282-    # Get the first row to determine columns
+283-    first_row = rows[0]
+284-    columns = list(first_row.keys())
+285-    
+286-    # In transposed CSV, metrics are in the 'Metric' column, and columns are Tickers
+287-    # Skip metadata columns like Year, Section, Metric
+288-    metadata_cols = {"year", "section", "metric"}
+289-    ticker_cols = [c for c in columns if c.strip().lower() not in metadata_cols]
+290-    
+291-    # Identify the column containing the metric name
+292-    metric_name_col = None
