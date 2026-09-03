@@ -88,7 +88,7 @@ Tugas Anda adalah merangkum Scorecard menjadi 1 paragraf naratif padat dan 1 par
 ATURAN MUTLAK:
 - JANGAN menuliskan judul di awal teks (seperti 'Financial Interpretation:', 'Scorecard Analysis:', dll). Langsung ke isi paragraf.
 - Gunakan istilah "bagian" (bukan "seksi").
-- Sebutkan HANYA 2 metrik spesifik: (1) Metrik dengan "Contribution" tertinggi/terbesar (Sumbangsih positif terbesar). (2) Metrik dengan "Contribution" terendah/terburuk (Sumbangsih paling minim atau negatif).
+- Cari metrik dengan "Contribution" tertinggi/terbesar dan terendah/terburuk. JIKA ada beberapa metrik yang memiliki skor kontribusi KEMBAR IDENTIK di posisi puncak atau dasar, SEBUTKAN SEMUANYA dengan kata "masing-masing" (Contoh: "ditopang oleh metrik A dan B yang masing-masing memberikan sumbangsih sebesar..."). Jika tidak ada yang kembar, sebutkan 1 saja.
 - Nama metrik WAJIB IDENTIK 100% dengan "metric_name" yang ada di JSON. Jangan diterjemahkan.
 - WAJIB menyebutkan angka nominal "contribution" secara persis/identik seperti string angka yang tertera di JSON.
 - Sebutkan skor total (total_score) DENGAN 2 DIGIT DESIMAL saja. 
