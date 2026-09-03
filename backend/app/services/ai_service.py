@@ -59,19 +59,18 @@ def generate_scorecard_interpretation(payload: dict) -> str:
         scorecard_data["metrics"] = {"top_contributors": top_3, "bottom_contributors": bottom_3}
 
     prompt = f"""
-You are a senior banking data analyst. Analyze the Scorecard data.
-STRICT RULES:
-1. Output MUST be purely in {language}.
-2. First part: Write EXACTLY 1 paragraph (maximum 3 sentences) summarizing the data using the 5W1H framework (Who, What, Where, When, Why, How). DO NOT explicitly write "Who:", "What:", etc. Make it a seamless narrative.
-3. Second part: Write EXACTLY 1 standalone concluding sentence on a new line (e.g. "Kesimpulan: ..."). This conclusion MUST state an analytical verdict on why the bank won or lost, rather than just repeating visible scores.
-4. Do NOT use bullet points, bold text (**), or emojis. Do NOT give stock investment advice.
+ATURAN MUTLAK (STRICT RULES):
+1. Anda adalah penerjemah tabel. DILARANG KERAS berhalusinasi, berasumsi, atau menggunakan istilah yang tidak ada di dalam JSON.
+2. Tulis 1 Paragraf (maksimal 3 kalimat) menggunakan prinsip 5W1H. Jelaskan bank mana yang di posisi Top, Median, dan Bottom (TIDAK BOLEH pakai format list/poin).
+3. Tulis 1 kalimat kesimpulan yang murni ditarik dari perbandingan angka di tabel, BUKAN fenomena umum.
+4. JANGAN gunakan kata ganti (ini, itu, tersebut). Sebut nama Ticker (contoh: BBCA) dan nama metrik secara spesifik.
 
-Data:
-{json.dumps(scorecard_data, indent=2)}
+Data Scorecard:
+{json.dumps(data, indent=2)}
 """
     
     def call():
-        response = client.models.generate_content(model='gemini-3.6-flash', contents=prompt)
+        response = client.models.generate_content(model='antigravity', contents=prompt)
         return response.text.strip().replace('**', '')
     return handle_ai_retry(call)
 
@@ -94,7 +93,7 @@ Data:
 """
     
     def call():
-        response = client.models.generate_content(model='gemini-3.6-flash', contents=prompt)
+        response = client.models.generate_content(model='antigravity', contents=prompt)
         return response.text.strip().replace('**', '')
     return handle_ai_retry(call)
 
@@ -128,7 +127,7 @@ Data:
 """
     
     def call():
-        response = client.models.generate_content(model='gemini-3.6-flash', contents=prompt)
+        response = client.models.generate_content(model='antigravity', contents=prompt)
         return response.text.strip().replace('**', '')
     return handle_ai_retry(call)
 
@@ -157,7 +156,7 @@ Data:
 """
 
     def call():
-        response = client.models.generate_content(model='gemini-3.6-flash', contents=prompt)
+        response = client.models.generate_content(model='antigravity', contents=prompt)
         return response.text.strip().replace('**', '')
     return handle_ai_retry(call)
 
@@ -180,7 +179,7 @@ Data:
 """
 
     def call():
-        response = client.models.generate_content(model='gemini-3.6-flash', contents=prompt)
+        response = client.models.generate_content(model='antigravity', contents=prompt)
         return response.text.strip().replace('**', '')
     return handle_ai_retry(call)
 
@@ -217,7 +216,7 @@ Data:
 """
 
     def call():
-        response = client.models.generate_content(model='gemini-3.6-flash', contents=prompt)
+        response = client.models.generate_content(model='antigravity', contents=prompt)
         return response.text.strip().replace('**', '')
     return handle_ai_retry(call)
 
@@ -248,7 +247,7 @@ Data:
 """
 
     def call():
-        response = client.models.generate_content(model='gemini-3.6-flash', contents=prompt)
+        response = client.models.generate_content(model='antigravity', contents=prompt)
         return response.text.strip().replace('**', '')
     return handle_ai_retry(call)
 
@@ -277,6 +276,6 @@ ATURAN SANGAT KETAT:
     messages.append({"role": "user", "parts": [{"text": question}]})
     
     def call():
-        response = client.models.generate_content(model='gemini-3.6-flash', contents=messages)
+        response = client.models.generate_content(model='antigravity', contents=messages)
         return response.text.strip().replace('**', '')
     return handle_ai_retry(call)
